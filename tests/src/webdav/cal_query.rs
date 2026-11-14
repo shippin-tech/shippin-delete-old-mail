@@ -901,7 +901,7 @@ const REPORT_10: &str = r#"<?xml version="1.0" encoding="utf-8" ?>
 
 const REPORT_10_RESPONSE: &str = r#"BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//shippin.tech Labs LLC//shippin.tech Server//EN
+PRODID:-//AngryVibes LLC//shippin.tech Server//EN
 BEGIN:VFREEBUSY
 DTSTART:20060104T140000Z
 DTEND:20060105T220000Z
@@ -922,7 +922,7 @@ const REPORT_11: &str = r#"<?xml version="1.0" encoding="utf-8" ?>
 
 const REPORT_11_RESPONSE: &str = r#"BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//shippin.tech Labs LLC//shippin.tech Server//EN
+PRODID:-//AngryVibes LLC//shippin.tech Server//EN
 BEGIN:VFREEBUSY
 DTSTART:20060101T000000Z
 DTEND:20060104T140000Z

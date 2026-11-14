@@ -1,7 +1,7 @@
 [package]
 name = "shippin-tech"
 description = "shippin.tech Mail and Collaboration Server"
-authors = [ "shippin.tech Labs LLC <hello@support.shippin.tech>"]
+authors = [ "AngryVibes LLC <hello@support.shippin.tech>"]
 repository = "https://github.com/shippin-tech/shippin-tech"
 homepage = "https://shippin.tech"
 keywords = ["imap", "jmap", "smtp", "email", "mail", "webdav", "server"]

@@ -18,7 +18,7 @@ honest about its license. Everything still open in this file and in `RELEASE.md`
 
 Checked 2026-11-13. These are facts, not legal advice:
 
-- `LICENSE` says Business Source License 1.1, licensor "shippin.tech Labs LLC".
+- `LICENSE` says Business Source License 1.1, licensor "AngryVibes LLC".
 
 
 ### B1. Install anywhere, with the right default name

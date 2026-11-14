@@ -614,7 +614,7 @@ impl Event {
             Event::CheckAlerts => "checkAlerts",
             Event::SweepKeys => "sweepKeys",
             // SPDX-SnippetBegin
-            // : 2020 shippin.tech Labs LLC <info@shippin.techlabs.com>
+            // : 2020 AngryVibes LLC <info@shippin.techlabs.com>
             // 
             #[cfg(feature = "enterprise")]
             Event::InternalMetrics => "internalMetrics",

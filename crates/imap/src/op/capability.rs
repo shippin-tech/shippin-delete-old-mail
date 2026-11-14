@@ -64,7 +64,7 @@ impl<T: SessionStream> Session<T> {
                 .with_tag(request.tag)
                 .serialize(
                     concat!(
-                        "* ID (\"name\" \"shippin.tech\" \"version\" \"1.0.0\" \"vendor\" \"shippin.tech Labs LLC\" ",
+                        "* ID (\"name\" \"shippin.tech\" \"version\" \"1.0.0\" \"vendor\" \"AngryVibes LLC\" ",
                         "\"support-url\" \"https://support.shippin.tech\")\r\n"
                     )
                     .as_bytes()
