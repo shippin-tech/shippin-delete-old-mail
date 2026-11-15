@@ -96,7 +96,7 @@
     },
     {
       "source": "assets/webui/assets/client-DZEVMWQz.js",
-      "sha256": "2723f11c7b0a99104651563b82e849547d1d1bd352c6ae54d750bd819aabe2b7",
+      "sha256": "a70b45f797ddf680d8e57fb25bf2a2ea3d57d0605f3d5109f9966404a2d78ee6",
       "owners": [
         "ui/src/lib/adapter/jmap.ts",
         "ui/src/lib/adapter/portal.ts",
@@ -192,7 +192,7 @@
     },
     {
       "source": "assets/webui/assets/index-7cDRjdpB.js",
-      "sha256": "79269544bc2d765d64f7245f2b18b1dc130602a0ca0960890b81ad636d6ea105",
+      "sha256": "5722d39ca99b81b24703b0fa42f7c6c899b0cbe51932add3e99b02fd95afa393",
       "owners": [
         "ui/src/app.html",
         "ui/src/routes/+layout.svelte",
