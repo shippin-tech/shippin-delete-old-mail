@@ -35,6 +35,112 @@ paths:
           $ref: '#/components/responses/Problem'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v1/registry/{object}:
+    parameters:
+    - {name: object, in: path, required: true, schema: {type: string}, description: 'A registry object type, for example Domain (the JMAP method is x:Domain/*). Standard JMAP mail types (Mailbox, Email) are not here.'}
+    get:
+      operationId: listRegistry
+      summary: List a collection's records, or read a singleton
+      description: 'One JMAP request, x:{object}/query then x:{object}/get, run as the caller. A singleton object has exactly one record and is returned as that record, not as a page.'
+      x-auth: any signed-in account; JMAP decides per object type
+      x-proof: deploy/local/verify_registry.py, ui/test-live/registry-live.test.ts
+      parameters:
+      - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 500, default: 50}}
+      - {name: position, in: query, schema: {type: integer, minimum: 0, default: 0}}
+      - {name: filter, in: query, schema: {type: string}, description: 'A JMAP filter as a JSON object, passed through'}
+      responses:
+        '200':
+          description: A page of records (collections) or the singleton record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistryPage'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createRegistryRecord
+      summary: Create a record (collections)
+      description: 'One JMAP request, x:{object}/set with a create. The body is the record without server-set properties.'
+      x-auth: JMAP decides
+      x-proof: deploy/local/verify_registry.py
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        '201':
+          description: The created record
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RegistryRecord'}
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateRegistrySingleton
+      summary: Change a singleton object
+      x-auth: JMAP decides
+      x-proof: deploy/local/verify_registry.py
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, description: 'A JMAP patch object'}
+      responses:
+        '200':
+          description: The record as it is now
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RegistryRecord'}
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v1/registry/{object}/{id}:
+    parameters:
+    - {name: object, in: path, required: true, schema: {type: string}}
+    - {name: id, in: path, required: true, schema: {type: string, pattern: '^[A-Za-z0-9_-]{1,64}$'}}
+    get:
+      operationId: getRegistryRecord
+      summary: Read one record
+      x-auth: JMAP decides
+      x-proof: deploy/local/verify_registry.py
+      responses:
+        '200':
+          description: The record
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RegistryRecord'}
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateRegistryRecord
+      summary: Change a record
+      description: 'The body is a JMAP patch object (a key like a/b changes one nested value). The answer is the record as it is now.'
+      x-auth: JMAP decides
+      x-proof: deploy/local/verify_registry.py
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        '200':
+          description: The record as it is now
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RegistryRecord'}
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteRegistryRecord
+      summary: Remove a record
+      description: 'A record that other records depend on is refused with 409 objectIsLinked.'
+      x-auth: JMAP decides
+      x-proof: deploy/local/verify_registry.py
+      responses:
+        '204':
+          description: Removed
+        default:
+          $ref: '#/components/responses/Problem'
 components:
   responses:
     Problem:
@@ -44,6 +150,20 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
   schemas:
+    RegistryRecord:
+      type: object
+      required: [id]
+      description: 'The shape of the rest depends on the object type; ui/src/lib/contract/registry.generated.ts is generated from the server schema (resources/schema/schema.json.gz) and checked against live data.'
+      properties:
+        id: {type: string, minLength: 1}
+      additionalProperties: true
+    RegistryPage:
+      type: object
+      required: [items, position]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/RegistryRecord'}}
+        position: {type: integer, minimum: 0}
+        total: {type: integer, minimum: 0}
     Role:
       type: string
       enum: [admin, org, owner, user]

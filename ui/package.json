@@ -16,7 +16,10 @@
 		"test:live": "playwright test -c playwright.live.config.ts",
 		"mcpl": "node scripts/check-mcpl.mjs",
 		"lint": "biome check .",
-		"format": "biome check --write ."
+		"format": "biome check --write .",
+		"registry": "node --experimental-strip-types scripts/emit-registry.ts",
+		"registry:check": "node --experimental-strip-types scripts/emit-registry.ts --check",
+		"test:contract-live": "vitest run -c vitest.live.config.ts"
 	},
 	"devDependencies": {
 		"@axe-core/playwright": "^4.14.0",

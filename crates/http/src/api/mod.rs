@@ -4,6 +4,7 @@
 pub mod telemetry;
 
 pub mod diagnose;
+pub mod registry_rest;
 pub mod v1;
 
 use crate::{
@@ -140,7 +141,7 @@ impl ManagementApi for Server {
                 self.handle_keys_request(req, session, &path[1..], body)
                     .await
             }
-            "v1" => self.handle_v1_request(req, session, &path[1..]).await,
+            "v1" => self.handle_v1_request(req, session, &path[1..], body).await,
             "mcp" => {
                 self.handle_mcp_request(req, session, &path[1..], body)
                     .await

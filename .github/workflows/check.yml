@@ -15,7 +15,8 @@ permissions:
 
 concurrency:
   group: check-${{ github.ref }}
-  cancel-in-progress: true
+  # main is the only branch. A newer push must not hide a failure by cancelling its run.
+  cancel-in-progress: false
 
 jobs:
   changes:
@@ -64,6 +65,9 @@ jobs:
       - name: MCPL conformance
         run: node scripts/check-mcpl.mjs
         working-directory: ui
+      - name: Registry contracts match the server schema
+        run: npm run registry:check
+        working-directory: ui
       - name: Biome (format and lint)
         run: npm run lint
         working-directory: ui
@@ -97,3 +101,20 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: cargo check (same feature set as the image)
         run: cargo check -p shippin-tech --no-default-features --features "sqlite postgres mysql rocks s3 redis azure nats enterprise"
+
+  # Pre-release there are no pull requests: main takes every change and this run is the gate.
+  # A red run is loud (annotation, summary, the pusher's failure email) and is fixed forward on main.
+  verdict:
+    name: main verdict
+    needs: [web, rust]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Report
+        run: |
+          web='${{ needs.web.result }}'; rust='${{ needs.rust.result }}'
+          echo "### Check on ${GITHUB_SHA::7}: web=$web rust=$rust" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$web" != success ] || { [ "$rust" != success ] && [ "$rust" != skipped ]; }; then
+            echo "::error title=main is red::Check failed on ${GITHUB_SHA::7} (web=$web, rust=$rust). Fix forward on main."
+            exit 1
+          fi

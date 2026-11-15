@@ -70,3 +70,49 @@ export function parse<T>(schema: Type<T>, body: unknown): Parsed<Type<T>['infer'
 	if (!(problem instanceof type.errors)) return { ok: false, problem };
 	return { ok: false, problem: malformed(value) };
 }
+
+/** A Problem made on this side, for what never reached the server or never came back. */
+export function localProblem(
+	type: string,
+	title: string,
+	status: number,
+	detail?: string,
+	fields?: Record<string, string>
+): Problem {
+	return {
+		type,
+		title,
+		status,
+		...(detail === undefined ? {} : { detail }),
+		...(fields === undefined ? {} : { fields })
+	};
+}
+
+/**
+ * Parses a response when its HTTP status is known: a 2xx must match `schema`; anything else must be
+ * a Problem, or is reported with the status the server really sent. `schema` null means "no body".
+ */
+export function parseResponse<T>(
+	schema: Type<T> | null,
+	status: number,
+	body: unknown
+): Parsed<Type<T>['infer'] | undefined> {
+	if (status >= 200 && status < 300) {
+		if (schema === null) return { ok: true, value: undefined };
+		const value = schema(body);
+		if (!(value instanceof type.errors)) return { ok: true, value };
+		return { ok: false, problem: malformed(value) };
+	}
+	const problem = Problem(body);
+	if (!(problem instanceof type.errors)) return { ok: false, problem };
+	const known = status >= 400 && status < 600;
+	return {
+		ok: false,
+		problem: localProblem(
+			'http-error',
+			'The server refused the request',
+			known ? status : 502,
+			known ? undefined : `Unexpected status ${status}`
+		)
+	};
+}

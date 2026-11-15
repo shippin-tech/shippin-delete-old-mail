@@ -72,10 +72,22 @@ as the person who will use it (see that file).
 | --- | --- | --- |
 | A1 | **Route table.** Replace the string match in `crates/http/src/api/mod.rs` with a table; generate `api/v1/openapi.yml` from it; one error shape | `check-api-coverage` compares table and spec; existing proofs still pass |
 | A2 | **Move to `/api/v1`, delete `api/compat`.** Update `ui/src/lib/adapter/*`, e2e and `verify*.py` in the same change. No redirects | Check is green and the three roles sign in |
-| A3 | **Registry facade.** `/api/v1/registry/*`; the Svelte admin and the actions use it instead of calling JMAP `x:` methods | `ui/e2e-live/` creates, edits and deletes a domain and a mailbox as admin through it |
+| A3 | **Registry facade.** `/api/v1/registry/*` (REST over native JMAP, run as the caller); the Svelte admin and the actions use it instead of calling JMAP `x:` methods | **Server side and typed client done 2026-11-15** (`crates/http/src/api/registry_rest.rs`, `ui/src/lib/contract/registry.ts`, contracts generated from the schema; `deploy/local/verify_registry.py`, `ui/test-live/`). **Not done:** no screen calls it yet, so the admin still uses JMAP directly |
 | A4 | **Events.** Replace `token/*` and `live/*` with `/events` | Delivery test and tracing screens work with no token route |
 | A5 | **Fence the paid code** into its own crate (`RELEASE.md` C1) | Default build contains no SEL path; CI builds with and without it |
 | A6 | **Layout.** Top-level grouping from B6.4 and a `crates/README.md` map | Image builds from the new layout |
+
+### A3 follow-ups (found when the facade was proven, 2026-11-15)
+
+Each has an owner step and a test that closes it. None is parked.
+
+| Item | Why it matters | Closed by |
+| --- | --- | --- |
+| **First screen on the facade: Domains.** No screen imports `registry.ts` yet, so the bundle carries none of it | The facade and contracts are only proven by tests until a real screen uses them | Admin Domains list/create/edit/delete call `registryClient`; the three-role sign-in e2e passes; `verify_registry.py` stays green |
+| **Code-split the runtime contracts.** `registry.generated.ts` is ~614 KB of source | A screen that imports it must not put it in the main bundle | Imported only from admin routes by dynamic import; `npm run build` shows it in its own chunk, not the entry chunk |
+| **Nested patch paths** (`a/b: value`). The server accepts them; the update contract is typed for whole properties only | A form that edits one map entry would otherwise send the whole map | Decide from the JMAP patch rules (RFC 8620 5.3) whether the client exposes them; add a live test patching one entry of `Domain.aliases` |
+| **Create on the 37 empty objects.** Only Domain has been through create, update and delete live | Read contracts for empty objects, and create contracts generally, are proven only against stored values | `verify_registry.py` creates, reads back and deletes one record of each object the seed account can create; objects that refuse are listed by name with the reason |
+| **Exclude enterprise-flagged properties.** 30 are in the generated contracts | Public build must not describe paid features (A5) | `emit-registry.ts --without-enterprise` drops flagged properties; CI builds both outputs; the default output is chosen when A5 lands |
 
 A1 to A3 are one coordinated change because the UI and the server must move together. Mail
 protocols, DAV and OAuth discovery are untouched throughout.

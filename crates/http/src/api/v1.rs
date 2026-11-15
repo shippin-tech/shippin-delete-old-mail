@@ -8,7 +8,7 @@ use common::Server;
 use http_proto::{HttpRequest, HttpResponse, HttpSessionData, JsonResponse, ToHttpResponse};
 use hyper::{Method, StatusCode};
 use registry::schema::enums::Permission;
-use serde_json::{Value, json};
+use serde_json::{Map, Value, json};
 use std::future::Future;
 
 /// What the interface should present, decided here and never guessed by the client:
@@ -29,9 +29,23 @@ pub fn role_of(permissions: &[Permission], runs_org: bool, owns_domain: bool) ->
 }
 
 pub fn problem(status: StatusCode, kind: &str, title: &str, detail: Option<&str>) -> trc::Result<HttpResponse> {
+    problem_with_fields(status, kind, title, detail, None)
+}
+
+/// `fields` names what was wrong per input, keyed by path, for forms to show beside the input.
+pub fn problem_with_fields(
+    status: StatusCode,
+    kind: &str,
+    title: &str,
+    detail: Option<&str>,
+    fields: Option<Map<String, Value>>,
+) -> trc::Result<HttpResponse> {
     let mut body = json!({ "type": kind, "title": title, "status": status.as_u16() });
     if let Some(detail) = detail {
         body["detail"] = Value::String(detail.to_string());
+    }
+    if let Some(fields) = fields {
+        body["fields"] = Value::Object(fields);
     }
     // The same content type the rest of the server uses for errors (RFC 9457).
     Ok(HttpResponse::new(status)
@@ -46,6 +60,7 @@ pub trait V1Api: Sync + Send {
         req: &HttpRequest,
         session: &HttpSessionData,
         path: &[&str],
+        body: Option<Vec<u8>>,
     ) -> impl Future<Output = trc::Result<HttpResponse>> + Send;
 }
 
@@ -55,6 +70,7 @@ impl V1Api for Server {
         req: &HttpRequest,
         session: &HttpSessionData,
         path: &[&str],
+        body: Option<Vec<u8>>,
     ) -> trc::Result<HttpResponse> {
         match (req.method().clone(), path.first().copied().unwrap_or_default()) {
             (Method::GET, "me") => {
@@ -81,6 +97,7 @@ impl V1Api for Server {
                 .no_cache()
                 .into_http_response())
             }
+            (_, "registry") => super::registry_rest::handle_registry(self, req, session, &path[1..], body).await,
             _ => problem(StatusCode::NOT_FOUND, "not-found", "No such route", None),
         }
     }
