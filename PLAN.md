@@ -68,6 +68,35 @@ practice: one page per product and per question people ask, structured data
 a sitemap, an `llms.txt` index, fast pages, and the same names everywhere. Needs from you the
 exact legal names and how the companies relate, before anything is published.
 
+### B5. One Svelte UI the AI can drive (written 2026-11-14)
+
+Direction: everything is built in `ui/` (Svelte). `assets/webui` (the upstream compiled bundle) and
+`platform/web` (React) are retired once nothing in `ui/porting/` depends on them. People get plain-language
+screens; the chat can read and change the product through the same declared actions a person uses.
+
+| Stage | Work | Done when |
+| --- | --- | --- |
+| B5.1 | **A2UI renderer in Svelte** (`ui/src/lib/a2ui/`): surface state, the Shippin catalog, data binding, actions handed to the host, web links only, prototype-safe paths | **Done 2026-11-14**: `ui/test/a2ui.test.ts`, `svelte-check` clean |
+| B5.2 | **Chat panel that shows surfaces.** The assistant answers with A2UI messages (explanations, steps, forms); button actions go to the agent bar, never straight to the server | A live test: the chat shows a form, the person submits, the agent bar asks before the write, the page's own event fires |
+| B5.3 | **Chat with read and write.** The assistant's tool calls are the screens' declared actions (`resources/product/actions.json`), using the provider the owner set at `/shippin/admin/ai` (their own frontier model, or a local one). Writes still need the person's yes; no action takes a key | `ui/e2e-live/` test: "add a mailbox" typed in chat creates it after approval; a refused approval changes nothing |
+| B5.4 | **Webmail**: threads, search, move, delete, bulk select, labels in plain words, each as a declared action | Live test of each; mobile size; fits the B2 budgets |
+| B5.5 | **Plain-language pass** over every admin screen: what it does, what happens if changed, a lesson per task (MCPL) | Each screen has a lesson and a chat-explain path |
+| B5.6 | **Retire `assets/webui` and `platform/web`**: every row in `ui/porting/webui-files.json` is replaced or retained on purpose; delete the rest | `scripts/check-webui-inventory.mjs` passes with the folders gone |
+| B5.7 | **Fence the SEL code** (`RELEASE.md` C1): `enterprise` off by default (builds without it, checked 2026-11-14), a manifest of every SEL path, a CI job that builds without it, upstream notices restored | Check workflow builds default features without `crates/common/src/enterprise/` |
+
+### B6. The public repository: API coverage and layout (written 2026-11-14)
+
+The repository is going public and has years of history in it. Order: say what it is, group it, then move
+what must move without breaking the build.
+
+| Stage | Work | Done when |
+| --- | --- | --- |
+| B6.1 | **API grouped and covered.** `api/compat/` (what other software already speaks) and `api/shippin/` (ours); `api/README.md`; every `/api` route in a spec | `node scripts/check-api-coverage.mjs` passes in Check |
+| B6.2 | **Compatibility proof (first pass done 2026-11-15: `deploy/local/verify_compat.py`, 15 checks).** Still open: calendar and contact round trip through a DAV client, a ManageSieve script upload, JMAP push. For each compatible surface (JMAP, IMAP, POP3, SMTP, ManageSieve, CalDAV/CardDAV, OAuth, autoconfig) one automated client check against the local stack, named in `api.json` | Each row of `api/README.md` "Compatible" names its test |
+| B6.3 | **What is public.** Decide for `platform/` (1,662 files: the Go control plane, a different product), `.ai/` (including four stored chat transcripts under `.ai/modules/chats/`), `.cursor/`, `landing/`, `LICENSES/New Text Document.txt`: stay, move to their own repository, or be removed. History already holds them; a decision to remove does not erase it | Owner's decision recorded here |
+| B6.4 | **Top level.** Root has 3 Dockerfiles, `docker-bake.hcl`, 3 security files, `img/`, `brand/`, `assets/`. Group into `docker/`, `docs/` and one assets folder, updating `Dockerfile` COPY paths, workflows and `include_bytes!` paths in the same change, with a full build proving it | Docker image builds from the new layout and Check is green |
+| B6.5 | **Crates stay flat** under `crates/` (Cargo path dependencies, `include_bytes!` and the Dockerfiles all use these paths). Grouping them is done with a `crates/README.md` map, not by moving them | `crates/README.md` names each crate's job and whether it holds SEL code |
+
 ## Then: the platform plan
 
 Written 2026-11-11. The goal: updates people can see and trust, and mail management,

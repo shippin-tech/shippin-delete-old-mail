@@ -15,6 +15,13 @@ that artifact and run `docker load -i mail-image.tar.gz`. Alternatively, build i
 docker build -f Dockerfile.fdb -t shippintech-mail:local .
 ```
 
+**One instance.** There is one compose project (`shippintech-local`) and one image tag
+(`shippintech-mail:local`). To install a new build, run `./deploy/local/refresh.ps1`: it rebuilds
+the image under that same tag and replaces the container; the volumes stay. Do not tag images per
+commit. After a Docker Desktop restart, `./deploy/local/refresh.ps1 -NoBuild` brings everything
+back (the services also restart by themselves). On a real host the same idea is the `release`
+channel: `auto-update.sh` pulls `:release` and replaces the one running node (`deploy/README.md`).
+
 The script generates local storage/setup credentials, starts the persistent Docker
 stack, performs first-run account setup, saves the permanent account to
 `.credentials.json`, and disables the temporary setup account. The `.env` and

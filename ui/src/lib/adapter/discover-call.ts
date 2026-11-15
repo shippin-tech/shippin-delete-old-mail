@@ -7,6 +7,17 @@ export const STORAGE_PREFIX = 'shippin-oauth-';
 
 
 
+/** The parts of the server's OAuth discovery document that sign-in reads. */
+export type DiscoveryDocument = {
+	authorization_endpoint?: string;
+	token_endpoint?: string;
+	end_session_endpoint?: string;
+	scopes_supported?: string[];
+	protected_resources?: string[];
+	client_id_metadata_document_supported?: boolean;
+	ShippinTECH_required_scopes?: unknown;
+};
+
 export type DiscoverNext =
 	| { step: 'register'; redirectUri: string; scope: string }
 	| { step: 'unconfigured'; message: string }

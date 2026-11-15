@@ -2,6 +2,7 @@ name: shippintech-local
 services:
   foundationdb:
     image: foundationdb/foundationdb:7.4.6
+    restart: unless-stopped
     environment:
       FDB_NETWORKING_MODE: container
     volumes:
@@ -23,6 +24,7 @@ services:
     entrypoint: [bash, /init-fdb.sh]
   minio:
     image: cgr.dev/chainguard/minio:latest
+    restart: unless-stopped
     environment:
       MINIO_ROOT_USER: ${LOCAL_S3_USER:?Create .env first}
       MINIO_ROOT_PASSWORD: ${LOCAL_S3_PASSWORD:?Create .env first}
@@ -42,6 +44,7 @@ services:
       - 'until mc alias set local http://minio:9000 "$$LOCAL_S3_USER" "$$LOCAL_S3_PASSWORD" >/dev/null 2>&1; do sleep 2; done; mc mb --ignore-existing local/shippin-local'
   nats:
     image: nats:2
+    restart: unless-stopped
     command: [--jetstream, --store_dir, /data]
     volumes:
       - nats-data:/data
@@ -95,6 +98,8 @@ services:
       - 127.0.0.1:21465:465
       - 127.0.0.1:21587:587
       - 127.0.0.1:21993:993
+      - 127.0.0.1:21995:995
+      - 127.0.0.1:21190:4190
   web:
     build:
       context: ../..

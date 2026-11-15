@@ -9,7 +9,7 @@ info:
     live (Server-Sent Events) telemetry streams.
   version: "1.0"
   license:
-    name: undecided for now-3.0-only
+    name: AGPL-3.0-only
 servers:
   - url: https://{host}
     description: shippin.tech server

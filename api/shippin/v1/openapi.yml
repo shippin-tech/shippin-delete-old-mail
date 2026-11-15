@@ -1,0 +1,4892 @@
+openapi: 3.0.3
+info:
+  title: shippin.tech Product API
+  description: 'Our own HTTP API, added on top of the compatible management API. It covers first-run setup,
+    the free plan, organisations, SSO, SCIM, recovery, alerts, masked addresses, keys, AI settings, the
+    assistant, lessons, the Google Drive link, MCP, statistics and traces. The compatible routes (`/api/auth`,
+    `/api/discover`, `/api/account`, `/api/schema`, `/api/token/*`, `/api/live/*`) are in `api/compat/v1/openapi.yml`
+    and are not repeated here.
+
+
+    Pre-release. Each operation names who may call it in `x-auth`, read from the handler, and the automated
+    test that exercises it in `x-proof` where one exists. `x-unverified: true` marks something not confirmed
+    from the code. Nothing here takes a key in a URL; secret fields are `writeOnly`.'
+  version: '1.0'
+  x-license-note: see LICENSE and RELEASE.md C1
+servers:
+- url: https://{host}
+  description: shippin.tech server
+  variables:
+    host:
+      default: mail.example.com
+      description: The hostname of the server
+security:
+- bearerAuth: []
+- basicAuth: []
+tags:
+- name: Product
+- name: Setup
+- name: Operations
+- name: Tracing
+- name: Assistant
+- name: Keys
+- name: MCP
+- name: SCIM
+- name: SSO
+- name: Calendar templates
+- name: Brand
+- name: Organisations
+- name: Organisation panel
+- name: Masked addresses
+- name: Recovery
+- name: Alerts
+- name: Google link
+- name: Lessons
+- name: Free plan
+paths:
+  /api:
+    get:
+      operationId: productIndex
+      summary: What this server offers, by product area
+      tags:
+      - Product
+      description: 'The same document as `resources/product/api.json`: each area with its web page, endpoints
+        and an honest status (live, partial or planned).'
+      x-auth: 'Public: no sign-in.'
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDocument'
+  /api/product:
+    get:
+      operationId: productIndexAlias
+      summary: Same as GET /api
+      tags:
+      - Product
+      x-auth: 'Public: no sign-in.'
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDocument'
+  /api/setup:
+    get:
+      operationId: setupStatus
+      summary: Is first-run setup still pending?
+      tags:
+      - Setup
+      x-auth: 'Not checked in code: this branch does not sign the caller in.'
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pending:
+                    type: boolean
+                required:
+                - pending
+      x-proof: ui/e2e-live/first-run.spec.ts
+  /api/setup/admin:
+    post:
+      operationId: setupAdmin
+      summary: Turn the printed setup key into the first administrator
+      tags:
+      - Setup
+      description: Creates the administrator's domain if needed, then the administrator account, then
+        retires the setup key for good. Fails with 409 `done` once an administrator exists.
+      x-auth: Signed in as the setup account (`admin` with the one-time setup key). Any other account
+        gets 403 notSetup.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                  writeOnly: true
+              required:
+              - email
+              - password
+      responses:
+        '200':
+          description: The administrator was created and the setup key retired
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email:
+                    type: string
+                required:
+                - email
+        '400':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/first-run.spec.ts
+      x-errors:
+      - invalidEmail
+      - weakPassword
+      - domainRejected
+      - adminRejected
+      - notSetup
+      - done
+  /api/resources:
+    get:
+      operationId: resources
+      summary: Server gauges and what each organisation uses
+      tags:
+      - Operations
+      x-auth: Permissions `liveMetrics` and `sysAccountGet`.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resources'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/resources.spec.ts
+  /api/stats:
+    get:
+      operationId: stats
+      summary: Dashboard statistics from the server's own sampler
+      tags:
+      - Operations
+      description: Counters are sampled into hourly and daily totals every minute. Use `period`, or `from`
+        and `to` together.
+      x-auth: Permission `liveMetrics`.
+      parameters:
+      - name: period
+        in: query
+        required: false
+        description: One of 24h, 7d, 30d, 90d. Default 24h.
+        schema:
+          type: string
+          enum:
+          - 24h
+          - 7d
+          - 30d
+          - 90d
+      - name: from
+        in: query
+        required: false
+        description: Start, seconds since 1970. Needs `to`.
+        schema:
+          type: integer
+      - name: to
+        in: query
+        required: false
+        description: End, seconds since 1970. Needs `from`.
+        schema:
+          type: integer
+      - name: node
+        in: query
+        required: false
+        description: A node id (an integer), or `all`.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stats'
+        '400':
+          description: 'invalidRange: bad period, from/to, or node'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/dashboard.spec.ts
+  /api/trace/token:
+    get:
+      operationId: traceToken
+      summary: A 60-second token for the live trace stream
+      tags:
+      - Tracing
+      x-auth: Permission `liveTracing`.
+      responses:
+        '200':
+          description: The token as plain text
+          content:
+            text/plain:
+              schema:
+                type: string
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/tracing.spec.ts
+  /api/trace/live:
+    get:
+      operationId: traceLive
+      summary: Stream the server's events (server-sent events)
+      tags:
+      - Tracing
+      x-auth: The token from `/api/trace/token`, passed as `?token=` (no Authorization header is read).
+      security:
+      - liveToken: []
+      parameters:
+      - name: token
+        in: query
+        required: false
+        description: Token from /api/trace/token.
+        schema:
+          type: string
+      - name: level
+        in: query
+        required: false
+        description: trace, debug, info, warn or error. Default debug.
+        schema:
+          type: string
+      - name: filter
+        in: query
+        required: false
+        description: A word to find in the event name or any value.
+        schema:
+          type: string
+      - name: '{key}'
+        in: query
+        required: false
+        description: Any other `key=value` pair filters on an event key such as accountName or remoteIp.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: 'Server-sent events: `ready` once, then `trace` events carrying arrays of event
+            objects; `: keepalive` comments in between.'
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '400':
+          description: invalidFilter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: noToken, or an invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      x-proof: ui/e2e-live/tracing.spec.ts
+  /api/trace/history:
+    get:
+      operationId: traceHistory
+      summary: Search stored traces
+      tags:
+      - Tracing
+      x-auth: Permission `liveTracing`.
+      parameters:
+      - name: q
+        in: query
+        required: false
+        description: Search text.
+        schema:
+          type: string
+      - name: kind
+        in: query
+        required: false
+        description: Trace kind filter.
+        schema:
+          type: string
+      - name: problems
+        in: query
+        required: false
+        description: '`1` to list only traces with problems.'
+        schema:
+          type: string
+      - name: before
+        in: query
+        required: false
+        description: Return traces before this value (paging).
+        schema:
+          type: integer
+      - name: limit
+        in: query
+        required: false
+        description: 1 to 500, default 100.
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  traces:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                required:
+                - traces
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/tracing.spec.ts
+      x-unverified-fields: The shape of each trace object is built by list_traces and was not read in
+        full.
+  /api/trace/history/{id}:
+    get:
+      operationId: traceHistoryOne
+      summary: The events of one stored trace
+      tags:
+      - Tracing
+      x-auth: Permission `liveTracing`.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Trace id.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                required:
+                - events
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: 'notFound: the trace is no longer kept'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/tracing.spec.ts
+  /api/assistant:
+    get:
+      operationId: assistantStatus
+      summary: Is the assistant turned on?
+      tags:
+      - Assistant
+      x-auth: Any signed-in account.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                required:
+                - enabled
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/assistant.spec.ts
+    post:
+      operationId: assistantAsk
+      summary: Ask the assistant a question about the product
+      tags:
+      - Assistant
+      description: 'Answers from this product''s own descriptions and lessons, fitted to the person''s
+        role (admin, owner or user). It has no tools: it cannot read mail or change anything. Conversations
+        are not stored.'
+      x-auth: 'Any signed-in account. Rate limit: 40 questions per hour per account.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                messages:
+                  type: array
+                  maxItems: 12
+                  description: Alternating turns starting with `user`; each content up to 4000 characters.
+                  items:
+                    type: object
+                    properties:
+                      role:
+                        type: string
+                        enum:
+                        - user
+                        - assistant
+                      content:
+                        type: string
+                    required:
+                    - role
+                    - content
+                page:
+                  type: string
+                  description: The screen the person is on.
+              required:
+              - messages
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  answer:
+                    type: string
+                required:
+                - answer
+        '400':
+          $ref: '#/components/responses/Problem'
+        '409':
+          description: 'off: the assistant is turned off'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          description: tooMany
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: 'unavailable: the AI service did not answer'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/assistant.spec.ts
+  /api/ai/settings:
+    get:
+      operationId: aiSettingsGet
+      summary: Read the AI service settings (the key is never returned)
+      tags:
+      - Assistant
+      x-auth: Server administrators only (the account is checked with is_server_admin; anyone else gets
+        403 notAdmin).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  kind:
+                    type: string
+                    nullable: true
+                  endpoint:
+                    type: string
+                    nullable: true
+                  model:
+                    type: string
+                    nullable: true
+                  hasKey:
+                    type: boolean
+                  assistant:
+                    type: boolean
+        '403':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/assistant.spec.ts
+    post:
+      operationId: aiSettingsSave
+      summary: Save the AI service settings
+      tags:
+      - Assistant
+      description: '`key` is write-only: it is sealed on the server and never returned. Paste it into
+        this field; never put it in a URL.'
+      x-auth: Server administrators only (the account is checked with is_server_admin; anyone else gets
+        403 notAdmin).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                kind:
+                  type: string
+                endpoint:
+                  type: string
+                model:
+                  type: string
+                key:
+                  type: string
+                  format: password
+                  writeOnly: true
+                assistant:
+                  type: boolean
+                  description: Turn the assistant on.
+      responses:
+        '200':
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  saved:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/assistant.spec.ts
+    delete:
+      operationId: aiSettingsRemove
+      summary: Remove the AI service settings
+      tags:
+      - Assistant
+      x-auth: Server administrators only (the account is checked with is_server_admin; anyone else gets
+        403 notAdmin).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  removed:
+                    type: boolean
+        '403':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/assistant.spec.ts
+  /api/ai/test:
+    post:
+      operationId: aiTest
+      summary: Check that the saved AI service answers
+      tags:
+      - Assistant
+      x-auth: Server administrators only (the account is checked with is_server_admin; anyone else gets
+        403 notAdmin).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  answer:
+                    type: string
+        '403':
+          $ref: '#/components/responses/Problem'
+        '409':
+          description: 'none: save the settings first'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/assistant.spec.ts
+  /api/keys:
+    get:
+      operationId: keysList
+      summary: Each service's keys, without their bytes
+      tags:
+      - Keys
+      x-auth: Server administrators only (the account is checked with is_server_admin; anyone else gets
+        403 notAdmin).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  services:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        service:
+                          type: string
+                        keys:
+                          type: array
+                          items:
+                            type: object
+                            additionalProperties: true
+                  wrapping:
+                    type: object
+                    properties:
+                      path:
+                        type: string
+                      madeHere:
+                        type: boolean
+                      readable:
+                        type: boolean
+        '403':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/keys.spec.ts
+      x-unverified-fields: The shape of each key description comes from keys::describe and was not read
+        in full.
+  /api/keys/author:
+    post:
+      operationId: keysAuthor
+      summary: Make the keys a new server still lacks
+      tags:
+      - Keys
+      x-auth: Server administrators only (the account is checked with is_server_admin; anyone else gets
+        403 notAdmin).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  made:
+                    type: array
+                    items:
+                      type: string
+        '403':
+          $ref: '#/components/responses/Problem'
+        '500':
+          description: keys
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/keys.spec.ts
+  /api/keys/{service}/replace:
+    post:
+      operationId: keysReplace
+      summary: Replace one service's key
+      tags:
+      - Keys
+      description: 'Where the new key comes from: random, pasted, an environment variable name, or a file
+        path. A pasted value is write-only.'
+      x-auth: Server administrators only (the account is checked with is_server_admin; anyone else gets
+        403 notAdmin).
+      parameters:
+      - name: service
+        in: path
+        required: true
+        description: A service name as listed by GET /api/keys.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+              - type: object
+                properties:
+                  from:
+                    type: string
+                    enum:
+                    - random
+              - type: object
+                properties:
+                  from:
+                    type: string
+                    enum:
+                    - value
+                  value:
+                    type: string
+                    format: byte
+                    writeOnly: true
+                    description: Base64 key bytes.
+                required:
+                - from
+                - value
+              - type: object
+                properties:
+                  from:
+                    type: string
+                    enum:
+                    - environmentVariable
+                  name:
+                    type: string
+                    maxLength: 128
+                required:
+                - from
+                - name
+              - type: object
+                properties:
+                  from:
+                    type: string
+                    enum:
+                    - file
+                  path:
+                    type: string
+                    description: Absolute path starting with /.
+                required:
+                - from
+                - path
+      responses:
+        '200':
+          description: Replaced; the service's values were sealed again under the new key before the old
+            one was destroyed
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          description: unknownService
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/keys.spec.ts
+  /api/mcp:
+    post:
+      operationId: mcp
+      summary: MCP server (JSON-RPC over Streamable HTTP)
+      tags:
+      - MCP
+      description: 'Speaks MCP 2026-07-28 (stateless: version and capabilities in `_meta`, mirrored in
+        the Streamable HTTP headers) and the initialize-based 2025-11-25, 2025-06-18 and 2025-03-26. Tools
+        are the actions screens declare (`resources/product/actions.json`). A call goes to the operator''s
+        open admin panel; nothing runs behind their back, writes ask first, and no tool takes a key. With
+        no admin panel open the agent is told why nothing happened. Other methods get 405.'
+      x-auth: Server administrators only (the account is checked with is_server_admin; anyone else gets
+        403 notAdmin). Origin must match the host.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: A JSON-RPC response, or a server-sent event stream while the operator decides on
+            a tool call that writes
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+            text/event-stream:
+              schema:
+                type: string
+        '400':
+          description: JSON-RPC parse error (-32700) or a bad protocol header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Origin not allowed, or not an administrator (JSON-RPC -32600)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '405':
+          description: Method not allowed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/mcp.spec.ts
+  /api/mcp/viewport/token:
+    post:
+      operationId: mcpViewportToken
+      summary: A 60-second token for the screen to open its stream
+      tags:
+      - MCP
+      x-auth: Server administrators only (the account is checked with is_server_admin; anyone else gets
+        403 notAdmin).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                required:
+                - token
+        '403':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/mcp.spec.ts
+  /api/mcp/viewport/stream:
+    get:
+      operationId: mcpViewportStream
+      summary: The calls waiting for the operator's screen (server-sent events)
+      tags:
+      - MCP
+      x-auth: The single-use token from /api/mcp/viewport/token, as `?token=`.
+      security:
+      - liveToken: []
+      parameters:
+      - name: token
+        in: query
+        required: false
+        description: Single-use token.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: 'Server-sent events: `ready` with the viewport id, then calls; keepalive comments
+            in between'
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          description: noToken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      x-proof: ui/e2e-live/mcp.spec.ts
+  /api/mcp/viewport/result:
+    post:
+      operationId: mcpViewportResult
+      summary: The screen reports the result of a call
+      tags:
+      - MCP
+      x-auth: Any signed-in account, and only for a call made for that same account.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                callId:
+                  type: string
+                ok:
+                  type: boolean
+                text:
+                  type: string
+                data: {}
+              required:
+              - callId
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  delivered:
+                    type: boolean
+        '404':
+          description: 'noCall: that call is no longer waiting'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/mcp.spec.ts
+  /api/scim/settings/{domain}:
+    get:
+      operationId: scimSettingsGet
+      summary: Does the domain have a provisioning token?
+      tags:
+      - SCIM
+      x-auth: 'Whoever manages the domain: a server administrator, the organisation''s administrator,
+        or the free-plan owner.'
+      parameters:
+      - name: domain
+        in: path
+        required: true
+        description: Domain name.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hasToken:
+                    type: boolean
+                  endpoint:
+                    type: string
+        '403':
+          description: notYourDomain
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/scim.spec.ts
+    post:
+      operationId: scimSettingsIssue
+      summary: Make a new provisioning token (shown once)
+      tags:
+      - SCIM
+      x-auth: Whoever manages the domain.
+      parameters:
+      - name: domain
+        in: path
+        required: true
+        description: Domain name.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: Shown only in this response. Store it where the identity provider asks
+                      for it.
+                  endpoint:
+                    type: string
+        '403':
+          description: notYourDomain
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/scim.spec.ts
+    delete:
+      operationId: scimSettingsRevoke
+      summary: Revoke the provisioning token
+      tags:
+      - SCIM
+      x-auth: Whoever manages the domain.
+      parameters:
+      - name: domain
+        in: path
+        required: true
+        description: Domain name.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  revoked:
+                    type: string
+        '403':
+          description: notYourDomain
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/scim.spec.ts
+  /api/scim/v2/ServiceProviderConfig:
+    get:
+      operationId: scimServiceProviderConfig
+      summary: SCIM service provider configuration
+      tags:
+      - SCIM
+      description: Patch and filter are supported; bulk, sort, etags and password change are not.
+      x-auth: 'The domain''s SCIM bearer token (`Authorization: Bearer`). It reaches nothing outside that
+        domain, and never a server administrator.'
+      security:
+      - scimToken: []
+      responses:
+        '200':
+          description: A SCIM resource
+          content:
+            application/scim+json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '401':
+          description: A valid bearer token is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '403':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '404':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '409':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+      x-proof: ui/e2e-live/scim.spec.ts
+  /api/scim/v2/ResourceTypes:
+    get:
+      operationId: scimResourceTypes
+      summary: SCIM resource types
+      tags:
+      - SCIM
+      description: Patch and filter are supported; bulk, sort, etags and password change are not.
+      x-auth: 'The domain''s SCIM bearer token (`Authorization: Bearer`). It reaches nothing outside that
+        domain, and never a server administrator.'
+      security:
+      - scimToken: []
+      responses:
+        '200':
+          description: A SCIM resource
+          content:
+            application/scim+json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '401':
+          description: A valid bearer token is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '403':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '404':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '409':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+      x-proof: ui/e2e-live/scim.spec.ts
+  /api/scim/v2/Schemas:
+    get:
+      operationId: scimSchemas
+      summary: SCIM schemas
+      tags:
+      - SCIM
+      description: Patch and filter are supported; bulk, sort, etags and password change are not.
+      x-auth: 'The domain''s SCIM bearer token (`Authorization: Bearer`). It reaches nothing outside that
+        domain, and never a server administrator.'
+      security:
+      - scimToken: []
+      responses:
+        '200':
+          description: A SCIM resource
+          content:
+            application/scim+json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '401':
+          description: A valid bearer token is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '403':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '404':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '409':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+      x-proof: ui/e2e-live/scim.spec.ts
+  /api/scim/v2/Users:
+    get:
+      operationId: scimUsersList
+      summary: List people
+      tags:
+      - SCIM
+      x-auth: 'The domain''s SCIM bearer token (`Authorization: Bearer`). It reaches nothing outside that
+        domain, and never a server administrator.'
+      security:
+      - scimToken: []
+      parameters:
+      - name: filter
+        in: query
+        required: false
+        description: '`eq` filters only.'
+        schema:
+          type: string
+      responses:
+        '200':
+          description: A SCIM ListResponse
+          content:
+            application/scim+json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '401':
+          description: A valid bearer token is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '403':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '404':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '409':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+      x-proof: ui/e2e-live/scim.spec.ts
+    post:
+      operationId: scimUsersCreate
+      summary: Create a person
+      tags:
+      - SCIM
+      description: Refused with 403 when the address is not on this domain or the organisation is full,
+        and with 409 when the person exists.
+      x-auth: 'The domain''s SCIM bearer token (`Authorization: Bearer`). It reaches nothing outside that
+        domain, and never a server administrator.'
+      security:
+      - scimToken: []
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Created
+          content:
+            application/scim+json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '401':
+          description: A valid bearer token is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '403':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '404':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '409':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+      x-proof: ui/e2e-live/scim.spec.ts
+  /api/scim/v2/Users/{id}:
+    get:
+      operationId: scimUserGet
+      summary: Read a person
+      tags:
+      - SCIM
+      x-auth: 'The domain''s SCIM bearer token (`Authorization: Bearer`). It reaches nothing outside that
+        domain, and never a server administrator.'
+      security:
+      - scimToken: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Person id.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: A SCIM resource
+          content:
+            application/scim+json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '401':
+          description: A valid bearer token is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '403':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '404':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '409':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+      x-proof: ui/e2e-live/scim.spec.ts
+    put:
+      operationId: scimUserReplace
+      summary: Replace a person
+      tags:
+      - SCIM
+      x-auth: 'The domain''s SCIM bearer token (`Authorization: Bearer`). It reaches nothing outside that
+        domain, and never a server administrator.'
+      security:
+      - scimToken: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Person id.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: A SCIM resource
+          content:
+            application/scim+json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '401':
+          description: A valid bearer token is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '403':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '404':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '409':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+      x-proof: ui/e2e-live/scim.spec.ts
+    patch:
+      operationId: scimUserPatch
+      summary: Change a person (PatchOp)
+      tags:
+      - SCIM
+      x-auth: 'The domain''s SCIM bearer token (`Authorization: Bearer`). It reaches nothing outside that
+        domain, and never a server administrator.'
+      security:
+      - scimToken: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Person id.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: A SCIM resource
+          content:
+            application/scim+json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '401':
+          description: A valid bearer token is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '403':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '404':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '409':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+      x-proof: ui/e2e-live/scim.spec.ts
+    delete:
+      operationId: scimUserDelete
+      summary: Remove a person
+      tags:
+      - SCIM
+      x-auth: 'The domain''s SCIM bearer token (`Authorization: Bearer`). It reaches nothing outside that
+        domain, and never a server administrator.'
+      security:
+      - scimToken: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Person id.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: A SCIM resource
+          content:
+            application/scim+json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '401':
+          description: A valid bearer token is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '403':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '404':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '409':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+      x-proof: ui/e2e-live/scim.spec.ts
+  /api/scim/v2/Groups:
+    get:
+      operationId: scimGroupsList
+      summary: List teams
+      tags:
+      - SCIM
+      x-auth: 'The domain''s SCIM bearer token (`Authorization: Bearer`). It reaches nothing outside that
+        domain, and never a server administrator.'
+      security:
+      - scimToken: []
+      parameters:
+      - name: filter
+        in: query
+        required: false
+        description: '`eq` filters only.'
+        schema:
+          type: string
+      responses:
+        '200':
+          description: A SCIM ListResponse
+          content:
+            application/scim+json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '401':
+          description: A valid bearer token is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '403':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '404':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '409':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+      x-proof: ui/e2e-live/scim.spec.ts
+    post:
+      operationId: scimGroupsCreate
+      summary: Create a team
+      tags:
+      - SCIM
+      x-auth: 'The domain''s SCIM bearer token (`Authorization: Bearer`). It reaches nothing outside that
+        domain, and never a server administrator.'
+      security:
+      - scimToken: []
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Created
+          content:
+            application/scim+json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '401':
+          description: A valid bearer token is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '403':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '404':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '409':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+      x-proof: ui/e2e-live/scim.spec.ts
+  /api/scim/v2/Groups/{id}:
+    get:
+      operationId: scimGroupGet
+      summary: Read a team
+      tags:
+      - SCIM
+      x-auth: 'The domain''s SCIM bearer token (`Authorization: Bearer`). It reaches nothing outside that
+        domain, and never a server administrator.'
+      security:
+      - scimToken: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Team id.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: A SCIM resource
+          content:
+            application/scim+json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '401':
+          description: A valid bearer token is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '403':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '404':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '409':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+      x-proof: ui/e2e-live/scim.spec.ts
+    put:
+      operationId: scimGroupReplace
+      summary: Replace a team
+      tags:
+      - SCIM
+      x-auth: 'The domain''s SCIM bearer token (`Authorization: Bearer`). It reaches nothing outside that
+        domain, and never a server administrator.'
+      security:
+      - scimToken: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Team id.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: A SCIM resource
+          content:
+            application/scim+json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '401':
+          description: A valid bearer token is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '403':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '404':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '409':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+      x-proof: ui/e2e-live/scim.spec.ts
+    patch:
+      operationId: scimGroupPatch
+      summary: Change a team (PatchOp)
+      tags:
+      - SCIM
+      x-auth: 'The domain''s SCIM bearer token (`Authorization: Bearer`). It reaches nothing outside that
+        domain, and never a server administrator.'
+      security:
+      - scimToken: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Team id.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: A SCIM resource
+          content:
+            application/scim+json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '401':
+          description: A valid bearer token is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '403':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '404':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '409':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+      x-proof: ui/e2e-live/scim.spec.ts
+    delete:
+      operationId: scimGroupDelete
+      summary: Remove a team
+      tags:
+      - SCIM
+      x-auth: 'The domain''s SCIM bearer token (`Authorization: Bearer`). It reaches nothing outside that
+        domain, and never a server administrator.'
+      security:
+      - scimToken: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Team id.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: A SCIM resource
+          content:
+            application/scim+json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '401':
+          description: A valid bearer token is required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '403':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '404':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+        '409':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScimError'
+      x-proof: ui/e2e-live/scim.spec.ts
+  /api/sso/{domain}:
+    get:
+      operationId: ssoOffered
+      summary: Does the domain offer sign-in through its own provider?
+      tags:
+      - SSO
+      x-auth: 'Public: the sign-in page asks.'
+      security: []
+      parameters:
+      - name: domain
+        in: path
+        required: true
+        description: Domain name.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+      x-proof: ui/e2e-live/sso.spec.ts
+  /api/sso/begin:
+    post:
+      operationId: ssoBegin
+      summary: Start a sign-in through the domain's provider
+      tags:
+      - SSO
+      x-auth: Public. Only the proof-key (S256) flow is accepted.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                account:
+                  type: string
+                  format: email
+                codeChallenge:
+                  type: string
+                codeChallengeMethod:
+                  type: string
+                  enum:
+                  - S256
+                clientId:
+                  type: string
+                redirectUri:
+                  type: string
+                nonce:
+                  type: string
+                scope:
+                  type: string
+                state:
+                  type: string
+              required:
+              - account
+              - codeChallenge
+              - codeChallengeMethod
+              - redirectUri
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                description: Where to send the browser.
+        '400':
+          description: 'invalid, or unavailable: this domain does not offer that sign-in'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: unreachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      x-proof: ui/e2e-live/sso.spec.ts
+  /api/sso/callback:
+    get:
+      operationId: ssoCallback
+      summary: Where the provider sends the browser back
+      tags:
+      - SSO
+      x-auth: Public; completes the sign-in from `code` and `state`.
+      security: []
+      parameters:
+      - name: code
+        in: query
+        required: false
+        description: Authorization code from the provider.
+        schema:
+          type: string
+      - name: state
+        in: query
+        required: false
+        description: State from the begin call.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: A redirect (302) back to the sign-in flow, or an error page
+      x-proof: ui/e2e-live/sso.spec.ts
+      x-unverified: true
+      x-unverified-fields: The exact redirect target and error page were not read in full.
+  /api/sso/{domain}/settings:
+    get:
+      operationId: ssoSettingsGet
+      summary: Read the domain's provider settings (no secret)
+      tags:
+      - SSO
+      x-auth: Whoever manages the domain (server administrator, the organisation's administrator, or the
+        free-plan owner).
+      parameters:
+      - name: domain
+        in: path
+        required: true
+        description: Domain name.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  issuer:
+                    type: string
+                    nullable: true
+                  clientId:
+                    type: string
+                    nullable: true
+                  hasSecret:
+                    type: boolean
+                  enabled:
+                    type: boolean
+                  callback:
+                    type: string
+        '400':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: notYourDomain
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/sso.spec.ts
+    post:
+      operationId: ssoSettingsSave
+      summary: Save the domain's provider settings
+      tags:
+      - SSO
+      x-auth: Whoever manages the domain (server administrator, the organisation's administrator, or the
+        free-plan owner).
+      parameters:
+      - name: domain
+        in: path
+        required: true
+        description: Domain name.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                issuer:
+                  type: string
+                clientId:
+                  type: string
+                clientSecret:
+                  type: string
+                  format: password
+                  writeOnly: true
+                enabled:
+                  type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  saved:
+                    type: string
+        '400':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: notYourDomain
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/sso.spec.ts
+    delete:
+      operationId: ssoSettingsRemove
+      summary: Remove the domain's provider settings
+      tags:
+      - SSO
+      x-auth: Whoever manages the domain (server administrator, the organisation's administrator, or the
+        free-plan owner).
+      parameters:
+      - name: domain
+        in: path
+        required: true
+        description: Domain name.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  removed:
+                    type: string
+        '400':
+          $ref: '#/components/responses/Problem'
+        '403':
+          description: notYourDomain
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/sso.spec.ts
+  /api/calendar-templates:
+    get:
+      operationId: calendarTemplatesList
+      summary: List the calendar emails and their wording
+      tags:
+      - Calendar templates
+      x-auth: Permission `sysCalendarSchedulingUpdate` (the server's administrators).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  templates:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        builtIn:
+                          type: string
+                        custom:
+                          type: string
+                          nullable: true
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/calendar-templates.spec.ts
+  /api/calendar-templates/{kind}:
+    post:
+      operationId: calendarTemplatesSave
+      summary: Save new wording for one calendar email
+      tags:
+      - Calendar templates
+      x-auth: Permission `sysCalendarSchedulingUpdate` (the server's administrators).
+      parameters:
+      - name: kind
+        in: path
+        required: true
+        description: A template id from the list.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                source:
+                  type: string
+              required:
+              - source
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  saved:
+                    type: string
+        '400':
+          description: invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/calendar-templates.spec.ts
+    delete:
+      operationId: calendarTemplatesReset
+      summary: Go back to the built-in wording
+      tags:
+      - Calendar templates
+      x-auth: Permission `sysCalendarSchedulingUpdate` (the server's administrators).
+      parameters:
+      - name: kind
+        in: path
+        required: true
+        description: A template id from the list.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reset:
+                    type: string
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/calendar-templates.spec.ts
+  /api/brand/{domain}:
+    get:
+      operationId: brandGet
+      summary: A domain's logo
+      tags:
+      - Brand
+      x-auth: 'Public: the sign-in page shows it.'
+      security: []
+      parameters:
+      - name: domain
+        in: path
+        required: true
+        description: Domain name.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: The image, cached for 5 minutes
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+      x-proof: ui/e2e-live/brand.spec.ts
+    post:
+      operationId: brandSet
+      summary: Set a domain's logo (the image is the body)
+      tags:
+      - Brand
+      x-auth: 'Whoever manages the domain: permission `sysDomainUpdate`, the organisation''s administrator,
+        or the free-plan owner.'
+      parameters:
+      - name: domain
+        in: path
+        required: true
+        description: Domain name.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          image/png:
+            schema:
+              type: string
+              format: binary
+          image/jpeg:
+            schema:
+              type: string
+              format: binary
+          image/webp:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domain:
+                    type: string
+        '400':
+          description: invalidLogo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: notYourDomain
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/brand.spec.ts
+    delete:
+      operationId: brandRemove
+      summary: Remove a domain's logo
+      tags:
+      - Brand
+      x-auth: Whoever manages the domain.
+      parameters:
+      - name: domain
+        in: path
+        required: true
+        description: Domain name.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domain:
+                    type: string
+        '403':
+          description: notYourDomain
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/brand.spec.ts
+  /api/orgs:
+    get:
+      operationId: orgsList
+      summary: List organisations and every domain on the server
+      tags:
+      - Organisations
+      x-auth: Permissions `sysDomainUpdate` and `sysAccountUpdate` (the server's administrators).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orgs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Organisation'
+                  domains:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/org.spec.ts
+    post:
+      operationId: orgsSave
+      summary: Create or change an organisation
+      tags:
+      - Organisations
+      description: Each administrator must already be an account on one of the organisation's domains.
+      x-auth: Permissions `sysDomainUpdate` and `sysAccountUpdate` (the server's administrators).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                domains:
+                  type: array
+                  items:
+                    type: string
+                admins:
+                  type: array
+                  items:
+                    type: string
+                    format: email
+                maxPeople:
+                  type: integer
+                maxStorageGb:
+                  type: integer
+              required:
+              - name
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organisation'
+        '400':
+          description: invalid, unknownAdmin or adminOutside
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/org.spec.ts
+  /api/orgs/{id}:
+    delete:
+      operationId: orgsDelete
+      summary: Remove an organisation (its domains and people stay)
+      tags:
+      - Organisations
+      x-auth: Permissions `sysDomainUpdate` and `sysAccountUpdate` (the server's administrators).
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Organisation id.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: string
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/org.spec.ts
+  /api/org:
+    get:
+      operationId: orgOverview
+      summary: 'The organisation''s overview: people, teams, domains, storage'
+      tags:
+      - Organisation panel
+      x-auth: An organisation's own administrator. Any other account gets 403 notOrgAdmin. It only reaches
+        people on that organisation's domains and never a server administrator.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgOverview'
+        '403':
+          description: notOrgAdmin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/org.spec.ts
+  /api/org/people:
+    post:
+      operationId: orgPeopleAdd
+      summary: Add a person
+      tags:
+      - Organisation panel
+      x-auth: An organisation's own administrator. Any other account gets 403 notOrgAdmin. It only reaches
+        people on that organisation's domains and never a server administrator.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                domainId:
+                  type: string
+                name:
+                  type: string
+                password:
+                  type: string
+                  format: password
+                  writeOnly: true
+                fullName:
+                  type: string
+                limitGb:
+                  type: integer
+              required:
+              - domainId
+              - name
+              - password
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    nullable: true
+        '400':
+          description: invalidName, weakPassword or rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: notOrgAdmin, notYourDomain or a plan limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/org.spec.ts
+  /api/org/people/{id}:
+    post:
+      operationId: orgPeopleChange
+      summary: Change a person (password, name, storage limit)
+      tags:
+      - Organisation panel
+      x-auth: An organisation's own administrator. Any other account gets 403 notOrgAdmin. It only reaches
+        people on that organisation's domains and never a server administrator.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Person id.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+                  format: password
+                  writeOnly: true
+                fullName:
+                  type: string
+                limitGb:
+                  type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated:
+                    type: string
+        '400':
+          description: invalidName, weakPassword or rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: notOrgAdmin, notYourDomain or a plan limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/org.spec.ts
+    delete:
+      operationId: orgPeopleRemove
+      summary: Remove a person
+      tags:
+      - Organisation panel
+      x-auth: An organisation's own administrator. Any other account gets 403 notOrgAdmin. It only reaches
+        people on that organisation's domains and never a server administrator.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Person id.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: string
+        '400':
+          description: invalidName, weakPassword or rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: notOrgAdmin, notYourDomain or a plan limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: 'isAdmin: an organisation administrator cannot be removed here'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/org.spec.ts
+  /api/org/people/{id}/aliases:
+    post:
+      operationId: orgAliasAdd
+      summary: Add an alias to a person
+      tags:
+      - Organisation panel
+      x-auth: An organisation's own administrator. Any other account gets 403 notOrgAdmin. It only reaches
+        people on that organisation's domains and never a server administrator.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Person id.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                alias:
+                  type: string
+              required:
+              - alias
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alias:
+                    type: string
+        '400':
+          description: invalidName, weakPassword or rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: notOrgAdmin, notYourDomain or a plan limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: exists or rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/org.spec.ts
+  /api/org/people/{id}/aliases/{alias}:
+    delete:
+      operationId: orgAliasRemove
+      summary: Remove an alias
+      tags:
+      - Organisation panel
+      x-auth: An organisation's own administrator. Any other account gets 403 notOrgAdmin. It only reaches
+        people on that organisation's domains and never a server administrator.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Person id.
+        schema:
+          type: string
+      - name: alias
+        in: path
+        required: true
+        description: The alias local part.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  removed:
+                    type: string
+        '400':
+          description: invalidName, weakPassword or rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: notOrgAdmin, notYourDomain or a plan limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/org.spec.ts
+  /api/org/teams:
+    post:
+      operationId: orgTeamAdd
+      summary: Create a team with its own address
+      tags:
+      - Organisation panel
+      x-auth: An organisation's own administrator. Any other account gets 403 notOrgAdmin. It only reaches
+        people on that organisation's domains and never a server administrator.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                domainId:
+                  type: string
+                name:
+                  type: string
+                description:
+                  type: string
+              required:
+              - domainId
+              - name
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    nullable: true
+        '400':
+          description: invalidName, weakPassword or rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: notOrgAdmin, notYourDomain or a plan limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/org.spec.ts
+  /api/org/teams/{id}/members:
+    post:
+      operationId: orgTeamMember
+      summary: Add or remove a team member
+      tags:
+      - Organisation panel
+      x-auth: An organisation's own administrator. Any other account gets 403 notOrgAdmin. It only reaches
+        people on that organisation's domains and never a server administrator.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Team id.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                person:
+                  type: string
+                member:
+                  type: boolean
+              required:
+              - person
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  member:
+                    type: boolean
+        '400':
+          description: invalidName, weakPassword or rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: notOrgAdmin, notYourDomain or a plan limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/org.spec.ts
+  /api/org/teams/{id}:
+    delete:
+      operationId: orgTeamRemove
+      summary: Remove a team
+      tags:
+      - Organisation panel
+      x-auth: An organisation's own administrator. Any other account gets 403 notOrgAdmin. It only reaches
+        people on that organisation's domains and never a server administrator.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Team id.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: string
+        '400':
+          description: invalidName, weakPassword or rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: notOrgAdmin, notYourDomain or a plan limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/org.spec.ts
+  /api/org/domains/{id}/dns:
+    get:
+      operationId: orgDomainDns
+      summary: Live check of the DNS records a domain needs
+      tags:
+      - Organisation panel
+      x-auth: An organisation's own administrator. Any other account gets 403 notOrgAdmin. It only reaches
+        people on that organisation's domains and never a server administrator.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Domain id (one of the organisation's).
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domain:
+                    type: string
+                  zone:
+                    type: string
+                    description: A BIND zone fragment.
+                  records:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DnsRecord'
+        '403':
+          description: notOrgAdmin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/org.spec.ts
+  /api/masked:
+    get:
+      operationId: maskedList
+      summary: List my masked addresses
+      tags:
+      - Masked addresses
+      x-auth: Any signed-in account; only ever its own addresses.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  limit:
+                    type: integer
+                  addresses:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MaskedAddress'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/masked.spec.ts
+    post:
+      operationId: maskedCreate
+      summary: Make a masked address
+      tags:
+      - Masked addresses
+      description: A random address on the person's own domain that delivers to their mailbox and refuses
+        mail once switched off. Receiving only.
+      x-auth: Any signed-in account; only ever its own addresses.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaskedAddress'
+        '400':
+          description: invalid, for example the limit was reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/masked.spec.ts
+  /api/masked/{local}:
+    post:
+      operationId: maskedChange
+      summary: Switch an address on or off, or rename it
+      tags:
+      - Masked addresses
+      x-auth: Any signed-in account; only ever its own addresses.
+      parameters:
+      - name: local
+        in: path
+        required: true
+        description: The part before the @.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                label:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaskedAddress'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/masked.spec.ts
+    delete:
+      operationId: maskedDelete
+      summary: Remove a masked address
+      tags:
+      - Masked addresses
+      x-auth: Any signed-in account; only ever its own addresses.
+      parameters:
+      - name: local
+        in: path
+        required: true
+        description: The part before the @.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: string
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/masked.spec.ts
+  /api/recover/accounts:
+    get:
+      operationId: recoverAccounts
+      summary: Deleted accounts that can still be restored
+      tags:
+      - Recovery
+      x-auth: Permission `sysAccountGet`.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  keepDays:
+                    type: integer
+                  accounts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        email:
+                          type: string
+                        kind:
+                          type: string
+                        deletedAt:
+                          type: integer
+                        until:
+                          type: integer
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/recover.spec.ts
+  /api/recover/accounts/{id}/restore:
+    post:
+      operationId: recoverAccountRestore
+      summary: Restore a deleted account
+      tags:
+      - Recovery
+      x-auth: Permission `sysAccountCreate`.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Account id.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restored:
+                    type: string
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/recover.spec.ts
+  /api/recover/messages/{account}:
+    get:
+      operationId: recoverMessages
+      summary: Deleted messages of an account that are still kept
+      tags:
+      - Recovery
+      x-auth: Permission `sysAccountUpdate`.
+      parameters:
+      - name: account
+        in: path
+        required: true
+        description: Account id.
+        schema:
+          type: string
+      - name: before
+        in: query
+        required: false
+        description: Paging cursor from the previous page.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/recover.spec.ts
+      x-unverified-fields: The shape of each kept message comes from list_kept and was not read in full.
+  /api/recover/messages/{account}/{id}/restore:
+    post:
+      operationId: recoverMessageRestore
+      summary: Restore a deleted message
+      tags:
+      - Recovery
+      x-auth: Permission `sysAccountUpdate`.
+      parameters:
+      - name: account
+        in: path
+        required: true
+        description: Account id.
+        schema:
+          type: string
+      - name: id
+        in: path
+        required: true
+        description: Message id.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restored:
+                    type: string
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/recover.spec.ts
+  /api/alerts:
+    get:
+      operationId: alertsList
+      summary: List alert rules and the metrics they can watch
+      tags:
+      - Alerts
+      x-auth: Permission `liveMetrics`.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rules:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AlertRule'
+                  metrics:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        description:
+                          type: string
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/alerts.spec.ts
+    post:
+      operationId: alertsSave
+      summary: Save an alert rule
+      tags:
+      - Alerts
+      description: A rule fires by email or webhook when a metric crosses a threshold, then waits out
+        its cooldown.
+      x-auth: Permission `liveMetrics`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertRule'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertRule'
+        '400':
+          description: invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/alerts.spec.ts
+  /api/alerts/check:
+    post:
+      operationId: alertsCheck
+      summary: Check every rule now
+      tags:
+      - Alerts
+      x-auth: Permission `liveMetrics`.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/alerts.spec.ts
+      x-unverified-fields: The shape of each result comes from check_alerts and was not read in full.
+  /api/alerts/{id}:
+    delete:
+      operationId: alertsDelete
+      summary: Remove an alert rule
+      tags:
+      - Alerts
+      x-auth: Permission `liveMetrics`.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Rule id.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: string
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/alerts.spec.ts
+  /api/google:
+    get:
+      operationId: googleStatus
+      summary: Is the Google Drive link available and connected?
+      tags:
+      - Google link
+      x-auth: Any signed-in account; only its own link.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  available:
+                    type: boolean
+                  connected:
+                    type: boolean
+                  email:
+                    type: string
+                    nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/google.spec.ts
+  /api/google/connect:
+    post:
+      operationId: googleConnect
+      summary: The Google sign-in address
+      tags:
+      - Google link
+      x-auth: Any signed-in account; only its own link.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+        '404':
+          description: 'notConfigured: the Google link is not set up on this server'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: notConnected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: 'google: Google refused or did not answer'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/google.spec.ts
+  /api/google/callback:
+    get:
+      operationId: googleCallback
+      summary: Where Google sends the browser back
+      tags:
+      - Google link
+      x-auth: The browser carries the state made by /connect.
+      security: []
+      responses:
+        '200':
+          description: Completes the link and returns the browser to the app
+      x-proof: ui/e2e-live/google.spec.ts
+      x-unverified: true
+      x-unverified-fields: Listed in the handler's header comment, but no match arm for it was found in
+        google.rs; it may be served elsewhere.
+  /api/google/disconnect:
+    post:
+      operationId: googleDisconnect
+      summary: Forget the link and revoke it at Google
+      tags:
+      - Google link
+      x-auth: Any signed-in account; only its own link.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connected:
+                    type: boolean
+        '404':
+          description: 'notConfigured: the Google link is not set up on this server'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: notConnected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: 'google: Google refused or did not answer'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/google.spec.ts
+  /api/google/files:
+    get:
+      operationId: googleFiles
+      summary: List Drive files
+      tags:
+      - Google link
+      x-auth: Any signed-in account; only its own link.
+      parameters:
+      - name: folder
+        in: query
+        required: false
+        description: Folder id.
+        schema:
+          type: string
+      - name: search
+        in: query
+        required: false
+        description: Search text.
+        schema:
+          type: string
+      - name: shared
+        in: query
+        required: false
+        description: '`1` for files shared with the person.'
+        schema:
+          type: string
+      - name: pageToken
+        in: query
+        required: false
+        description: From the previous page.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  files:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GoogleFile'
+                  nextPage:
+                    type: string
+                    nullable: true
+        '404':
+          description: 'notConfigured: the Google link is not set up on this server'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: notConnected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: 'google: Google refused or did not answer'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/google.spec.ts
+  /api/google/info/{id}:
+    get:
+      operationId: googleInfo
+      summary: One Drive file's details
+      tags:
+      - Google link
+      x-auth: Any signed-in account; only its own link.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Google file id.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoogleFile'
+        '404':
+          description: 'notConfigured: the Google link is not set up on this server'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: notConnected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: 'google: Google refused or did not answer'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/google.spec.ts
+  /api/google/content/{id}:
+    get:
+      operationId: googleContent
+      summary: A file's bytes (Google Docs are exported)
+      tags:
+      - Google link
+      x-auth: Any signed-in account; only its own link.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Google file id.
+        schema:
+          type: string
+      - name: export
+        in: query
+        required: false
+        description: An export format offered in the file's `exports` list.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: The file; `X-File-Extension` names its extension
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: 'notConfigured: the Google link is not set up on this server'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: notConnected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: 'google: Google refused or did not answer'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '400':
+          description: 'folder: a folder has no content'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/google.spec.ts
+  /api/google/copy:
+    post:
+      operationId: googleCopy
+      summary: Put a copy of one of the person's files in Google Drive
+      tags:
+      - Google link
+      x-auth: Any signed-in account; only its own link.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                blobId:
+                  type: string
+                  description: A blob of the person's own.
+                name:
+                  type: string
+                type:
+                  type: string
+                parent:
+                  type: string
+              required:
+              - blobId
+              - name
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoogleFile'
+        '404':
+          description: 'notConfigured: the Google link is not set up on this server'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: notConnected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: 'google: Google refused or did not answer'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '400':
+          description: invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: 'forbidden: not a file of the person''s'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/google.spec.ts
+  /api/learn/progress:
+    get:
+      operationId: learnProgress
+      summary: Which lesson steps I have finished
+      tags:
+      - Lessons
+      x-auth: Any signed-in account; only its own progress.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lessons:
+                    type: object
+                    additionalProperties:
+                      $ref: '#/components/schemas/LessonProgress'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/learn.spec.ts
+  /api/learn/progress/{lesson}:
+    post:
+      operationId: learnRecord
+      summary: Record finished steps
+      tags:
+      - Lessons
+      description: 'Steps are only ever added: another device cannot take finished steps away. Answers
+        with the merged progress. At most 32 lessons and 64 steps each.'
+      x-auth: Any signed-in account; only its own progress.
+      parameters:
+      - name: lesson
+        in: path
+        required: true
+        description: Lowercase words joined by dashes.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LessonProgress'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LessonProgress'
+        '400':
+          description: invalidLesson, invalidProgress or tooManyLessons
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/learn.spec.ts
+    delete:
+      operationId: learnReset
+      summary: Start a lesson over
+      tags:
+      - Lessons
+      x-auth: Any signed-in account; only its own progress.
+      parameters:
+      - name: lesson
+        in: path
+        required: true
+        description: Lowercase words joined by dashes.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LessonProgress'
+        '400':
+          description: invalidLesson
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: ui/e2e-live/learn.spec.ts
+  /api/panel/plan:
+    get:
+      operationId: panelPlan
+      summary: The plan's limits and how to prove a domain
+      tags:
+      - Free plan
+      x-auth: Public.
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  signup:
+                    type: string
+                    enum:
+                    - open
+                    - closed
+                  dnsProof:
+                    type: boolean
+                  mailboxes:
+                    type: integer
+                  aliases:
+                    type: integer
+                  mailboxMb:
+                    type: integer
+                  sendsPerDay:
+                    type: integer
+                  mailHost:
+                    type: string
+                  verifyLabel:
+                    type: string
+      x-proof: deploy/local/verify_panel.py
+  /api/panel/signup/code:
+    post:
+      operationId: panelSignupCode
+      summary: The TXT record that proves a domain is yours
+      tags:
+      - Free plan
+      x-auth: Public. Signups can be closed (403 signupClosed) and are rate-limited per IP (429).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                domain:
+                  type: string
+              required:
+              - domain
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domain:
+                    type: string
+                  record:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      name:
+                        type: string
+                      value:
+                        type: string
+                  dnsProof:
+                    type: boolean
+        '400':
+          description: invalidDomain
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: signupClosed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: domainTaken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          description: keys
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      x-proof: deploy/local/verify_panel.py
+  /api/panel/signup:
+    post:
+      operationId: panelSignup
+      summary: Create a domain and its owner mailbox
+      tags:
+      - Free plan
+      description: Checks the TXT record first, unless the server skips the proof (local test stacks only).
+      x-auth: Public. Signups can be closed (403 signupClosed) and are rate-limited per IP (429).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                domain:
+                  type: string
+                name:
+                  type: string
+                password:
+                  type: string
+                  format: password
+                  writeOnly: true
+              required:
+              - domain
+              - name
+              - password
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email:
+                    type: string
+                  domain:
+                    type: string
+        '400':
+          description: invalidDomain, invalidName, weakPassword, domainRejected or ownerRejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: signupClosed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: domainTaken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+      x-proof: deploy/local/verify_panel.py
+      x-unverified: true
+      x-errors:
+      - invalidDomain
+      - invalidName
+      - weakPassword
+      - domainRejected
+      - ownerRejected
+      - signupClosed
+      - domainTaken
+      x-unverified-fields: A DNS-proof failure's status code and error name were not read.
+  /api/panel/domain:
+    get:
+      operationId: panelDomain
+      summary: 'My domain: plan, usage, catch-all, DNS zone'
+      tags:
+      - Free plan
+      x-auth: Signed in as a free-plan domain owner (the "Self-service domain owner" role). Anyone else
+        gets 403 notOwner.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  domain:
+                    type: string
+                  plan:
+                    type: object
+                    properties:
+                      mailboxes:
+                        type: integer
+                      aliases:
+                        type: integer
+                      mailboxMb:
+                        type: integer
+                  usage:
+                    type: object
+                    properties:
+                      mailboxes:
+                        type: integer
+                      aliases:
+                        type: integer
+                  catchAll:
+                    type: string
+                    nullable: true
+                  mailHost:
+                    type: string
+                  dnsZone:
+                    type: string
+        '400':
+          description: see x-errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: notOwner, ownerMailbox or planLimit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: deploy/local/verify_panel.py
+  /api/panel/dns:
+    get:
+      operationId: panelDns
+      summary: Live check of the DNS records my domain needs
+      tags:
+      - Free plan
+      x-auth: Signed in as a free-plan domain owner (the "Self-service domain owner" role). Anyone else
+        gets 403 notOwner.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  records:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DnsRecord'
+        '400':
+          description: see x-errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: notOwner, ownerMailbox or planLimit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: deploy/local/verify_panel.py
+  /api/panel/domain/close:
+    post:
+      operationId: panelClose
+      summary: Delete every mailbox and the domain
+      tags:
+      - Free plan
+      description: Destructive. The owner must type the domain name; mail data is purged by the server's
+        account-removal task.
+      x-auth: Signed in as a free-plan domain owner (the "Self-service domain owner" role). Anyone else
+        gets 403 notOwner.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                confirm:
+                  type: string
+                  description: The domain name, typed by the owner.
+              required:
+              - confirm
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  closed:
+                    type: string
+        '400':
+          description: notConfirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: notOwner, ownerMailbox or planLimit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: deploy/local/verify_panel.py
+      x-destructive: true
+  /api/panel/domain/catchall:
+    post:
+      operationId: panelCatchAll
+      summary: Send mail for unknown addresses to one mailbox, or stop it
+      tags:
+      - Free plan
+      x-auth: Signed in as a free-plan domain owner (the "Self-service domain owner" role). Anyone else
+        gets 403 notOwner.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mailbox:
+                  type: string
+                  description: A mailbox address, or empty to turn the catch-all off.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  catchAll:
+                    type: string
+                    nullable: true
+        '400':
+          description: see x-errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: notOwner, ownerMailbox or planLimit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: deploy/local/verify_panel.py
+  /api/panel/mailboxes:
+    get:
+      operationId: panelMailboxes
+      summary: My domain's mailboxes
+      tags:
+      - Free plan
+      x-auth: Signed in as a free-plan domain owner (the "Self-service domain owner" role). Anyone else
+        gets 403 notOwner.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mailboxes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        email:
+                          type: string
+                        owner:
+                          type: boolean
+                        you:
+                          type: boolean
+                        aliases:
+                          type: array
+                          items:
+                            type: string
+                        quotaBytes:
+                          type: integer
+                        usedBytes:
+                          type: integer
+        '400':
+          description: see x-errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: notOwner, ownerMailbox or planLimit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: deploy/local/verify_panel.py
+    post:
+      operationId: panelMailboxCreate
+      summary: Add a mailbox
+      tags:
+      - Free plan
+      x-auth: Signed in as a free-plan domain owner (the "Self-service domain owner" role). Anyone else
+        gets 403 notOwner.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                password:
+                  type: string
+                  format: password
+                  writeOnly: true
+              required:
+              - name
+              - password
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    nullable: true
+                  email:
+                    type: string
+        '400':
+          description: invalidName, weakPassword or rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: notOwner, ownerMailbox or planLimit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: deploy/local/verify_panel.py
+  /api/panel/mailboxes/{id}:
+    delete:
+      operationId: panelMailboxDelete
+      summary: Delete a mailbox
+      tags:
+      - Free plan
+      x-auth: Signed in as a free-plan domain owner (the "Self-service domain owner" role). Anyone else
+        gets 403 notOwner.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Mailbox id.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  destroyed:
+                    type: string
+        '400':
+          description: see x-errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: notOwner, ownerMailbox or planLimit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: deploy/local/verify_panel.py
+      x-destructive: true
+  /api/panel/mailboxes/{id}/password:
+    post:
+      operationId: panelMailboxPassword
+      summary: Change a mailbox's password
+      tags:
+      - Free plan
+      x-auth: Signed in as a free-plan domain owner (the "Self-service domain owner" role). Anyone else
+        gets 403 notOwner.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Mailbox id.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+                  format: password
+                  writeOnly: true
+              required:
+              - password
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated:
+                    type: string
+        '400':
+          description: weakPassword or rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: notOwner, ownerMailbox or planLimit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: deploy/local/verify_panel.py
+  /api/panel/mailboxes/{id}/aliases:
+    post:
+      operationId: panelAliasAdd
+      summary: Add an alias to a mailbox
+      tags:
+      - Free plan
+      x-auth: Signed in as a free-plan domain owner (the "Self-service domain owner" role). Anyone else
+        gets 403 notOwner.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Mailbox id.
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                alias:
+                  type: string
+              required:
+              - alias
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alias:
+                    type: string
+        '400':
+          description: see x-errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: notOwner, ownerMailbox or planLimit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: deploy/local/verify_panel.py
+  /api/panel/mailboxes/{id}/aliases/{alias}:
+    delete:
+      operationId: panelAliasRemove
+      summary: Remove an alias
+      tags:
+      - Free plan
+      x-auth: Signed in as a free-plan domain owner (the "Self-service domain owner" role). Anyone else
+        gets 403 notOwner.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Mailbox id.
+        schema:
+          type: string
+      - name: alias
+        in: path
+        required: true
+        description: The alias local part.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  removed:
+                    type: string
+        '400':
+          description: see x-errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: notOwner, ownerMailbox or planLimit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-proof: deploy/local/verify_panel.py
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: OAuth2 access token issued by `POST /auth/token`.
+    basicAuth:
+      type: http
+      scheme: basic
+      description: HTTP Basic authentication using account name and secret.
+    liveToken:
+      type: apiKey
+      in: query
+      name: token
+      description: A short-lived token (60 seconds) for event streams, where a browser cannot set an Authorization
+        header.
+    scimToken:
+      type: http
+      scheme: bearer
+      description: A per-domain SCIM token made at `POST /api/scim/settings/{domain}`. It reaches nothing
+        outside that domain.
+  responses:
+    Problem:
+      description: The request was refused; `error` is a short code, `message` plain words.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            additionalProperties: true
+    Forbidden:
+      description: The account lacks the permission this call needs
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            additionalProperties: true
+    NotFound:
+      description: No such resource
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            additionalProperties: true
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            additionalProperties: true
+  schemas:
+    Problem:
+      type: object
+      properties:
+        error:
+          type: string
+          description: A short code such as notYourDomain.
+        message:
+          type: string
+      required:
+      - error
+      - message
+    ScimError:
+      type: object
+      additionalProperties: true
+      description: A SCIM error (RFC 7644 section 3.12).
+    ProductDocument:
+      type: object
+      additionalProperties: true
+      description: 'See resources/product/api.json: product, prerelease, summary, reviewed, statuses,
+        areas.'
+    Organisation:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        domains:
+          type: array
+          items:
+            type: string
+        admins:
+          type: array
+          items:
+            type: string
+        maxPeople:
+          type: integer
+        maxStorage:
+          type: integer
+          description: Bytes.
+        createdAt:
+          type: integer
+        people:
+          type: integer
+        storageHeld:
+          type: integer
+    OrgOverview:
+      type: object
+      properties:
+        name:
+          type: string
+        me:
+          type: string
+        maxPeople:
+          type: integer
+        maxStorage:
+          type: integer
+        storageUsed:
+          type: integer
+        storageHeld:
+          type: integer
+        domains:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+        people:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              email:
+                type: string
+              domainId:
+                type: string
+              fullName:
+                type: string
+              limit:
+                type: integer
+                nullable: true
+              used:
+                type: integer
+              aliases:
+                type: array
+                items:
+                  type: string
+              teamIds:
+                type: array
+                items:
+                  type: string
+              admin:
+                type: boolean
+              protected:
+                type: boolean
+        teams:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              email:
+                type: string
+              domainId:
+                type: string
+              description:
+                type: string
+    DnsRecord:
+      type: object
+      properties:
+        kind:
+          type: string
+        name:
+          type: string
+        expected:
+          type: string
+        state:
+          type: string
+          enum:
+          - found
+          - different
+          - missing
+        actual:
+          type: string
+          nullable: true
+    MaskedAddress:
+      type: object
+      properties:
+        address:
+          type: string
+        accountId:
+          type: integer
+        label:
+          type: string
+        enabled:
+          type: boolean
+        createdAt:
+          type: integer
+    AlertRule:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        metric:
+          type: string
+        window:
+          type: string
+          enum:
+          - 1h
+          - 24h
+        above:
+          type: boolean
+          description: Fire above the threshold (true) or below it (false).
+        threshold:
+          type: number
+        email:
+          type: array
+          items:
+            type: string
+        webhook:
+          type: string
+          nullable: true
+        enabled:
+          type: boolean
+        cooldownMinutes:
+          type: integer
+        lastFired:
+          type: integer
+          nullable: true
+        lastValue:
+          type: number
+          nullable: true
+      required:
+      - name
+      - metric
+      - window
+      - above
+      - threshold
+    GoogleFile:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        size:
+          type: integer
+          nullable: true
+        modified:
+          type: string
+        webLink:
+          type: string
+        exports:
+          type: array
+          items:
+            type: string
+      description: Only what the screen shows, never Google's own payload.
+    LessonProgress:
+      type: object
+      properties:
+        done:
+          type: array
+          items:
+            type: string
+        dismissed:
+          type: boolean
+    Resources:
+      type: object
+      properties:
+        server:
+          type: object
+          properties:
+            host:
+              type: string
+            memory:
+              type: number
+            disk:
+              type: object
+              additionalProperties: true
+            people:
+              type: number
+            domains:
+              type: number
+            queue:
+              type: number
+        orgs:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              domains:
+                type: array
+                items:
+                  type: string
+              people:
+                type: integer
+              maxPeople:
+                type: integer
+              peopleLevel:
+                type: string
+              storageUsed:
+                type: integer
+              storageHeld:
+                type: integer
+              maxStorage:
+                type: integer
+              storageLevel:
+                type: string
+        other:
+          type: object
+          properties:
+            domains:
+              type: integer
+            people:
+              type: integer
+            storageUsed:
+              type: integer
+    Stats:
+      type: object
+      properties:
+        period:
+          type: string
+        start:
+          type: integer
+        step:
+          type: integer
+        points:
+          type: integer
+        since:
+          type: integer
+          nullable: true
+        node:
+          type: integer
+          nullable: true
+        nodes:
+          type: integer
+        nodeList:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        live:
+          type: object
+          additionalProperties:
+            type: number
+        history:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              kind:
+                type: string
+              values:
+                type: array
+                items:
+                  type: number
+                  nullable: true
+              total:
+                type: number
+                nullable: true
+              previous:
+                type: number
+                nullable: true
+        descriptions:
+          type: object
+          additionalProperties:
+            type: string
+x-compat-note: 'Served by the compatible management API, documented in api/compat/v1/openapi.yml: /api/auth,
+  /api/discover/{email}, /api/account, /api/schema, /api/schema/{hash}, /api/token/{delivery,tracing,metrics},
+  /api/live/{delivery,tracing,metrics}.'
