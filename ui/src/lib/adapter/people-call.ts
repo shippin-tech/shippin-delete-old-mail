@@ -4,7 +4,13 @@
  * adapter/people.ts.
  */
 
-export type AddressBook = { id: string; name: string; isDefault: boolean; canWrite: boolean; canDelete: boolean };
+export type AddressBook = {
+	id: string;
+	name: string;
+	isDefault: boolean;
+	canWrite: boolean;
+	canDelete: boolean;
+};
 
 export type Person = {
 	id: string;
@@ -33,7 +39,9 @@ export type PersonDraft = {
 type Raw = Record<string, unknown>;
 
 function values(map: unknown): Raw[] {
-	return map && typeof map === 'object' ? (Object.values(map) as Raw[]).filter((item) => item && typeof item === 'object') : [];
+	return map && typeof map === 'object'
+		? (Object.values(map) as Raw[]).filter((item) => item && typeof item === 'object')
+		: [];
 }
 
 function text(value: unknown): string {
@@ -47,13 +55,19 @@ export function toPerson(raw: Raw): Person | null {
 	const part = (kind: string) => text(components.find((item) => item?.kind === kind)?.value);
 	const given = part('given');
 	const surname = part('surname');
-	const emails = values(raw.emails).map((item) => text(item.address)).filter(Boolean);
-	const phones = values(raw.phones).map((item) => text(item.number)).filter(Boolean);
+	const emails = values(raw.emails)
+		.map((item) => text(item.address))
+		.filter(Boolean);
+	const phones = values(raw.phones)
+		.map((item) => text(item.number))
+		.filter(Boolean);
 	const organization = text(values(raw.organizations)[0]?.name);
-	const displayName = text(name.full) || [given, surname].filter(Boolean).join(' ') || organization || emails[0] || 'No name';
+	const displayName =
+		text(name.full) || [given, surname].filter(Boolean).join(' ') || organization || emails[0] || 'No name';
 	return {
 		id: raw.id,
-		addressBookIds: raw.addressBookIds && typeof raw.addressBookIds === 'object' ? Object.keys(raw.addressBookIds) : [],
+		addressBookIds:
+			raw.addressBookIds && typeof raw.addressBookIds === 'object' ? Object.keys(raw.addressBookIds) : [],
 		given,
 		surname,
 		displayName,
@@ -75,13 +89,30 @@ export function searchPeople(people: readonly Person[], query: string): Person[]
 	const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
 	if (!words.length) return [...people];
 	return people.filter((person) => {
-		const haystack = [person.displayName, person.organization, person.jobTitle, ...person.emails, ...person.phones].join(' ').toLowerCase();
+		const haystack = [
+			person.displayName,
+			person.organization,
+			person.jobTitle,
+			...person.emails,
+			...person.phones
+		]
+			.join(' ')
+			.toLowerCase();
 		return words.every((word) => haystack.includes(word));
 	});
 }
 
 export function emptyPersonDraft(addressBookId: string): PersonDraft {
-	return { addressBookId, given: '', surname: '', emails: [''], phones: [''], organization: '', jobTitle: '', notes: '' };
+	return {
+		addressBookId,
+		given: '',
+		surname: '',
+		emails: [''],
+		phones: [''],
+		organization: '',
+		jobTitle: '',
+		notes: ''
+	};
 }
 
 export function draftFromPerson(person: Person): PersonDraft {
@@ -101,7 +132,12 @@ const filled = (items: readonly string[]) => items.map((item) => item.trim()).fi
 
 export function personProblem(draft: PersonDraft): string {
 	if (!draft.addressBookId) return 'Choose an address book.';
-	if (!draft.given.trim() && !draft.surname.trim() && !draft.organization.trim() && !filled(draft.emails).length) {
+	if (
+		!draft.given.trim() &&
+		!draft.surname.trim() &&
+		!draft.organization.trim() &&
+		!filled(draft.emails).length
+	) {
 		return 'Add a name, a company or an email address.';
 	}
 	const bad = filled(draft.emails).find((email) => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email));
@@ -126,7 +162,9 @@ export function personProperties(draft: PersonDraft, isNew: boolean): Raw {
 		name: components.length ? { '@type': 'Name', components, isOrdered: true } : null,
 		emails: keyed(filled(draft.emails), 'e', (address) => ({ '@type': 'EmailAddress', address })),
 		phones: keyed(filled(draft.phones), 'p', (number) => ({ '@type': 'Phone', number })),
-		organizations: draft.organization.trim() ? { o: { '@type': 'Organization', name: draft.organization.trim() } } : null,
+		organizations: draft.organization.trim()
+			? { o: { '@type': 'Organization', name: draft.organization.trim() } }
+			: null,
 		titles: draft.jobTitle.trim() ? { t: { '@type': 'Title', name: draft.jobTitle.trim() } } : null,
 		notes: draft.notes.trim() ? { n: { '@type': 'Note', note: draft.notes.trim() } } : null
 	};

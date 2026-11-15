@@ -42,7 +42,9 @@ export function base32Decode(text: string): Uint8Array {
 }
 
 /** 160 random bits, above the 128-bit minimum the server enforces. */
-export function newSecret(random: (bytes: Uint8Array) => Uint8Array = (b) => crypto.getRandomValues(b)): string {
+export function newSecret(
+	random: (bytes: Uint8Array) => Uint8Array = (b) => crypto.getRandomValues(b)
+): string {
 	return base32Encode(random(new Uint8Array(20)));
 }
 
@@ -53,7 +55,12 @@ export function otpauthUrl(issuer: string, account: string, secret: string): str
 	return `otpauth://totp/${label}?${params.toString()}`;
 }
 
-export async function totpCode(secretBytes: Uint8Array, unixSeconds: number, digits = 6, period = 30): Promise<string> {
+export async function totpCode(
+	secretBytes: Uint8Array,
+	unixSeconds: number,
+	digits = 6,
+	period = 30
+): Promise<string> {
 	const counter = Math.floor(unixSeconds / period);
 	const message = new Uint8Array(8);
 	let rest = counter;
@@ -61,7 +68,13 @@ export async function totpCode(secretBytes: Uint8Array, unixSeconds: number, dig
 		message[index] = rest & 255;
 		rest = Math.floor(rest / 256);
 	}
-	const key = await crypto.subtle.importKey('raw', new Uint8Array(secretBytes), { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
+	const key = await crypto.subtle.importKey(
+		'raw',
+		new Uint8Array(secretBytes),
+		{ name: 'HMAC', hash: 'SHA-1' },
+		false,
+		['sign']
+	);
 	const mac = new Uint8Array(await crypto.subtle.sign('HMAC', key, message));
 	const offset = mac[mac.length - 1] & 15;
 	const binary =
@@ -70,7 +83,11 @@ export async function totpCode(secretBytes: Uint8Array, unixSeconds: number, dig
 }
 
 /** Accepts the current code or one step either side, to allow for clock drift. */
-export async function verifyCode(secret: string, code: string, nowSeconds = Date.now() / 1000): Promise<boolean> {
+export async function verifyCode(
+	secret: string,
+	code: string,
+	nowSeconds = Date.now() / 1000
+): Promise<boolean> {
 	const wanted = code.replace(/\s/g, '');
 	if (!/^\d{6}$/.test(wanted)) return false;
 	const bytes = base32Decode(secret);

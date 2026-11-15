@@ -1,12 +1,15 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 // The portal requires a session (sign-in gate since 2026-11-08). These checks use a
 // stored session and answer engine calls with empty results, so no backend is needed.
 async function signedIn(page: Page) {
 	await page.addInitScript(() => {
 		sessionStorage.setItem('shippin-basic', 'token');
-		sessionStorage.setItem('shippin-account', JSON.stringify({ username: 'admin@example.com', accountId: 'a' }));
+		sessionStorage.setItem(
+			'shippin-account',
+			JSON.stringify({ username: 'admin@example.com', accountId: 'a' })
+		);
 	});
 	await page.route('**/jmap', (route) => route.fulfill({ json: { methodResponses: [] } }));
 	await page.route('**/api/**', (route) => route.fulfill({ status: 404, json: {} }));

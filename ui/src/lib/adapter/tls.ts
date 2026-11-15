@@ -1,5 +1,5 @@
-import { loadPortalSchema, loadRegistryPage } from './portal';
 import type { PortalSchema } from '$lib/portal/schema';
+import { loadPortalSchema, loadRegistryPage } from './portal';
 
 export type TlsReport = {
 	schema: PortalSchema;
@@ -23,7 +23,8 @@ async function records(object: string, properties: string[]): Promise<Record<str
 export async function loadTls(): Promise<TlsReport> {
 	const schema = await loadPortalSchema();
 	for (const name of ['x:AcmeProvider', 'x:Domain', 'x:Certificate']) {
-		if (!schema.objects[name]) throw new Error(`TLS management is unavailable: the server schema does not define ${name}.`);
+		if (!schema.objects[name])
+			throw new Error(`TLS management is unavailable: the server schema does not define ${name}.`);
 	}
 	const [providers, domains, certificates] = await Promise.all([
 		records('x:AcmeProvider', ['id', 'description', 'directory', 'challengeType']),

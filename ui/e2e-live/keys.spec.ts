@@ -1,9 +1,9 @@
-import { expect, test } from '@playwright/test';
-import AxeBuilder from '@axe-core/playwright';
 import { randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { resolve } from 'node:path';
+import AxeBuilder from '@axe-core/playwright';
+import { expect, test } from '@playwright/test';
 
 // One key, one job, in a real browser against the local stack (KEYS.md). Each service's
 // keys are shown without their bytes, and replacing one, at random or with a pasted key,
@@ -11,7 +11,9 @@ import { resolve } from 'node:path';
 // AI service afterwards, and the old key is destroyed.
 const run = Math.random().toString(16).slice(2, 8);
 const base = process.env.LIVE_URL ?? 'http://127.0.0.1:28080';
-const admin = JSON.parse(readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')) as {
+const admin = JSON.parse(
+	readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')
+) as {
 	username: string;
 	secret: string;
 };
@@ -31,7 +33,10 @@ const service = createServer((req, res) => {
 });
 
 type KeyView = { id: number; origin: string; kept: string; state: string; readable: boolean };
-type Report = { services: { service: string; keys: KeyView[] }[]; wrapping: { path: string; madeHere: boolean; readable: boolean } };
+type Report = {
+	services: { service: string; keys: KeyView[] }[];
+	wrapping: { path: string; madeHere: boolean; readable: boolean };
+};
 
 async function keysText(auth = adminAuth) {
 	return fetch(`${base}/api/keys`, { headers: { Authorization: auth } });
@@ -58,7 +63,9 @@ test.afterAll(async () => {
 	await fetch(`${base}/api/ai/settings`, { method: 'DELETE', headers: { Authorization: adminAuth } });
 });
 
-test('each service has its own key, shown without its bytes, and replacing one keeps its secrets', async ({ page }) => {
+test('each service has its own key, shown without its bytes, and replacing one keeps its secrets', async ({
+	page
+}) => {
 	test.setTimeout(180_000);
 	expect((await fetch(`${base}/api/keys`)).status).toBe(401);
 
@@ -66,7 +73,13 @@ test('each service has its own key, shown without its bytes, and replacing one k
 	const saved = await fetch(`${base}/api/ai/settings`, {
 		method: 'POST',
 		headers: { Authorization: adminAuth, 'Content-Type': 'application/json' },
-		body: JSON.stringify({ kind: 'openai', endpoint: `http://host.docker.internal:${PORT}/v1`, model: 'm', key: providerKey, assistant: false })
+		body: JSON.stringify({
+			kind: 'openai',
+			endpoint: `http://host.docker.internal:${PORT}/v1`,
+			model: 'm',
+			key: providerKey,
+			assistant: false
+		})
 	});
 	expect(saved.status).toBe(200);
 	expect(await aiTest()).toBe(`Bearer ${providerKey}`);
@@ -84,18 +97,26 @@ test('each service has its own key, shown without its bytes, and replacing one k
 	const author = page.getByRole('button', { name: 'Make the missing keys' });
 	if (await author.isVisible()) await author.click();
 	for (const name of ['AI provider key', 'Sign-in secrets', 'Google link', 'Domain proof']) {
-		await expect(page.getByRole('region', { name }).getByText(/^Key \d+: .* In use\.$/)).toBeVisible({ timeout: 30_000 });
+		await expect(page.getByRole('region', { name }).getByText(/^Key \d+: .* In use\.$/)).toBeVisible({
+			timeout: 30_000
+		});
 	}
-	await expect(page.getByRole('region', { name: 'Key-wrapping key' })).toContainText('The server can read it.');
-	const serious = (await new AxeBuilder({ page }).include('main').withTags(['wcag2a', 'wcag2aa']).analyze()).violations.filter(
-		(v) => v.impact === 'serious' || v.impact === 'critical'
+	await expect(page.getByRole('region', { name: 'Key-wrapping key' })).toContainText(
+		'The server can read it.'
 	);
+	const serious = (
+		await new AxeBuilder({ page }).include('main').withTags(['wcag2a', 'wcag2aa']).analyze()
+	).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
 	expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
 
 	// Replaced at random: the secret is sealed again, the old key destroyed, the secret still works.
 	const ai = page.getByRole('form', { name: 'New key for AI provider key' });
 	await ai.getByRole('button', { name: /Replace the key/ }).click();
-	await expect(page.getByText(/^AI provider key: key \d+ is in use\. 1 value was sealed again\. The old key was destroyed\.$/)).toBeVisible({
+	await expect(
+		page.getByText(
+			/^AI provider key: key \d+ is in use\. 1 value was sealed again\. The old key was destroyed\.$/
+		)
+	).toBeVisible({
 		timeout: 30_000
 	});
 	expect(await aiTest()).toBe(`Bearer ${providerKey}`);
@@ -107,11 +128,17 @@ test('each service has its own key, shown without its bytes, and replacing one k
 	await expect(ai.getByRole('alert')).toContainText('44 characters');
 	await ai.getByLabel(/Your key/).fill(pasted);
 	await ai.getByRole('button', { name: /Replace the key/ }).click();
-	await expect(page.getByText(/^AI provider key: key \d+ is in use\. 1 value was sealed again\. The old key was destroyed\.$/)).toBeVisible({
+	await expect(
+		page.getByText(
+			/^AI provider key: key \d+ is in use\. 1 value was sealed again\. The old key was destroyed\.$/
+		)
+	).toBeVisible({
 		timeout: 30_000
 	});
 	expect(await aiTest()).toBe(`Bearer ${providerKey}`);
-	await expect(page.getByRole('complementary', { name: 'Author your keys' }).getByText('All done.')).toBeVisible({ timeout: 30_000 });
+	await expect(
+		page.getByRole('complementary', { name: 'Author your keys' }).getByText('All done.')
+	).toBeVisible({ timeout: 30_000 });
 
 	// What the server says about keys never holds a key.
 	const text = await (await keysText()).text();
@@ -130,9 +157,14 @@ test('each service has its own key, shown without its bytes, and replacing one k
 		body: JSON.stringify({ from: 'environmentVariable', name: `SHIPPIN_NOT_SET_${run.toUpperCase()}` })
 	});
 	expect(missing.status).toBe(400);
-	expect(((await missing.json()) as { message?: string; detail?: string }).message ?? '').toMatch(/is not set/);
+	expect(((await missing.json()) as { message?: string; detail?: string }).message ?? '').toMatch(
+		/is not set/
+	);
 	expect(await aiTest()).toBe(`Bearer ${providerKey}`);
-	expect((JSON.parse(await (await keysText()).text()) as Report).services.find((item) => item.service === 'ai')!.keys).toHaveLength(1);
+	expect(
+		(JSON.parse(await (await keysText()).text()) as Report).services.find((item) => item.service === 'ai')!
+			.keys
+	).toHaveLength(1);
 
 	// Keys are for the server's administrators only.
 	const signup = await fetch(`${base}/api/panel/signup`, {
@@ -143,7 +175,9 @@ test('each service has its own key, shown without its bytes, and replacing one k
 	expect(signup.status).toBe(200);
 	const owner = 'Basic ' + Buffer.from(`owner@keys-${run}.test:Keys check ${run} pw`).toString('base64');
 	expect((await keysText(owner)).status).toBe(403);
-	expect((await fetch(`${base}/api/keys/ai/replace`, { method: 'POST', headers: { Authorization: owner } })).status).toBe(403);
+	expect(
+		(await fetch(`${base}/api/keys/ai/replace`, { method: 'POST', headers: { Authorization: owner } })).status
+	).toBe(403);
 	await fetch(`${base}/api/panel/domain/close`, {
 		method: 'POST',
 		headers: { Authorization: owner, 'Content-Type': 'application/json' },

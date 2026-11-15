@@ -1,7 +1,7 @@
-import { expect, test } from '@playwright/test';
-import AxeBuilder from '@axe-core/playwright';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import AxeBuilder from '@axe-core/playwright';
+import { expect, test } from '@playwright/test';
 import { dashboards } from '../src/lib/portal/catalog';
 
 // The administrator dashboard on our own statistics, against the local stack:
@@ -9,7 +9,9 @@ import { dashboards } from '../src/lib/portal/catalog';
 // a couple of minutes, served by /api/stats and drawn by the Svelte dashboard.
 // Nothing on the page may touch the enterprise metrics endpoints.
 const base = process.env.LIVE_URL ?? 'http://127.0.0.1:28080';
-const admin = JSON.parse(readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')) as {
+const admin = JSON.parse(
+	readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')
+) as {
 	username: string;
 	secret: string;
 };
@@ -36,7 +38,9 @@ test('dashboard statistics are ours, stored, served and drawn', async ({ page })
 
 	// The endpoint: admin only, four periods, live figures from the stores.
 	expect((await fetch(`${base}/api/stats`)).status).toBe(401);
-	expect((await fetch(`${base}/api/stats?period=1y`, { headers: { Authorization: adminAuth } })).status).toBe(400);
+	expect((await fetch(`${base}/api/stats?period=1y`, { headers: { Authorization: adminAuth } })).status).toBe(
+		400
+	);
 	for (const [period, points, step] of [
 		['24h', 24, 3600],
 		['7d', 28, 21600],
@@ -47,16 +51,22 @@ test('dashboard statistics are ours, stored, served and drawn', async ({ page })
 		expect([answer.period, answer.points, answer.step]).toEqual([period, points, step]);
 	}
 	const now = Math.floor(Date.now() / 1000);
-	const custom = await fetch(`${base}/api/stats?from=${now - 30 * 3600}&to=${now}`, { headers: { Authorization: adminAuth } });
+	const custom = await fetch(`${base}/api/stats?from=${now - 30 * 3600}&to=${now}`, {
+		headers: { Authorization: adminAuth }
+	});
 	expect(custom.status).toBe(200);
 	expect(await custom.json()).toMatchObject({ period: 'custom', step: 3600 });
-	const backwards = await fetch(`${base}/api/stats?from=${now}&to=${now - 3600}`, { headers: { Authorization: adminAuth } });
+	const backwards = await fetch(`${base}/api/stats?from=${now}&to=${now - 3600}`, {
+		headers: { Authorization: adminAuth }
+	});
 	expect(backwards.status).toBe(400);
 
 	const before = await stats();
 	expect(before.nodeList.length).toBeGreaterThanOrEqual(1);
 	const one = before.nodeList[0];
-	const single = await fetch(`${base}/api/stats?period=24h&node=${one.id}`, { headers: { Authorization: adminAuth } });
+	const single = await fetch(`${base}/api/stats?period=24h&node=${one.id}`, {
+		headers: { Authorization: adminAuth }
+	});
 	expect(((await single.json()) as Stats).node).toBe(one.id);
 	expect(before.live['user.count']).toBeGreaterThanOrEqual(1);
 	expect(before.live['domain.count']).toBeGreaterThanOrEqual(1);
@@ -66,14 +76,19 @@ test('dashboard statistics are ours, stored, served and drawn', async ({ page })
 	// Real events: three failed sign-ins.
 	for (let attempt = 0; attempt < 3; attempt++) {
 		const res = await fetch(`${base}/api/account`, {
-			headers: { Authorization: 'Basic ' + Buffer.from(`nobody-${attempt}@dashboard.test:wrong`).toString('base64') }
+			headers: {
+				Authorization: 'Basic ' + Buffer.from(`nobody-${attempt}@dashboard.test:wrong`).toString('base64')
+			}
 		});
 		expect(res.status).toBe(401);
 	}
 
 	// The sampler stores them within its one-minute cycle.
 	await expect
-		.poll(async () => (await stats()).history['auth.failed']?.total ?? 0, { timeout: 150_000, intervals: [5_000] })
+		.poll(async () => (await stats()).history['auth.failed']?.total ?? 0, {
+			timeout: 150_000,
+			intervals: [5_000]
+		})
 		.toBeGreaterThanOrEqual(failedBefore + 3);
 	const after = await stats();
 	expect(after.history['auth.failed'].kind).toBe('count');
@@ -95,21 +110,29 @@ test('dashboard statistics are ours, stored, served and drawn', async ({ page })
 
 	await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible({ timeout: 30_000 });
 	const tabs = page.getByRole('tablist', { name: 'Dashboard sections' }).getByRole('tab');
-	await expect(tabs).toHaveText(['Overview', 'Network', 'Security', 'Delivery', 'Performance', 'Storage', 'All metrics']);
+	await expect(tabs).toHaveText([
+		'Overview',
+		'Network',
+		'Security',
+		'Delivery',
+		'Performance',
+		'Storage',
+		'All metrics'
+	]);
 
 	const users = page.getByRole('region', { name: 'Total Users' });
 	await expect(users.locator('.value')).toHaveText(String(after.live['user.count']));
 	await expect(page.getByRole('region', { name: 'Messages', exact: true })).toBeVisible();
 
-	const serious = (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()).violations.filter(
-		(v) => v.impact === 'serious' || v.impact === 'critical'
-	);
+	const serious = (
+		await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
+	).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
 	expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
 
 	await page.getByRole('tab', { name: 'Security' }).click();
 	const failures = page.getByRole('region', { name: 'Auth Failures' }).locator('.value');
 	await expect(failures).not.toHaveText('0');
-	const shown = Number((await failures.innerText()).replace(/[^0-9]/g, ''));
+	const shown = Number((await failures.textContent()).replace(/[^0-9]/g, ''));
 	expect(shown).toBeGreaterThanOrEqual(failedBefore + 3);
 
 	// Keyboard readout on a chart.
@@ -169,16 +192,21 @@ test('every tab, card and chart of the dashboard definition is on the page', asy
 		const names = new Map<string, number>();
 		for (const item of [...tab.cards, ...tab.charts]) names.set(item.title, (names.get(item.title) ?? 0) + 1);
 		for (const [name, count] of names) {
-			await expect(panel.getByRole('region', { name, exact: true }), `${tab.label}: ${name}`).toHaveCount(count);
+			await expect(panel.getByRole('region', { name, exact: true }), `${tab.label}: ${name}`).toHaveCount(
+				count
+			);
 		}
 		for (const card of tab.cards) {
-			const region = panel.locator('section.card', { has: page.getByRole('heading', { name: card.title, exact: true }) });
+			const region = panel.locator('section.card', {
+				has: page.getByRole('heading', { name: card.title, exact: true })
+			});
 			await expect(region.locator('.value'), `${tab.label}: ${card.title} value`).not.toHaveText('');
 		}
 		for (const chart of tab.charts) {
-			await expect(panel.getByRole('slider', { name: `${chart.title}, by time` }), `${tab.label}: ${chart.title}`).toHaveCount(
-				tab.charts.filter((other) => other.title === chart.title).length
-			);
+			await expect(
+				panel.getByRole('slider', { name: `${chart.title}, by time` }),
+				`${tab.label}: ${chart.title}`
+			).toHaveCount(tab.charts.filter((other) => other.title === chart.title).length);
 		}
 		cards += tab.cards.length;
 		charts += tab.charts.length;

@@ -5,8 +5,6 @@ export const UNCONFIGURED =
 
 export const STORAGE_PREFIX = 'shippin-oauth-';
 
-
-
 /** The parts of the server's OAuth discovery document that sign-in reads. */
 export type DiscoveryDocument = {
 	authorization_endpoint?: string;

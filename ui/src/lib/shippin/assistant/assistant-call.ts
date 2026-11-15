@@ -13,7 +13,13 @@ export function turnsToSend(turns: readonly Turn[]): Turn[] {
 
 export type AiKind = 'openai' | 'anthropic';
 
-export type AiSettings = { kind: AiKind | null; endpoint: string | null; model: string | null; hasKey: boolean; assistant: boolean };
+export type AiSettings = {
+	kind: AiKind | null;
+	endpoint: string | null;
+	model: string | null;
+	hasKey: boolean;
+	assistant: boolean;
+};
 
 export type AiDraft = { kind: AiKind; endpoint: string; model: string; key: string; assistant: boolean };
 

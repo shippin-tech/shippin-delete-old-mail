@@ -27,7 +27,12 @@ export async function assistantEnabled(): Promise<boolean> {
 }
 
 export async function askAssistant(messages: Turn[], page: string): Promise<string> {
-	return (await call<{ answer: string }>('POST', 'assistant', 'The assistant could not answer just now.', { messages, page })).answer;
+	return (
+		await call<{ answer: string }>('POST', 'assistant', 'The assistant could not answer just now.', {
+			messages,
+			page
+		})
+	).answer;
 }
 
 export function loadAiSettings(): Promise<AiSettings> {

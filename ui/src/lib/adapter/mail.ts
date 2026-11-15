@@ -110,12 +110,19 @@ export async function loadMessages(mailboxId: string): Promise<Message[]> {
 export async function loadMessage(id: string): Promise<MessageDetail | null> {
 	const fetched = await jmap(
 		[MAIL],
-		[['Email/get', {
-			accountId: accountId(), ids: [id],
-			properties: [...emailProperties, 'textBody', 'bodyValues'],
-			fetchTextBodyValues: true,
-			maxBodyValueBytes: 1_000_000
-		}, 'e0']]
+		[
+			[
+				'Email/get',
+				{
+					accountId: accountId(),
+					ids: [id],
+					properties: [...emailProperties, 'textBody', 'bodyValues'],
+					fetchTextBodyValues: true,
+					maxBodyValueBytes: 1_000_000
+				},
+				'e0'
+			]
+		]
 	);
 	const row = listOf<EmailRow>(fetched, 'Email/get')[0];
 	if (!row) return null;

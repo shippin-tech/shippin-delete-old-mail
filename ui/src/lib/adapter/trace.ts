@@ -1,10 +1,12 @@
-import { authorization } from './session';
 import { classifyMetrics } from './metrics-call';
+import { authorization } from './session';
 
-export { reduceMetricsStream as reduceTraceStream } from './metrics-call';
-export { classifyMetrics as classifyTracing } from './metrics-call';
+export { classifyMetrics as classifyTracing, reduceMetricsStream as reduceTraceStream } from './metrics-call';
 
-export async function requestLiveTracing(): Promise<{ status: ReturnType<typeof classifyMetrics>; token: string }> {
+export async function requestLiveTracing(): Promise<{
+	status: ReturnType<typeof classifyMetrics>;
+	token: string;
+}> {
 	const auth = authorization();
 	if (!auth) return { status: 'signed-out', token: '' };
 	try {
@@ -43,7 +45,12 @@ export function traceHeadline(trace: Pick<StoredTrace, 'from' | 'to'>): string {
 	return `${from} to ${to}${others}`;
 }
 
-export function traceListUrl(options: { query?: string; kind?: string; problems?: boolean; before?: number }): string {
+export function traceListUrl(options: {
+	query?: string;
+	kind?: string;
+	problems?: boolean;
+	before?: number;
+}): string {
 	const params = new URLSearchParams({ limit: String(TRACE_PAGE) });
 	if (options.query?.trim()) params.set('q', options.query.trim());
 	if (options.kind) params.set('kind', options.kind);
@@ -52,11 +59,23 @@ export function traceListUrl(options: { query?: string; kind?: string; problems?
 	return `/api/trace/history?${params.toString()}`;
 }
 
-export async function listStoredTraces(options: { query?: string; kind?: string; problems?: boolean; before?: number }): Promise<StoredTrace[]> {
+export async function listStoredTraces(options: {
+	query?: string;
+	kind?: string;
+	problems?: boolean;
+	before?: number;
+}): Promise<StoredTrace[]> {
 	const auth = authorization();
 	if (!auth) throw new Error('sign-in required');
-	const res = await fetch(traceListUrl(options), { credentials: 'same-origin', cache: 'no-store', headers: { Authorization: auth } });
-	if (!res.ok) throw new Error(res.status === 403 ? 'Only administrators can see stored traces.' : 'Stored traces could not be loaded.');
+	const res = await fetch(traceListUrl(options), {
+		credentials: 'same-origin',
+		cache: 'no-store',
+		headers: { Authorization: auth }
+	});
+	if (!res.ok)
+		throw new Error(
+			res.status === 403 ? 'Only administrators can see stored traces.' : 'Stored traces could not be loaded.'
+		);
 	return ((await res.json()) as { traces: StoredTrace[] }).traces;
 }
 
@@ -64,7 +83,11 @@ export async function listStoredTraces(options: { query?: string; kind?: string;
 export async function loadStoredTrace(id: string): Promise<string> {
 	const auth = authorization();
 	if (!auth) throw new Error('sign-in required');
-	const res = await fetch(`/api/trace/history/${encodeURIComponent(id)}`, { credentials: 'same-origin', cache: 'no-store', headers: { Authorization: auth } });
+	const res = await fetch(`/api/trace/history/${encodeURIComponent(id)}`, {
+		credentials: 'same-origin',
+		cache: 'no-store',
+		headers: { Authorization: auth }
+	});
 	if (!res.ok) throw new Error('That trace is no longer kept.');
 	return JSON.stringify(((await res.json()) as { events: unknown }).events);
 }

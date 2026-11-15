@@ -6,7 +6,9 @@ const STEP = 3600;
 
 /** A smooth, repeatable curve so stories look the same every time. */
 export function wave(scale: number, shift = 0, points = POINTS): number[] {
-	return Array.from({ length: points }, (_, i) => Math.round(scale * (1.2 + Math.sin((i + shift) / 3) + 0.3 * Math.cos(i * 1.7))));
+	return Array.from({ length: points }, (_, i) =>
+		Math.round(scale * (1.2 + Math.sin((i + shift) / 3) + 0.3 * Math.cos(i * 1.7)))
+	);
 }
 
 export const labels = Array.from({ length: POINTS }, (_, i) => `${String(i).padStart(2, '0')}:00`);
@@ -20,7 +22,9 @@ export const singleSeries: ChartSeries[] = [{ label: 'failed sign-ins', values: 
 
 export const emptySeries: ChartSeries[] = [{ label: 'received', values: new Array(POINTS).fill(0) }];
 
-export const gappySeries: ChartSeries[] = [{ label: 'average delivery time', values: wave(900).map((v, i) => (i % 5 === 2 ? null : v)) }];
+export const gappySeries: ChartSeries[] = [
+	{ label: 'average delivery time', values: wave(900).map((v, i) => (i % 5 === 2 ? null : v)) }
+];
 
 function count(values: number[], previous: number): StatsSeries {
 	return { kind: 'count', values, total: values.reduce((a, b) => a + b, 0), previous };

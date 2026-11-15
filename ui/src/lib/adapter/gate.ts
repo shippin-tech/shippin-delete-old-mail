@@ -121,9 +121,9 @@ export function installRequestGate(scope: typeof globalThis = globalThis): void 
 
 /** Follows the limit a session document advertises, and remembers it for this tab. */
 export function followServerLimit(capabilities: unknown): void {
-	const core = (capabilities as Record<string, { maxConcurrentRequests?: unknown } | undefined> | undefined)?.[
-		'urn:ietf:params:jmap:core'
-	];
+	const core = (
+		capabilities as Record<string, { maxConcurrentRequests?: unknown } | undefined> | undefined
+	)?.['urn:ietf:params:jmap:core'];
 	const limit = limitFor(core?.maxConcurrentRequests);
 	installed?.setLimit(limit);
 	try {

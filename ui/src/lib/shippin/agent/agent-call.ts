@@ -21,7 +21,8 @@ export const ADMIN_ROOT = '/shippin/admin';
 export function parseCall(data: string): AgentCall | null {
 	try {
 		const raw = JSON.parse(data) as Partial<AgentCall>;
-		if (typeof raw.callId !== 'string' || typeof raw.name !== 'string' || typeof raw.route !== 'string') return null;
+		if (typeof raw.callId !== 'string' || typeof raw.name !== 'string' || typeof raw.route !== 'string')
+			return null;
 		return {
 			callId: raw.callId,
 			name: raw.name,
@@ -29,8 +30,11 @@ export function parseCall(data: string): AgentCall | null {
 			route: raw.route,
 			writes: raw.writes === true,
 			destructive: raw.destructive === true,
-			secret: Array.isArray(raw.secret) ? raw.secret.filter((item): item is string => typeof item === 'string') : [],
-			arguments: raw.arguments && typeof raw.arguments === 'object' ? (raw.arguments as Record<string, unknown>) : {},
+			secret: Array.isArray(raw.secret)
+				? raw.secret.filter((item): item is string => typeof item === 'string')
+				: [],
+			arguments:
+				raw.arguments && typeof raw.arguments === 'object' ? (raw.arguments as Record<string, unknown>) : {},
 			seconds: typeof raw.seconds === 'number' ? raw.seconds : 120
 		};
 	} catch {
@@ -59,7 +63,12 @@ export function phaseText(call: AgentCall, phase: 'moving' | 'asking' | 'working
 
 /** Only the admin panel's own pages, never anywhere else. */
 export function allowedRoute(route: unknown): route is string {
-	return typeof route === 'string' && (route === ADMIN_ROOT || route.startsWith(`${ADMIN_ROOT}/`)) && !route.includes('..') && !/[?#\s]/.test(route);
+	return (
+		typeof route === 'string' &&
+		(route === ADMIN_ROOT || route.startsWith(`${ADMIN_ROOT}/`)) &&
+		!route.includes('..') &&
+		!/[?#\s]/.test(route)
+	);
 }
 
 /** Whether the screen is already where a call wants it. */

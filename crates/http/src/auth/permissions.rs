@@ -24,6 +24,12 @@ pub trait AccountApiHandler: Sync + Send {
         &self,
         access_token: &AccessToken,
     ) -> impl Future<Output = trc::Result<HttpResponse>> + Send;
+
+    /// What the caller is and may do. Shared by the old `/api/account` and `/api/v1/me`.
+    fn account_view(
+        &self,
+        access_token: &AccessToken,
+    ) -> impl Future<Output = trc::Result<(Account, String)>> + Send;
 }
 
 impl AccountApiHandler for Server {
@@ -31,6 +37,11 @@ impl AccountApiHandler for Server {
         &self,
         access_token: &AccessToken,
     ) -> trc::Result<HttpResponse> {
+        let (account, _email) = self.account_view(access_token).await?;
+        Ok(JsonResponse::new(account).into_http_response())
+    }
+
+    async fn account_view(&self, access_token: &AccessToken) -> trc::Result<(Account, String)> {
         #[cfg(not(feature = "enterprise"))]
         let edition = "oss";
 
@@ -124,11 +135,13 @@ impl AccountApiHandler for Server {
             Vec::new()
         };
 
-        Ok(JsonResponse::new(Account {
-            permissions,
-            edition,
-            locale: account_info.locale(),
-        })
-        .into_http_response())
+        Ok((
+            Account {
+                permissions,
+                edition,
+                locale: account_info.locale(),
+            },
+            account_info.name().to_string(),
+        ))
     }
 }

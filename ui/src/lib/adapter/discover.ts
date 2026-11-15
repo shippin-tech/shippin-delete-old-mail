@@ -1,12 +1,12 @@
 import {
-	STORAGE_PREFIX,
-	UNCONFIGURED,
 	clientIdFor,
+	type DiscoverNext,
+	type DiscoveryDocument,
 	discoveryFailed,
 	nextAfterDiscover,
 	registrationBody,
-	type DiscoverNext,
-	type DiscoveryDocument
+	STORAGE_PREFIX,
+	UNCONFIGURED
 } from './discover-call';
 
 const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';

@@ -4,6 +4,7 @@ import {
 	draftDuration,
 	draftFrom,
 	draftProblem,
+	type EventItem,
 	emptyDraft,
 	eventDays,
 	eventProperties,
@@ -17,8 +18,7 @@ import {
 	repeatOf,
 	repeatRule,
 	secondsBetween,
-	toEvent,
-	type EventItem
+	toEvent
 } from '../src/lib/adapter/events-call';
 
 function event(overrides: Partial<EventItem> = {}): EventItem {
@@ -70,7 +70,12 @@ describe('calendar helpers', () => {
 	it('places all-day events on every day they cover and sorts each day', () => {
 		const holiday = event({ id: 'h', allDay: true, start: '2026-11-26T00:00:00', duration: 'P2D' });
 		expect(eventDays(holiday)).toEqual(['2026-11-26', '2026-11-27']);
-		const early = event({ id: 'e', start: '2026-11-26T08:00:00', utcStart: '2026-11-26T12:00:00Z', utcEnd: '2026-11-26T12:30:00Z' });
+		const early = event({
+			id: 'e',
+			start: '2026-11-26T08:00:00',
+			utcStart: '2026-11-26T12:00:00Z',
+			utcEnd: '2026-11-26T12:30:00Z'
+		});
 		const list = eventsByDay([early, holiday]).get(eventDays(early)[0]);
 		expect(list?.[0].id).toBe('h');
 	});
@@ -81,7 +86,11 @@ describe('calendar helpers', () => {
 		expect(repeatOf({ frequency: 'weekly', count: 4 })).toBe('custom');
 		expect(repeatRule('monthly')).toEqual({ '@type': 'RecurrenceRule', frequency: 'monthly' });
 		expect(repeatRule('none')).toBeNull();
-		const properties = eventProperties({ ...emptyDraft('2026-11-20', 'c', 'UTC'), title: 'x', repeat: 'custom' }, 'me@x.test', event());
+		const properties = eventProperties(
+			{ ...emptyDraft('2026-11-20', 'c', 'UTC'), title: 'x', repeat: 'custom' },
+			'me@x.test',
+			event()
+		);
 		expect('recurrenceRule' in properties).toBe(false);
 	});
 
@@ -98,7 +107,11 @@ describe('calendar helpers', () => {
 	});
 
 	it('builds what the server stores', () => {
-		const draft = { ...emptyDraft('2026-11-20', 'c', 'America/New_York'), title: ' Plan ', location: 'Office' };
+		const draft = {
+			...emptyDraft('2026-11-20', 'c', 'America/New_York'),
+			title: ' Plan ',
+			location: 'Office'
+		};
 		const created = eventProperties(draft, 'me@x.test');
 		expect(created).toMatchObject({
 			'@type': 'Event',
@@ -124,9 +137,19 @@ describe('calendar helpers', () => {
 		const people = participantsFor(['a@x.test', 'b@x.test'], 'me@x.test', [
 			{ key: 'kept', address: 'a@x.test', name: 'a', status: 'accepted', isOwner: false }
 		])!;
-		expect(people.owner).toMatchObject({ calendarAddress: 'mailto:me@x.test', roles: { owner: true, attendee: true } });
-		expect(people.kept).toMatchObject({ calendarAddress: 'mailto:a@x.test', participationStatus: 'accepted' });
-		expect(people.guest1).toMatchObject({ calendarAddress: 'mailto:b@x.test', participationStatus: 'needs-action', expectReply: true });
+		expect(people.owner).toMatchObject({
+			calendarAddress: 'mailto:me@x.test',
+			roles: { owner: true, attendee: true }
+		});
+		expect(people.kept).toMatchObject({
+			calendarAddress: 'mailto:a@x.test',
+			participationStatus: 'accepted'
+		});
+		expect(people.guest1).toMatchObject({
+			calendarAddress: 'mailto:b@x.test',
+			participationStatus: 'needs-action',
+			expectReply: true
+		});
 	});
 
 	it('reads server events, including who is invited', () => {
@@ -144,19 +167,43 @@ describe('calendar helpers', () => {
 			recurrenceRule: null,
 			participants: {
 				o: { calendarAddress: 'mailto:Boss@x.test', roles: { owner: true }, participationStatus: 'accepted' },
-				g: { calendarAddress: 'mailto:me@x.test', roles: { attendee: true }, participationStatus: 'needs-action' }
+				g: {
+					calendarAddress: 'mailto:me@x.test',
+					roles: { attendee: true },
+					participationStatus: 'needs-action'
+				}
 			}
 		};
 		const parsed = toEvent(raw, 'me@x.test')!;
-		expect(parsed).toMatchObject({ id: 'h1', baseId: 'b1', location: 'Room', isOrganizer: false, calendarIds: ['c'] });
+		expect(parsed).toMatchObject({
+			id: 'h1',
+			baseId: 'b1',
+			location: 'Room',
+			isOrganizer: false,
+			calendarIds: ['c']
+		});
 		expect(myGuest(parsed, 'ME@x.test')?.key).toBe('g');
 		expect(toEvent({ ...raw, participants: undefined }, 'me@x.test')?.isOrganizer).toBe(true);
 		expect(toEvent({ title: 'no id' }, 'me@x.test')).toBeNull();
 	});
 
 	it('opens the form with the event as stored', () => {
-		const form = draftFrom(event({ guests: [{ key: 'o', address: 'me@x.test', name: '', status: 'accepted', isOwner: true }, { key: 'g', address: 'a@x.test', name: '', status: 'accepted', isOwner: false }] }));
-		expect(form).toMatchObject({ startDate: '2026-11-20', startTime: '10:00', endDate: '2026-11-20', endTime: '11:00', guests: 'a@x.test', calendarId: 'c' });
+		const form = draftFrom(
+			event({
+				guests: [
+					{ key: 'o', address: 'me@x.test', name: '', status: 'accepted', isOwner: true },
+					{ key: 'g', address: 'a@x.test', name: '', status: 'accepted', isOwner: false }
+				]
+			})
+		);
+		expect(form).toMatchObject({
+			startDate: '2026-11-20',
+			startTime: '10:00',
+			endDate: '2026-11-20',
+			endTime: '11:00',
+			guests: 'a@x.test',
+			calendarId: 'c'
+		});
 		const allDay = draftFrom(event({ allDay: true, start: '2026-11-26T00:00:00', duration: 'P2D' }));
 		expect(allDay).toMatchObject({ startDate: '2026-11-26', endDate: '2026-11-27' });
 	});

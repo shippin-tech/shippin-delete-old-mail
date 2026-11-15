@@ -1,14 +1,16 @@
-import { expect, test } from '@playwright/test';
-import AxeBuilder from '@axe-core/playwright';
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { resolve } from 'node:path';
+import AxeBuilder from '@axe-core/playwright';
+import { expect, test } from '@playwright/test';
 
 // Alerts in a real browser against the local stack: a rule the administrator writes
 // fires, reaches a real webhook and a real mailbox, then waits out its cooldown.
 const run = Math.random().toString(16).slice(2, 8);
 const base = process.env.LIVE_URL ?? 'http://127.0.0.1:28080';
-const admin = JSON.parse(readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')) as {
+const admin = JSON.parse(
+	readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')
+) as {
 	username: string;
 	secret: string;
 };
@@ -19,8 +21,24 @@ const owner = `owner@${domain}`;
 const ownerAuth = 'Basic ' + Buffer.from(`${owner}:${password}`).toString('base64');
 const name = `Domains exist ${run}`;
 
-type Hook = { alert: string; metric: string; value: number; threshold: number; above: boolean; window: string; server: string; at: number };
-type Rule = { id: string; name: string; enabled: boolean; threshold: number; lastFired: number | null; lastValue: number | null };
+type Hook = {
+	alert: string;
+	metric: string;
+	value: number;
+	threshold: number;
+	above: boolean;
+	window: string;
+	server: string;
+	at: number;
+};
+type Rule = {
+	id: string;
+	name: string;
+	enabled: boolean;
+	threshold: number;
+	lastFired: number | null;
+	lastValue: number | null;
+};
 
 const hooks: Hook[] = [];
 const receiver = createServer((req, res) => {
@@ -59,7 +77,9 @@ async function ours(): Promise<Rule | undefined> {
 }
 
 async function inboxSubjects(): Promise<string[]> {
-	const session = (await (await fetch(`${base}/jmap/session`, { headers: { Authorization: ownerAuth } })).json()) as { primaryAccounts: Record<string, string> };
+	const session = (await (
+		await fetch(`${base}/jmap/session`, { headers: { Authorization: ownerAuth } })
+	).json()) as { primaryAccounts: Record<string, string> };
 	const accountId = session.primaryAccounts['urn:ietf:params:jmap:mail'];
 	const res = await fetch(`${base}/jmap`, {
 		method: 'POST',
@@ -68,11 +88,21 @@ async function inboxSubjects(): Promise<string[]> {
 			using: ['urn:ietf:params:jmap:core', 'urn:ietf:params:jmap:mail'],
 			methodCalls: [
 				['Email/query', { accountId }, 'q'],
-				['Email/get', { accountId, '#ids': { resultOf: 'q', name: 'Email/query', path: '/ids' }, properties: ['subject'] }, 'g']
+				[
+					'Email/get',
+					{
+						accountId,
+						'#ids': { resultOf: 'q', name: 'Email/query', path: '/ids' },
+						properties: ['subject']
+					},
+					'g'
+				]
 			]
 		})
 	});
-	const reply = (await res.json()) as { methodResponses: [string, { list?: { subject: string }[] }, string][] };
+	const reply = (await res.json()) as {
+		methodResponses: [string, { list?: { subject: string }[] }, string][];
+	};
 	return (reply.methodResponses[1][1].list ?? []).map((email) => email.subject);
 }
 
@@ -105,13 +135,20 @@ test('an alert fires to a real webhook and mailbox, then waits out its cooldown'
 	const form = page.getByRole('form', { name: 'New alert' });
 	await form.getByRole('button', { name: 'Save alert' }).click();
 	await expect(form.getByRole('alert')).toHaveText('Give the alert a name.');
-	const refused = await alerts('POST', '', { name: 'Bad', metric: 'not.a-metric', window: '1h', above: true, threshold: 1, email: ['a@b.co'] });
+	const refused = await alerts('POST', '', {
+		name: 'Bad',
+		metric: 'not.a-metric',
+		window: '1h',
+		above: true,
+		threshold: 1,
+		email: ['a@b.co']
+	});
 	expect(refused.status).toBe(400);
 	expect(((await refused.json()) as { message: string }).message).toMatch(/metric/);
 
-	const serious = (await new AxeBuilder({ page }).include('main').withTags(['wcag2a', 'wcag2aa']).analyze()).violations.filter(
-		(v) => v.impact === 'serious' || v.impact === 'critical'
-	);
+	const serious = (
+		await new AxeBuilder({ page }).include('main').withTags(['wcag2a', 'wcag2aa']).analyze()
+	).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
 	expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
 
 	await form.getByLabel('Name').fill(name);
@@ -137,7 +174,9 @@ test('an alert fires to a real webhook and mailbox, then waits out its cooldown'
 	// It does not fire again during its cooldown.
 	const firstFired = (await ours())!.lastFired;
 	expect(firstFired).not.toBeNull();
-	const second = (await (await alerts('POST', '/check')).json()) as { results: { id: string; fired: boolean }[] };
+	const second = (await (await alerts('POST', '/check')).json()) as {
+		results: { id: string; fired: boolean }[];
+	};
 	const rule = (await ours())!;
 	expect(second.results.find((result) => result.id === rule.id)?.fired).toBe(false);
 	expect(rule.lastFired).toBe(firstFired);
@@ -148,7 +187,9 @@ test('an alert fires to a real webhook and mailbox, then waits out its cooldown'
 	const edit = page.getByRole('form', { name: 'Edit alert' });
 	await edit.getByLabel('Threshold').fill('5000000');
 	await edit.getByRole('button', { name: 'Save alert' }).click();
-	await expect(item.getByText('domain.count above 5000000 over the last hour')).toBeVisible({ timeout: 30_000 });
+	await expect(item.getByText('domain.count above 5000000 over the last hour')).toBeVisible({
+		timeout: 30_000
+	});
 	expect((await ours())!.lastFired).toBe(firstFired);
 
 	await item.getByRole('checkbox').uncheck();

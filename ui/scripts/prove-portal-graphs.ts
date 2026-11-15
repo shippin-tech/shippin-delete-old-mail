@@ -8,8 +8,10 @@ import { layoutGraph } from '../src/lib/flow/portal/graph.ts';
 import { layouts } from '../src/lib/portal/catalog.ts';
 
 const management = layoutGraph(layouts, 'Management');
-const domains = management.find((node) => node.label === 'Domains' && node.href === '/shippin/admin/x:Domain');
-if (!domains || domains.parent !== 'Management:Domains') throw new Error('domains node');
+const domains = management.find(
+	(node) => node.label === 'Domains' && node.href === '/shippin/admin/x:Domain'
+);
+if (domains?.parent !== 'Management:Domains') throw new Error('domains node');
 if (management.some((node) => node.href.startsWith('/mail'))) throw new Error('shell link');
 
 const settings = layoutGraph(layouts, 'Settings');
@@ -22,7 +24,7 @@ if (all.some((node) => !node.href.startsWith('/shippin/admin'))) throw new Error
 const lookup = deliveryNodes.find((node) => node.label === 'MX Lookup');
 const connection = deliveryNodes.find((node) => node.label === 'TCP Connection');
 if (!lookup || lookup.parent) throw new Error('mx lookup');
-if (!connection || connection.parent !== 'ip-lookup') throw new Error('tcp connection');
+if (connection?.parent !== 'ip-lookup') throw new Error('tcp connection');
 if (deliveryNodes.some((node) => node.href !== '/shippin/admin/CustomComponent/LiveDelivery')) {
 	throw new Error('delivery href');
 }
@@ -36,7 +38,8 @@ if (!graph.includes("from '@xyflow/svelte'")) throw new Error('graph library');
 
 const catalog = readFileSync(new URL('../src/lib/shippin/admin/PortalView.svelte', import.meta.url), 'utf8');
 const form = readFileSync(new URL('../src/lib/shippin/admin/RecordForm.svelte', import.meta.url), 'utf8');
-if (catalog.includes('@xyflow/svelte') || catalog.includes('$lib/flow')) throw new Error('catalog imports flow');
+if (catalog.includes('@xyflow/svelte') || catalog.includes('$lib/flow'))
+	throw new Error('catalog imports flow');
 if (form.includes('@xyflow/svelte') || form.includes('$lib/flow')) throw new Error('form imports flow');
 
 const mail = readFileSync(new URL('../src/lib/flow/mail/nodes.ts', import.meta.url), 'utf8');

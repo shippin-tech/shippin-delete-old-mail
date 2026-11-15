@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { base32Decode, base32Encode, newSecret, otpauthUrl, totpCode, verifyCode } from '../src/lib/account/totp';
+import {
+	base32Decode,
+	base32Encode,
+	newSecret,
+	otpauthUrl,
+	totpCode,
+	verifyCode
+} from '../src/lib/account/totp';
 
 // RFC 6238 appendix B uses the ASCII secret "12345678901234567890" with SHA-1.
 const RFC_SECRET = new TextEncoder().encode('12345678901234567890');

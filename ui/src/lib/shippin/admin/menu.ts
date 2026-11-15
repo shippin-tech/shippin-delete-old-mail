@@ -42,13 +42,21 @@ export const ADMIN_MENU: readonly AdminGroup[] = [
 ];
 
 /** Schema screens that have their own place in the menu above. */
-const OWN_VIEWS = new Set(['CustomComponent/Dashboard', 'CustomComponent/LiveTracing', 'CustomComponent/LiveDelivery']);
+const OWN_VIEWS = new Set([
+	'CustomComponent/Dashboard',
+	'CustomComponent/LiveTracing',
+	'CustomComponent/LiveDelivery'
+]);
 
 export function isCurrent(path: string, href: string): boolean {
 	return path === href;
 }
 
-type Item = { readonly name: string; readonly view: string; readonly children: readonly { readonly name: string; readonly view: string }[] };
+type Item = {
+	readonly name: string;
+	readonly view: string;
+	readonly children: readonly { readonly name: string; readonly view: string }[];
+};
 type Layout = { readonly name: string; readonly items: readonly Item[] };
 
 /** The schema's menu without the screens we show elsewhere, and without anything left empty. */

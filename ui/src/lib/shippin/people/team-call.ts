@@ -60,7 +60,13 @@ export function toPerson(raw: Raw): Person | null {
 
 export function toTeam(raw: Raw): Team | null {
 	if (typeof raw.id !== 'string' || raw['@type'] !== 'Group') return null;
-	return { id: raw.id, name: text(raw.name), domainId: text(raw.domainId), email: text(raw.emailAddress), description: text(raw.description) };
+	return {
+		id: raw.id,
+		name: text(raw.name),
+		domainId: text(raw.domainId),
+		email: text(raw.emailAddress),
+		description: text(raw.description)
+	};
 }
 
 export function displayName(person: Person): string {
@@ -68,7 +74,9 @@ export function displayName(person: Person): string {
 }
 
 export function sortPeople(people: readonly Person[]): Person[] {
-	return [...people].sort((a, b) => displayName(a).localeCompare(displayName(b), undefined, { sensitivity: 'base' }));
+	return [...people].sort((a, b) =>
+		displayName(a).localeCompare(displayName(b), undefined, { sensitivity: 'base' })
+	);
 }
 
 export function filterPeople(people: readonly Person[], query: string, teamId = ''): Person[] {
@@ -109,7 +117,8 @@ export function passwordProblem(password: string): string {
 
 export function personProblem(draft: PersonDraft, isNew: boolean): string {
 	if (isNew) {
-		if (!USERNAME.test(draft.name.trim().toLowerCase())) return 'The username can use letters, digits, dots, dashes and underscores.';
+		if (!USERNAME.test(draft.name.trim().toLowerCase()))
+			return 'The username can use letters, digits, dots, dashes and underscores.';
 		if (!draft.domainId) return 'Choose a domain.';
 		if (!draft.password) return 'Set a password.';
 	}
@@ -117,12 +126,14 @@ export function personProblem(draft: PersonDraft, isNew: boolean): string {
 		const problem = passwordProblem(draft.password);
 		if (problem) return problem;
 	}
-	if (limitBytes(draft.limitGb) === undefined) return 'Enter the storage limit as a number of gigabytes, or leave it empty.';
+	if (limitBytes(draft.limitGb) === undefined)
+		return 'Enter the storage limit as a number of gigabytes, or leave it empty.';
 	return '';
 }
 
 export function teamProblem(draft: TeamDraft): string {
-	if (!USERNAME.test(draft.name.trim().toLowerCase())) return 'The team name can use letters, digits, dots, dashes and underscores.';
+	if (!USERNAME.test(draft.name.trim().toLowerCase()))
+		return 'The team name can use letters, digits, dots, dashes and underscores.';
 	if (!draft.domainId) return 'Choose a domain.';
 	return '';
 }
@@ -157,7 +168,8 @@ export function personPatch(draft: PersonDraft, person: Person): Raw {
 	if (role && draft.role !== person.role) patch.roles = role;
 	const limit = limitBytes(draft.limitGb) ?? null;
 	if (limit !== person.limit) patch.quotas = limit ? { maxDiskQuota: limit } : {};
-	if ([...draft.teamIds].sort().join() !== [...person.teamIds].sort().join()) patch.memberGroupIds = teamSet(draft.teamIds);
+	if ([...draft.teamIds].sort().join() !== [...person.teamIds].sort().join())
+		patch.memberGroupIds = teamSet(draft.teamIds);
 	if (draft.password) {
 		if (person.passwordKey !== null) patch[`credentials/${person.passwordKey}/secret`] = draft.password;
 		else patch['credentials/0'] = { '@type': 'Password', secret: draft.password };

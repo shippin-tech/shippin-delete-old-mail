@@ -64,6 +64,9 @@ jobs:
       - name: MCPL conformance
         run: node scripts/check-mcpl.mjs
         working-directory: ui
+      - name: Biome (format and lint)
+        run: npm run lint
+        working-directory: ui
       - run: npm run check
         working-directory: ui
       - run: npm test

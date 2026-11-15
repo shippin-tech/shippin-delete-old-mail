@@ -1,6 +1,5 @@
 export const COPY_FAILED = 'Copy failed';
-export const COPY_BLOCKED =
-	'Your browser blocked clipboard access. Select the value and copy it manually.';
+export const COPY_BLOCKED = 'Your browser blocked clipboard access. Select the value and copy it manually.';
 export const COPIED = 'Copied';
 
 export function copyLabel(name?: string): string {

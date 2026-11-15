@@ -1,5 +1,11 @@
 import { authorization } from '../../adapter/session';
-import { newKeyBody, type KeysReport, type NewKeyDraft, type Replaced, type ServiceName } from './keys-admin-call';
+import {
+	type KeysReport,
+	type NewKeyDraft,
+	newKeyBody,
+	type Replaced,
+	type ServiceName
+} from './keys-admin-call';
 
 export * from './keys-admin-call';
 

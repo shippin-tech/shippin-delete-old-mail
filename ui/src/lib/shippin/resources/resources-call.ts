@@ -16,7 +16,14 @@ export type OrgUsage = {
 };
 
 export type ResourceReport = {
-	server: { host: string; memory: number; disk: { total: number; free: number } | null; people: number; domains: number; queue: number };
+	server: {
+		host: string;
+		memory: number;
+		disk: { total: number; free: number } | null;
+		people: number;
+		domains: number;
+		queue: number;
+	};
 	orgs: OrgUsage[];
 	other: { domains: number; people: number; storageUsed: number };
 };
@@ -49,7 +56,9 @@ const RANK: Record<UsageLevel, number> = { over: 0, near: 1, fine: 2, none: 3 };
 /** Whatever needs attention first, then the biggest users of storage. */
 export function sortByAttention(orgs: readonly OrgUsage[]): OrgUsage[] {
 	const worst = (org: OrgUsage) => Math.min(RANK[org.peopleLevel], RANK[org.storageLevel]);
-	return [...orgs].sort((a, b) => worst(a) - worst(b) || b.storageUsed - a.storageUsed || a.name.localeCompare(b.name));
+	return [...orgs].sort(
+		(a, b) => worst(a) - worst(b) || b.storageUsed - a.storageUsed || a.name.localeCompare(b.name)
+	);
 }
 
 export function diskUsed(disk: { total: number; free: number }): number {

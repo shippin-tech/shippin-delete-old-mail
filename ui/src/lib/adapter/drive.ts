@@ -1,28 +1,39 @@
-import { accountId, idsOf, jmap, listOf, type MethodResponse } from './jmap';
-import { authorization } from './session';
 import {
+	type DriveNode,
+	type DriveShare,
+	type DriveUsage,
 	downloadPath,
-	searchPattern,
 	roleOf,
+	type SharedDrive,
+	type ShareRole,
+	searchPattern,
 	setErrorMessage,
 	shareMap,
 	sortNodes,
 	toNode,
 	topShared,
-	uploadProblem,
-	type DriveNode,
-	type DriveShare,
-	type DriveUsage,
-	type ShareRole,
-	type SharedDrive
+	uploadProblem
 } from './drive-call';
+import { accountId, idsOf, jmap, listOf, type MethodResponse } from './jmap';
+import { authorization } from './session';
 
 export * from './drive-call';
 
 const FILES = 'urn:ietf:params:jmap:filenode';
 const QUOTA = 'urn:ietf:params:jmap:quota';
 const PRINCIPALS = 'urn:ietf:params:jmap:principals';
-const PROPERTIES = ['id', 'parentId', 'name', 'nodeType', 'size', 'type', 'blobId', 'modified', 'myRights', 'shareWith'];
+const PROPERTIES = [
+	'id',
+	'parentId',
+	'name',
+	'nodeType',
+	'size',
+	'type',
+	'blobId',
+	'modified',
+	'myRights',
+	'shareWith'
+];
 
 type SetPayload = {
 	created?: Record<string, { id?: string }>;
@@ -37,19 +48,33 @@ function setPayload(responses: MethodResponse[]): SetPayload {
 	return (responses.find((response) => response[0] === 'FileNode/set')?.[1] ?? {}) as SetPayload;
 }
 
-async function queryNodes(account: string, filter: Record<string, unknown> | undefined, limit?: number): Promise<DriveNode[]> {
+async function queryNodes(
+	account: string,
+	filter: Record<string, unknown> | undefined,
+	limit?: number
+): Promise<DriveNode[]> {
 	const responses = await jmap(
 		[FILES],
 		[
-			['FileNode/query', { accountId: account, ...(filter ? { filter } : {}), ...(limit ? { limit } : {}) }, 'q'],
+			[
+				'FileNode/query',
+				{ accountId: account, ...(filter ? { filter } : {}), ...(limit ? { limit } : {}) },
+				'q'
+			],
 			[
 				'FileNode/get',
-				{ accountId: account, '#ids': { resultOf: 'q', name: 'FileNode/query', path: '/ids' }, properties: PROPERTIES },
+				{
+					accountId: account,
+					'#ids': { resultOf: 'q', name: 'FileNode/query', path: '/ids' },
+					properties: PROPERTIES
+				},
 				'g'
 			]
 		]
 	);
-	const nodes = listOf<Record<string, unknown>>(responses, 'FileNode/get').flatMap((raw) => toNode(raw) ?? []);
+	const nodes = listOf<Record<string, unknown>>(responses, 'FileNode/get').flatMap(
+		(raw) => toNode(raw) ?? []
+	);
 	return idsOf(responses, 'FileNode/query').length ? sortNodes(nodes) : [];
 }
 
@@ -75,9 +100,18 @@ export function findByPattern(pattern: string, account = accountId()): Promise<D
 export async function listSharedDrives(): Promise<SharedDrive[]> {
 	const auth = authorization();
 	if (!auth) throw new Error('sign-in required');
-	const res = await fetch('/jmap/session', { credentials: 'same-origin', cache: 'no-store', headers: { Authorization: auth } });
+	const res = await fetch('/jmap/session', {
+		credentials: 'same-origin',
+		cache: 'no-store',
+		headers: { Authorization: auth }
+	});
 	if (!res.ok) throw new Error('Shared files could not be loaded.');
-	const session = (await res.json()) as { accounts?: Record<string, { name?: unknown; isPersonal?: unknown; accountCapabilities?: Record<string, unknown> }> };
+	const session = (await res.json()) as {
+		accounts?: Record<
+			string,
+			{ name?: unknown; isPersonal?: unknown; accountCapabilities?: Record<string, unknown> }
+		>;
+	};
 	return Object.entries(session.accounts ?? {})
 		.filter(([, info]) => info.isPersonal !== true && info.accountCapabilities?.[FILES])
 		.map(([id, info]) => ({ accountId: id, name: typeof info.name === 'string' ? info.name : id }));
@@ -85,12 +119,19 @@ export async function listSharedDrives(): Promise<SharedDrive[]> {
 
 /** What one person has shared with you: the highest things you can see in their Drive. */
 export async function listSharedWithMe(drive: SharedDrive): Promise<DriveNode[]> {
-	return topShared(await queryNodes(drive.accountId, undefined)).map((node) => ({ ...node, drive: drive.accountId, owner: drive.name }));
+	return topShared(await queryNodes(drive.accountId, undefined)).map((node) => ({
+		...node,
+		drive: drive.accountId,
+		owner: drive.name
+	}));
 }
 
 async function findPrincipals(ids: string[]): Promise<Map<string, string>> {
 	if (!ids.length) return new Map();
-	const responses = await jmap([PRINCIPALS], [['Principal/get', { accountId: accountId(), ids, properties: ['id', 'name', 'email'] }, 'g']]);
+	const responses = await jmap(
+		[PRINCIPALS],
+		[['Principal/get', { accountId: accountId(), ids, properties: ['id', 'name', 'email'] }, 'g']]
+	);
 	return new Map(
 		listOf<{ id?: unknown; name?: unknown; email?: unknown }>(responses, 'Principal/get').map((row) => [
 			String(row.id),
@@ -101,7 +142,10 @@ async function findPrincipals(ids: string[]): Promise<Map<string, string>> {
 
 /** Finds someone on your domain by address, or null. */
 export async function findPerson(email: string): Promise<{ id: string; name: string } | null> {
-	const responses = await jmap([PRINCIPALS], [['Principal/query', { accountId: accountId(), filter: { email: email.trim().toLowerCase() } }, 'q']]);
+	const responses = await jmap(
+		[PRINCIPALS],
+		[['Principal/query', { accountId: accountId(), filter: { email: email.trim().toLowerCase() } }, 'q']]
+	);
 	const id = idsOf(responses, 'Principal/query')[0];
 	if (!id) return null;
 	const names = await findPrincipals([id]);
@@ -109,16 +153,30 @@ export async function findPerson(email: string): Promise<{ id: string; name: str
 }
 
 export async function loadShares(nodeId: string, account = accountId()): Promise<DriveShare[]> {
-	const responses = await jmap([FILES], [['FileNode/get', { accountId: account, ids: [nodeId], properties: ['id', 'shareWith'] }, 'g']]);
-	const shareWith = (listOf<{ shareWith?: Record<string, Record<string, unknown>> | null }>(responses, 'FileNode/get')[0]?.shareWith ?? {}) as Record<string, Record<string, unknown>>;
+	const responses = await jmap(
+		[FILES],
+		[['FileNode/get', { accountId: account, ids: [nodeId], properties: ['id', 'shareWith'] }, 'g']]
+	);
+	const shareWith = (listOf<{ shareWith?: Record<string, Record<string, unknown>> | null }>(
+		responses,
+		'FileNode/get'
+	)[0]?.shareWith ?? {}) as Record<string, Record<string, unknown>>;
 	const names = await findPrincipals(Object.keys(shareWith));
 	return Object.entries(shareWith)
-		.map(([principalId, rights]) => ({ principalId, name: names.get(principalId) ?? principalId, role: roleOf(rights) }))
+		.map(([principalId, rights]) => ({
+			principalId,
+			name: names.get(principalId) ?? principalId,
+			role: roleOf(rights)
+		}))
 		.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /** Replaces who a file or folder is shared with. */
-export function saveShares(nodeId: string, shares: readonly Pick<DriveShare, 'principalId' | 'role'>[], account = accountId()): Promise<void> {
+export function saveShares(
+	nodeId: string,
+	shares: readonly Pick<DriveShare, 'principalId' | 'role'>[],
+	account = accountId()
+): Promise<void> {
 	return updateNode(nodeId, { shareWith: shareMap(shares) }, 'Sharing could not be changed.', account);
 }
 
@@ -127,16 +185,27 @@ export type { ShareRole };
 /** How much storage is used, when the account has a limit. */
 export async function loadUsage(): Promise<DriveUsage | null> {
 	const responses = await jmap([QUOTA], [['Quota/get', { accountId: accountId(), ids: null }, 'q']]);
-	const quota = listOf<{ resourceType?: unknown; used?: unknown; hardLimit?: unknown }>(responses, 'Quota/get').find(
-		(item) => item.resourceType === 'octets'
-	);
+	const quota = listOf<{ resourceType?: unknown; used?: unknown; hardLimit?: unknown }>(
+		responses,
+		'Quota/get'
+	).find((item) => item.resourceType === 'octets');
 	if (!quota || typeof quota.used !== 'number') return null;
-	return { used: quota.used, limit: typeof quota.hardLimit === 'number' && quota.hardLimit > 0 ? quota.hardLimit : null };
+	return {
+		used: quota.used,
+		limit: typeof quota.hardLimit === 'number' && quota.hardLimit > 0 ? quota.hardLimit : null
+	};
 }
 
-export async function createFolder(parentId: string | null, name: string, account = accountId()): Promise<string> {
+export async function createFolder(
+	parentId: string | null,
+	name: string,
+	account = accountId()
+): Promise<string> {
 	const payload = setPayload(
-		await jmap([FILES], [['FileNode/set', { accountId: account, create: { folder: { parentId, name: name.trim() } } }, 's']])
+		await jmap(
+			[FILES],
+			[['FileNode/set', { accountId: account, create: { folder: { parentId, name: name.trim() } } }, 's']]
+		)
 	);
 	const id = payload.created?.folder?.id;
 	if (!id) throw new Error(setErrorMessage(payload.notCreated?.folder, 'The folder could not be created.'));
@@ -144,7 +213,12 @@ export async function createFolder(parentId: string | null, name: string, accoun
 }
 
 /** Sends the bytes; XHR rather than fetch because fetch cannot report upload progress. */
-function sendBytes(file: Blob, name: string, account: string, onProgress: (sent: number) => void): Promise<string> {
+function sendBytes(
+	file: Blob,
+	name: string,
+	account: string,
+	onProgress: (sent: number) => void
+): Promise<string> {
 	const auth = authorization();
 	if (!auth) return Promise.reject(new Error('sign-in required'));
 	const url = `/jmap/upload/${encodeURIComponent(account)}/`;
@@ -175,7 +249,12 @@ export function sendBlob(content: Blob, account: string, name: string): Promise<
 }
 
 /** Uploads a file into a folder. A name that is taken becomes "name (2)"; nothing is overwritten. */
-export async function uploadFile(file: File, parentId: string | null, onProgress: (sent: number) => void, account = accountId()): Promise<void> {
+export async function uploadFile(
+	file: File,
+	parentId: string | null,
+	onProgress: (sent: number) => void,
+	account = accountId()
+): Promise<void> {
 	// Bytes always go to your own account; the file then links them into whichever Drive it lives in.
 	const blobId = await sendBytes(file, file.name, accountId(), onProgress);
 	const payload = setPayload(
@@ -187,18 +266,28 @@ export async function uploadFile(file: File, parentId: string | null, onProgress
 					{
 						accountId: account,
 						onExists: 'rename',
-						create: { file: { parentId, name: file.name, blobId, type: file.type || 'application/octet-stream' } }
+						create: {
+							file: { parentId, name: file.name, blobId, type: file.type || 'application/octet-stream' }
+						}
 					},
 					's'
 				]
 			]
 		)
 	);
-	if (!payload.created?.file?.id) throw new Error(setErrorMessage(payload.notCreated?.file, `${file.name} could not be saved.`));
+	if (!payload.created?.file?.id)
+		throw new Error(setErrorMessage(payload.notCreated?.file, `${file.name} could not be saved.`));
 }
 
-async function updateNode(id: string, patch: Record<string, unknown>, fallback: string, account = accountId()): Promise<void> {
-	const payload = setPayload(await jmap([FILES], [['FileNode/set', { accountId: account, update: { [id]: patch } }, 's']]));
+async function updateNode(
+	id: string,
+	patch: Record<string, unknown>,
+	fallback: string,
+	account = accountId()
+): Promise<void> {
+	const payload = setPayload(
+		await jmap([FILES], [['FileNode/set', { accountId: account, update: { [id]: patch } }, 's']])
+	);
 	if (payload.notUpdated?.[id] || !payload.updated || !(id in payload.updated)) {
 		throw new Error(setErrorMessage(payload.notUpdated?.[id], fallback));
 	}
@@ -215,9 +304,13 @@ export function moveNode(id: string, parentId: string | null, account = accountI
 /** Deletes a file, or a folder with everything in it. */
 export async function removeNode(id: string, account = accountId()): Promise<void> {
 	const payload = setPayload(
-		await jmap([FILES], [['FileNode/set', { accountId: account, destroy: [id], onDestroyRemoveChildren: true }, 's']])
+		await jmap(
+			[FILES],
+			[['FileNode/set', { accountId: account, destroy: [id], onDestroyRemoveChildren: true }, 's']]
+		)
 	);
-	if (!payload.destroyed?.includes(id)) throw new Error(setErrorMessage(payload.notDestroyed?.[id], 'It could not be deleted.'));
+	if (!payload.destroyed?.includes(id))
+		throw new Error(setErrorMessage(payload.notDestroyed?.[id], 'It could not be deleted.'));
 }
 
 /** Downloads with the session's credentials, which a plain link cannot carry. */

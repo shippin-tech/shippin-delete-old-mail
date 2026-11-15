@@ -1,13 +1,11 @@
 {
-  "id": "calendar-invite",
-  "a2ui": "CalendarInvite",
-  "kind": "mail-body",
-  "variants": [
-    "html"
-  ],
-  "engine": "crates/common/src/config/groupware.rs",
-  "html": "resources/html-templates/calendar-invite.html",
-  "routes": [],
-  "emits": [],
-  "kernel": "ui/src/lib/ai-runtime/mail/kernel/instruction.md"
+	"id": "calendar-invite",
+	"a2ui": "CalendarInvite",
+	"kind": "mail-body",
+	"variants": ["html"],
+	"engine": "crates/common/src/config/groupware.rs",
+	"html": "resources/html-templates/calendar-invite.html",
+	"routes": [],
+	"emits": [],
+	"kernel": "ui/src/lib/ai-runtime/mail/kernel/instruction.md"
 }

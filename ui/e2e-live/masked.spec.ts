@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
-import AxeBuilder from '@axe-core/playwright';
 import { connect } from 'node:net';
+import AxeBuilder from '@axe-core/playwright';
+import { expect, test } from '@playwright/test';
 
 // Masked addresses in a real browser against the local stack: mail to one arrives,
 // switching it off refuses mail, and each person only ever reaches their own.
@@ -54,7 +54,9 @@ function deliver(to: string, title: string): Promise<number> {
 }
 
 async function arrived(user: string, title: string): Promise<number> {
-	const session = (await (await api('GET', '/jmap/session', user)).json()) as { primaryAccounts: Record<string, string> };
+	const session = (await (await api('GET', '/jmap/session', user)).json()) as {
+		primaryAccounts: Record<string, string>;
+	};
 	const accountId = session.primaryAccounts['urn:ietf:params:jmap:mail'];
 	const res = await api('POST', '/jmap', user, {
 		using: ['urn:ietf:params:jmap:core', 'urn:ietf:params:jmap:mail'],
@@ -87,17 +89,24 @@ test('mail to a masked address arrives and stops when it is switched off', async
 	await page.waitForURL(/\/manage/, { timeout: 30_000 });
 	await page.goto('/mail');
 	await page.getByRole('link', { name: 'Masked addresses' }).click();
-	await expect(page.getByRole('heading', { name: 'Masked addresses', level: 1 })).toBeVisible({ timeout: 30_000 });
-	await expect(page.getByRole('complementary', { name: 'Mask your address' }).getByText('0 of 2 done')).toBeVisible({ timeout: 30_000 });
+	await expect(page.getByRole('heading', { name: 'Masked addresses', level: 1 })).toBeVisible({
+		timeout: 30_000
+	});
+	await expect(
+		page.getByRole('complementary', { name: 'Mask your address' }).getByText('0 of 2 done')
+	).toBeVisible({ timeout: 30_000 });
 
-	const serious = (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()).violations.filter(
-		(v) => v.impact === 'serious' || v.impact === 'critical'
-	);
+	const serious = (
+		await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
+	).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
 	expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
 
 	await page.getByLabel('What is it for?').fill('Shops');
 	await page.getByRole('button', { name: 'Make an address' }).click();
-	const row = page.getByRole('list', { name: 'Your masked addresses' }).getByRole('listitem').filter({ hasText: 'Shops' });
+	const row = page
+		.getByRole('list', { name: 'Your masked addresses' })
+		.getByRole('listitem')
+		.filter({ hasText: 'Shops' });
 	await expect(row).toBeVisible({ timeout: 30_000 });
 	const address = ((await row.getByRole('heading').textContent()) ?? '').trim();
 	expect(address).toMatch(new RegExp(`^[a-z2-9]{12}@${domain.replace(/\./g, '\\.')}$`));
@@ -112,14 +121,19 @@ test('mail to a masked address arrives and stops when it is switched off', async
 	const local = address.split('@')[0];
 	expect((await api('POST', `/api/masked/${local}`, other, { enabled: false })).status).toBe(404);
 	expect((await api('DELETE', `/api/masked/${local}`, other)).status).toBe(404);
-	const theirs = (await (await api('GET', '/api/masked', other)).json()) as { addresses: unknown[]; limit: number };
+	const theirs = (await (await api('GET', '/api/masked', other)).json()) as {
+		addresses: unknown[];
+		limit: number;
+	};
 	expect(theirs.addresses).toEqual([]);
 
 	// Switched off, it is refused during the conversation.
 	await row.getByRole('checkbox').uncheck();
 	await expect(row.getByText(/Switched off/)).toBeVisible({ timeout: 30_000 });
 	expect(await deliver(address, `Refused ${run}`)).toBe(550);
-	await expect(page.getByRole('complementary', { name: 'Mask your address' }).getByText('All done.')).toBeVisible({ timeout: 30_000 });
+	await expect(
+		page.getByRole('complementary', { name: 'Mask your address' }).getByText('All done.')
+	).toBeVisible({ timeout: 30_000 });
 
 	// Switched back on, it works again.
 	await row.getByRole('checkbox').check();

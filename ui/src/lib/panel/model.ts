@@ -55,16 +55,27 @@ function hostFor(name: string, domain: string): string {
 	return name.endsWith(suffix) ? name.slice(0, -suffix.length) : name;
 }
 
-function purposeOf(type: string, name: string, value: string, domain: string): { purpose: string; required: boolean } {
+function purposeOf(
+	type: string,
+	name: string,
+	value: string,
+	domain: string
+): { purpose: string; required: boolean } {
 	if (type === 'MX') return { purpose: 'Receive mail', required: true };
-	if (type === 'TXT' && value.startsWith('v=spf1')) return { purpose: 'SPF: who may send for the domain', required: true };
-	if (type === 'TXT' && name.includes('._domainkey.')) return { purpose: 'DKIM: signature key', required: true };
-	if (type === 'TXT' && name === `_dmarc.${domain}`) return { purpose: 'DMARC: policy for failed checks', required: true };
-	if (type === 'TXT' && name.startsWith('_mta-sts.')) return { purpose: 'MTA-STS: require TLS', required: false };
+	if (type === 'TXT' && value.startsWith('v=spf1'))
+		return { purpose: 'SPF: who may send for the domain', required: true };
+	if (type === 'TXT' && name.includes('._domainkey.'))
+		return { purpose: 'DKIM: signature key', required: true };
+	if (type === 'TXT' && name === `_dmarc.${domain}`)
+		return { purpose: 'DMARC: policy for failed checks', required: true };
+	if (type === 'TXT' && name.startsWith('_mta-sts.'))
+		return { purpose: 'MTA-STS: require TLS', required: false };
 	if (type === 'TXT' && name.startsWith('_smtp._tls.')) return { purpose: 'TLS reports', required: false };
 	if (type === 'SRV') return { purpose: 'Mail app auto-setup', required: false };
-	if (type === 'CNAME' && /^(autoconfig|autodiscover)\./.test(name)) return { purpose: 'Mail app auto-setup', required: false };
-	if (type === 'CNAME' && name.startsWith('mta-sts.')) return { purpose: 'MTA-STS policy host', required: false };
+	if (type === 'CNAME' && /^(autoconfig|autodiscover)\./.test(name))
+		return { purpose: 'Mail app auto-setup', required: false };
+	if (type === 'CNAME' && name.startsWith('mta-sts.'))
+		return { purpose: 'MTA-STS policy host', required: false };
 	if (type === 'TLSA') return { purpose: 'DANE: pin the TLS certificate', required: false };
 	if (type === 'CAA') return { purpose: 'Certificate authority policy', required: false };
 	return { purpose: '', required: false };
@@ -82,14 +93,21 @@ export function parseZone(zone: string, domain: string): DnsRow[] {
 		let value = rest.trim();
 		if (value === '(') {
 			const chunks: string[] = [];
-			for (index += 1; index < lines.length && lines[index].trim() !== ')'; index += 1) chunks.push(lines[index]);
+			for (index += 1; index < lines.length && lines[index].trim() !== ')'; index += 1)
+				chunks.push(lines[index]);
 			value = unquote(chunks.join(' '));
 		} else if (type === 'TXT') {
 			value = unquote(value);
 		}
 		const name = rawName.replace(/\.$/, '');
 		const shown = type === 'TXT' ? value : value.replace(/\.$/, '');
-		rows.push({ type, name, host: hostFor(name, domain), value: shown, ...purposeOf(type, name, value, domain) });
+		rows.push({
+			type,
+			name,
+			host: hostFor(name, domain),
+			value: shown,
+			...purposeOf(type, name, value, domain)
+		});
 	}
 	return rows.sort((a, b) => Number(b.required) - Number(a.required));
 }

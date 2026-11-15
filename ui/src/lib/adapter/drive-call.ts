@@ -28,7 +28,13 @@ export type DriveShare = { principalId: string; name: string; role: ShareRole };
 export type SharedDrive = { accountId: string; name: string };
 
 export const FULL_RIGHTS: DriveRights = { add: true, rename: true, remove: true, modify: true, share: true };
-export const NO_RIGHTS: DriveRights = { add: false, rename: false, remove: false, modify: false, share: false };
+export const NO_RIGHTS: DriveRights = {
+	add: false,
+	rename: false,
+	remove: false,
+	modify: false,
+	share: false
+};
 
 export const ROLE_LABELS: Record<ShareRole, string> = { viewer: 'Can view', editor: 'Can edit' };
 
@@ -68,7 +74,9 @@ export function topShared(nodes: readonly DriveNode[]): DriveNode[] {
 }
 
 /** The shareWith map for a set of people and roles. */
-export function shareMap(shares: readonly Pick<DriveShare, 'principalId' | 'role'>[]): Record<string, Record<string, boolean>> {
+export function shareMap(
+	shares: readonly Pick<DriveShare, 'principalId' | 'role'>[]
+): Record<string, Record<string, boolean>> {
 	return Object.fromEntries(shares.map((share) => [share.principalId, roleRights(share.role)]));
 }
 
@@ -146,9 +154,32 @@ export function breadcrumbs(
 
 const FORBIDDEN = /[/<>:"\\|?*]/;
 const RESERVED = new Set([
-	'.', '..', 'CON', 'PRN', 'AUX', 'NUL',
-	'COM0', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9',
-	'LPT0', 'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'
+	'.',
+	'..',
+	'CON',
+	'PRN',
+	'AUX',
+	'NUL',
+	'COM0',
+	'COM1',
+	'COM2',
+	'COM3',
+	'COM4',
+	'COM5',
+	'COM6',
+	'COM7',
+	'COM8',
+	'COM9',
+	'LPT0',
+	'LPT1',
+	'LPT2',
+	'LPT3',
+	'LPT4',
+	'LPT5',
+	'LPT6',
+	'LPT7',
+	'LPT8',
+	'LPT9'
 ]);
 
 /** Why a name cannot be used, or an empty string when it can. Mirrors the server's rules. */
@@ -162,7 +193,11 @@ export function nameProblem(name: string): string {
 }
 
 /** A folder cannot move into itself or anything inside it. */
-export function canMoveInto(moving: DriveNode, target: string | null, known: ReadonlyMap<string, DriveNode>): boolean {
+export function canMoveInto(
+	moving: DriveNode,
+	target: string | null,
+	known: ReadonlyMap<string, DriveNode>
+): boolean {
 	if (target === moving.parentId) return false;
 	const seen = new Set<string>();
 	let current = target;
@@ -175,7 +210,10 @@ export function canMoveInto(moving: DriveNode, target: string | null, known: Rea
 }
 
 /** The server's refusal, in words a person can act on. */
-export function setErrorMessage(error: { type?: unknown; description?: unknown } | undefined, fallback: string): string {
+export function setErrorMessage(
+	error: { type?: unknown; description?: unknown } | undefined,
+	fallback: string
+): string {
 	switch (error?.type) {
 		case 'overQuota':
 			return 'You are out of storage. Delete something or ask for more space.';
@@ -207,7 +245,7 @@ export function downloadPath(accountId: string, blobId: string, name: string, ty
 }
 
 export function usagePercent(usage: DriveUsage | null): number | null {
-	if (!usage || !usage.limit) return null;
+	if (!usage?.limit) return null;
 	return Math.min(100, Math.round((usage.used / usage.limit) * 100));
 }
 

@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { expect, test } from '@playwright/test';
 
 // Docs in a real browser against the local stack: write with formatting, autosave,
 // reopen, export, see it in Drive, a second writer, and a safe link.
@@ -12,12 +12,18 @@ const base = process.env.LIVE_URL ?? 'http://127.0.0.1:28080';
 test.afterAll(async () => {
 	await fetch(`${base}/api/panel/domain/close`, {
 		method: 'POST',
-		headers: { Authorization: 'Basic ' + Buffer.from(`${owner}:${password}`).toString('base64'), 'Content-Type': 'application/json' },
+		headers: {
+			Authorization: 'Basic ' + Buffer.from(`${owner}:${password}`).toString('base64'),
+			'Content-Type': 'application/json'
+		},
 		body: JSON.stringify({ confirm: domain })
 	});
 });
 
-test('a person writes a document that saves itself, reopens, exports and lives in Drive', async ({ page, browser }) => {
+test('a person writes a document that saves itself, reopens, exports and lives in Drive', async ({
+	page,
+	browser
+}) => {
 	test.setTimeout(180_000);
 	const created = await fetch(`${base}/api/panel/signup`, {
 		method: 'POST',
@@ -48,9 +54,9 @@ test('a person writes a document that saves itself, reopens, exports and lives i
 
 	const text = page.getByRole('textbox', { name: 'Document text' });
 	await expect(text).toBeVisible({ timeout: 30_000 });
-	const serious = (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()).violations.filter(
-		(v) => v.impact === 'serious' || v.impact === 'critical'
-	);
+	const serious = (
+		await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
+	).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
 	expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
 
 	// Write with formatting; it saves by itself.
@@ -79,12 +85,18 @@ test('a person writes a document that saves itself, reopens, exports and lives i
 	await expect(text.locator('strong')).toHaveText('Grow');
 
 	// Exports carry the content.
-	const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download HTML' }).click()]);
+	const [download] = await Promise.all([
+		page.waitForEvent('download'),
+		page.getByRole('button', { name: 'Download HTML' }).click()
+	]);
 	expect(download.suggestedFilename()).toBe('Quarterly plan.html');
 	const chunks: Buffer[] = [];
 	for await (const chunk of await download.createReadStream()) chunks.push(chunk as Buffer);
 	expect(Buffer.concat(chunks).toString()).toContain('<strong>Grow</strong>');
-	const [word] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download Word' }).click()]);
+	const [word] = await Promise.all([
+		page.waitForEvent('download'),
+		page.getByRole('button', { name: 'Download Word' }).click()
+	]);
 	expect(word.suggestedFilename()).toBe('Quarterly plan.doc');
 
 	// Renaming from the editor reaches the list.
@@ -92,7 +104,9 @@ test('a person writes a document that saves itself, reopens, exports and lives i
 	await page.getByLabel('Document title').blur();
 	await expect(page.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible({ timeout: 30_000 });
 	await page.goto('/docs');
-	await expect(page.getByRole('button', { name: 'Annual plan', exact: true })).toBeVisible({ timeout: 30_000 });
+	await expect(page.getByRole('button', { name: 'Annual plan', exact: true })).toBeVisible({
+		timeout: 30_000
+	});
 	await expect(lesson.getByText('3 of 3 done')).toBeVisible();
 
 	// It is a real file in Drive, and opening it there opens the editor.

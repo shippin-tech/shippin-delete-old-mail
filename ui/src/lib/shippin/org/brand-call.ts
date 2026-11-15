@@ -15,6 +15,7 @@ export function logoUrl(domain: string, version = 0): string {
 }
 
 export function logoFileProblem(file: Pick<File, 'type' | 'size'>): string {
-	if (!LOGO_TYPES.includes(file.type) || file.size > MAX_LOGO_BYTES) return 'Use a PNG, JPEG or WebP image under 90 KB.';
+	if (!LOGO_TYPES.includes(file.type) || file.size > MAX_LOGO_BYTES)
+		return 'Use a PNG, JPEG or WebP image under 90 KB.';
 	return '';
 }

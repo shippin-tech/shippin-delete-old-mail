@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { keptFor, keptIntro, messageSize, subjectOrPlaceholder } from '../src/lib/shippin/recover/recover-call';
+import {
+	keptFor,
+	keptIntro,
+	messageSize,
+	subjectOrPlaceholder
+} from '../src/lib/shippin/recover/recover-call';
 
 describe('recovery helpers', () => {
 	it('counts the days left, rounding up', () => {

@@ -11,6 +11,9 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const schemaPath = resolve(root, '../resources/schema/schema.json.gz');
 const outPath = resolve(root, 'src/lib/portal/catalog.ts');
 
+// Display text from the schema names the upstream product; ours is shippin.tech.
+const brand = (text: string) => text.replace(/Stalwart/gi, 'shippin.tech');
+
 type Field = { name?: string; label?: string };
 type PropertyType = { type?: string; format?: string; objectName?: string };
 type Property = { type?: PropertyType; update?: string; enterprise?: boolean };
@@ -60,7 +63,6 @@ type Schema = {
 	dashboards: Dashboard[];
 	schemas?: Record<string, SchemaRecord>;
 };
-
 
 function named(items: Field[] | undefined): { name: string; label: string }[] {
 	return (items ?? []).flatMap((item) =>
@@ -120,7 +122,10 @@ function bootstrapSteps(schema: Schema): { title: string; fields: BootstrapField
 	});
 }
 
-function walk(items: Link[] | undefined, into: { name: string; view: string; children: { name: string; view: string }[] }[]) {
+function walk(
+	items: Link[] | undefined,
+	into: { name: string; view: string; children: { name: string; view: string }[] }[]
+) {
 	for (const raw of items ?? []) {
 		const link = raw.link ?? (raw.name ? raw : undefined);
 		if (link?.name && link.viewName) into.push({ name: link.name, view: link.viewName, children: [] });
@@ -144,7 +149,10 @@ const layouts = (schema.layouts ?? []).map((layout) => {
 		name: layout.name ?? '',
 		items: items
 			.filter((item) => !REPLACED_VIEWS.has(item.view))
-			.map((item) => ({ ...item, children: item.children.filter((child) => !REPLACED_VIEWS.has(child.view)) }))
+			.map((item) => ({
+				...item,
+				children: item.children.filter((child) => !REPLACED_VIEWS.has(child.view))
+			}))
 	};
 });
 
@@ -156,20 +164,23 @@ for (const layout of layouts) {
 	}
 }
 
-const views: Record<string, {
-	view: string;
-	object: string;
-	kind: string;
-	description: string;
-	listTitle: string;
-	listSubtitle: string;
-	columns: { name: string; label: string }[];
-	sections: { title: string; fields: { name: string; label: string; type: string; format: string }[] }[];
-}> = {};
+const views: Record<
+	string,
+	{
+		view: string;
+		object: string;
+		kind: string;
+		description: string;
+		listTitle: string;
+		listSubtitle: string;
+		columns: { name: string; label: string }[];
+		sections: { title: string; fields: { name: string; label: string; type: string; format: string }[] }[];
+	}
+> = {};
 
 for (const view of seen) {
 	const record = schema.objects[view];
-	const objectName = record?.type === 'view' ? record.objectName ?? view : view;
+	const objectName = record?.type === 'view' ? (record.objectName ?? view) : view;
 	const object = schema.objects[objectName] ?? record;
 	const list = schema.lists[view] ?? schema.lists[objectName];
 	const form = schema.forms[view] ?? schema.forms[objectName];
@@ -231,7 +242,13 @@ const dashboards = (schema.dashboards ?? []).flatMap((board) =>
 					charts: (board.charts ?? []).flatMap((chart) => {
 						const series = (chart.series ?? []).flatMap((item) =>
 							item.label && metricList(item.metrics).length
-								? [{ label: item.label, metrics: metricList(item.metrics), aggregate: aggregate(item.aggregate) }]
+								? [
+										{
+											label: item.label,
+											metrics: metricList(item.metrics),
+											aggregate: aggregate(item.aggregate)
+										}
+									]
 								: []
 						);
 						return chart.title && series.length
@@ -278,4 +295,6 @@ export type PortalDashboard = (typeof dashboards)[number];
 
 mkdirSync(dirname(outPath), { recursive: true });
 writeFileSync(outPath, source);
-console.log(`portal catalog: ${layouts.length} layouts, ${Object.keys(views).length} views, ${dashboards.length} dashboard tabs, ${bootstrap.steps.length} bootstrap steps, ${actions.length} actions`);
+console.log(
+	`portal catalog: ${layouts.length} layouts, ${Object.keys(views).length} views, ${dashboards.length} dashboard tabs, ${bootstrap.steps.length} bootstrap steps, ${actions.length} actions`
+);

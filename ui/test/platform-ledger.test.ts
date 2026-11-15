@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { dispositionCounts, ledgerDispositions, ledgerGroups, platformLedger } from '../src/lib/platform/ledger';
+import {
+	dispositionCounts,
+	ledgerDispositions,
+	ledgerGroups,
+	platformLedger
+} from '../src/lib/platform/ledger';
 
 describe('platform ledger', () => {
 	it('loads the copied disposition ledger and exposes groups/dispositions', () => {

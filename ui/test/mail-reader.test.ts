@@ -12,11 +12,28 @@ describe('mail reader', () => {
 		vi.stubGlobal('sessionStorage', { getItem: (key: string) => storage.get(key) ?? null });
 		const fetch = vi.fn(async (_url: string, _options: RequestInit) => ({
 			ok: true,
-			json: async () => ({ methodResponses: [['Email/get', { list: [{
-				id: 'one', subject: 'Hello', preview: 'Preview',
-				textBody: [{ partId: '1' }, { partId: '2' }],
-				bodyValues: { '1': { value: 'First' }, '2': { value: '<script>text</script>', isTruncated: true } }
-			}] }, 'e0']] })
+			json: async () => ({
+				methodResponses: [
+					[
+						'Email/get',
+						{
+							list: [
+								{
+									id: 'one',
+									subject: 'Hello',
+									preview: 'Preview',
+									textBody: [{ partId: '1' }, { partId: '2' }],
+									bodyValues: {
+										'1': { value: 'First' },
+										'2': { value: '<script>text</script>', isTruncated: true }
+									}
+								}
+							]
+						},
+						'e0'
+					]
+				]
+			})
 		}));
 		vi.stubGlobal('fetch', fetch);
 		const message = await loadMessage('one');

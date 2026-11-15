@@ -1,6 +1,12 @@
 import { authorization } from '../../adapter/session';
 
-export type SsoSettings = { issuer: string | null; clientId: string | null; hasSecret: boolean; enabled: boolean; callback: string };
+export type SsoSettings = {
+	issuer: string | null;
+	clientId: string | null;
+	hasSecret: boolean;
+	enabled: boolean;
+	callback: string;
+};
 export type SsoDraft = { issuer: string; clientId: string; clientSecret: string; enabled: boolean };
 
 /** What the sign-in page already holds for the application asking to sign someone in. */
@@ -31,8 +37,13 @@ export async function beginSso(request: SsoRequest): Promise<string> {
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify(request)
 	});
-	const reply = (await res.json().catch(() => null)) as { url?: string; message?: string; detail?: string } | null;
-	if (!res.ok || !reply?.url) throw new Error(reply?.message ?? reply?.detail ?? 'Your organisation sign-in could not be started.');
+	const reply = (await res.json().catch(() => null)) as {
+		url?: string;
+		message?: string;
+		detail?: string;
+	} | null;
+	if (!res.ok || !reply?.url)
+		throw new Error(reply?.message ?? reply?.detail ?? 'Your organisation sign-in could not be started.');
 	return reply.url;
 }
 

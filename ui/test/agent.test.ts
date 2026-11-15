@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { allowedRoute, onRoute, parseCall, phaseText, shownArguments } from '../src/lib/shippin/agent/agent-call';
+import {
+	allowedRoute,
+	onRoute,
+	parseCall,
+	phaseText,
+	shownArguments
+} from '../src/lib/shippin/agent/agent-call';
 
 const raw = {
 	callId: 'c1',
@@ -19,7 +25,14 @@ describe('the agent bar', () => {
 		expect(parseCall('not json')).toBeNull();
 		expect(parseCall(JSON.stringify({ name: 'x' }))).toBeNull();
 		const bare = parseCall(JSON.stringify({ callId: 'c', name: 'screen.read', route: '/shippin/admin' }))!;
-		expect(bare).toMatchObject({ title: 'screen.read', writes: false, destructive: false, secret: [], arguments: {}, seconds: 120 });
+		expect(bare).toMatchObject({
+			title: 'screen.read',
+			writes: false,
+			destructive: false,
+			secret: [],
+			arguments: {},
+			seconds: 120
+		});
 	});
 
 	it('shows every argument, masking the secret ones', () => {
@@ -34,14 +47,23 @@ describe('the agent bar', () => {
 		const call = parseCall(JSON.stringify(raw))!;
 		expect(phaseText(call, 'moving')).toBe('An AI agent is opening the screen for: Replace a service key.');
 		expect(phaseText(call, 'asking')).toMatch(/replaces or removes something\. Allow it\?$/);
-		expect(phaseText({ ...call, destructive: false }, 'asking')).toBe('An AI agent wants to: Replace a service key. Allow it?');
+		expect(phaseText({ ...call, destructive: false }, 'asking')).toBe(
+			'An AI agent wants to: Replace a service key. Allow it?'
+		);
 		expect(phaseText(call, 'working')).toBe('An AI agent is doing: Replace a service key.');
 	});
 
 	it('opens only pages of the admin panel', () => {
 		expect(allowedRoute('/shippin/admin')).toBe(true);
 		expect(allowedRoute('/shippin/admin/keys')).toBe(true);
-		for (const bad of ['/mail', 'https://evil.example', '/shippin/admin/../mail', '/shippin/admin?x=1', '/shippin/adminx', 3]) {
+		for (const bad of [
+			'/mail',
+			'https://evil.example',
+			'/shippin/admin/../mail',
+			'/shippin/admin?x=1',
+			'/shippin/adminx',
+			3
+		]) {
 			expect(allowedRoute(bad)).toBe(false);
 		}
 		expect(onRoute('/shippin/admin/keys/', '/shippin/admin/keys')).toBe(true);

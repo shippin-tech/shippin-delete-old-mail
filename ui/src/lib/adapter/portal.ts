@@ -1,10 +1,11 @@
+import type { PortalSchema } from '$lib/portal/schema';
 import { accountId, idsOf, jmap, listOf } from './jmap';
 import { registryGet, usingFor } from './portal-call';
 import { authorization, clearSession } from './session';
-import { registrySet, setResult, type RegistryChange } from './writes-call';
-import type { PortalSchema } from '$lib/portal/schema';
+import { type RegistryChange, registrySet, setResult } from './writes-call';
 
 export { cell, registryGet, rowCells, usingFor } from './portal-call';
+
 const registryStates = new Map<string, string>();
 
 export type RegistryListControls = {
@@ -47,7 +48,10 @@ export function sanitizeRegistryPosition(value: number | undefined): number {
 	return Math.max(0, Math.floor(raw));
 }
 
-export function mergeRegistryFilter(filter: Record<string, unknown> | undefined, filterText: string): Record<string, unknown> | undefined {
+export function mergeRegistryFilter(
+	filter: Record<string, unknown> | undefined,
+	filterText: string
+): Record<string, unknown> | undefined {
 	const merged = filter ? { ...filter } : {};
 	const text = filterText.trim();
 	if (text) merged.text = text;
@@ -67,7 +71,10 @@ export async function loadRegistry(
 	return page.items;
 }
 
-export async function loadRegistryPage(objectName: string, options: RegistryListOptions = {}): Promise<RegistryListPage> {
+export async function loadRegistryPage(
+	objectName: string,
+	options: RegistryListOptions = {}
+): Promise<RegistryListPage> {
 	const id = accountId();
 	const limit = sanitizeRegistryLimit(options.limit);
 	const position = sanitizeRegistryPosition(options.position);
@@ -87,7 +94,11 @@ export async function loadRegistryPage(objectName: string, options: RegistryList
 		get[1].ids = options.ids;
 	} else {
 		const filter = mergeRegistryFilter(options.filter, controls.filterText);
-		const query: Record<string, unknown> = { accountId: id, position: controls.position, limit: controls.limit };
+		const query: Record<string, unknown> = {
+			accountId: id,
+			position: controls.position,
+			limit: controls.limit
+		};
 		if (filter) query.filter = filter;
 		if (controls.sortBy) query.sort = [{ property: controls.sortBy, isAscending: controls.sortAscending }];
 		get[1]['#ids'] = { resultOf: 'q0', name: `${objectName}/query`, path: '/ids' };
@@ -99,13 +110,16 @@ export async function loadRegistryPage(objectName: string, options: RegistryList
 		total = typeof queryPayload?.total === 'number' ? queryPayload.total : null;
 		const rows = listOf<Record<string, unknown>>(responses, `${objectName}/get`);
 		const byId = new Map(rows.map((row) => [String(row.id ?? ''), row]));
-		const items = queryIds.map((entryId) => byId.get(entryId)).filter((row): row is Record<string, unknown> => Boolean(row));
+		const items = queryIds
+			.map((entryId) => byId.get(entryId))
+			.filter((row): row is Record<string, unknown> => Boolean(row));
 		return {
 			items,
 			controls,
 			total,
 			hasPrev: controls.position > 0,
-			hasNext: total == null ? queryIds.length === controls.limit : controls.position + queryIds.length < total
+			hasNext:
+				total == null ? queryIds.length === controls.limit : controls.position + queryIds.length < total
 		};
 	}
 
@@ -126,7 +140,10 @@ export async function loadPortalSchema(): Promise<PortalSchema> {
 	const auth = authorization();
 	if (!auth) throw new Error('sign-in required');
 	const response = await fetch('/api/schema', { headers: { Authorization: auth }, cache: 'no-store' });
-	if (response.status === 401) { clearSession(); throw new Error('sign-in required'); }
+	if (response.status === 401) {
+		clearSession();
+		throw new Error('sign-in required');
+	}
 	if (!response.ok) throw new Error('Could not load server schema: HTTP ' + response.status);
 	return response.json();
 }
@@ -143,8 +160,14 @@ export async function writeRegistry(object: string, change: RegistryChange, id: 
 		return created?.[id]?.id ?? id;
 	}
 	const failure = [payload.notCreated, payload.notUpdated, payload.notDestroyed]
-		.map((map) => map && typeof map === 'object' ? (map as Record<string, unknown>)[id] : null)
+		.map((map) => (map && typeof map === 'object' ? (map as Record<string, unknown>)[id] : null))
 		.find(Boolean) as { description?: string; type?: string; properties?: unknown } | undefined;
-	if (failure?.type === 'objectIsLinked') throw new Error('This record is still referenced by other objects. Remove those links before deleting it.');
-	throw new Error((failure?.description || failure?.type || 'The server did not confirm the change.') + (Array.isArray(failure?.properties) ? ` (${failure.properties.join(', ')})` : ''));
+	if (failure?.type === 'objectIsLinked')
+		throw new Error(
+			'This record is still referenced by other objects. Remove those links before deleting it.'
+		);
+	throw new Error(
+		(failure?.description || failure?.type || 'The server did not confirm the change.') +
+			(Array.isArray(failure?.properties) ? ` (${failure.properties.join(', ')})` : '')
+	);
 }

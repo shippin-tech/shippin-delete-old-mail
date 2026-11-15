@@ -1,13 +1,9 @@
 {
-  "id": "platform",
-  "a2ui": "PortingLedger",
-  "variants": [
-    "ledger"
-  ],
-  "engine": "ui/porting/platform-disposition.csv",
-  "routes": [
-    "/platform"
-  ],
-  "emits": [],
-  "kernel": "ui/src/lib/ai-runtime/admin/kernel/instruction.md"
+	"id": "platform",
+	"a2ui": "PortingLedger",
+	"variants": ["ledger"],
+	"engine": "ui/porting/platform-disposition.csv",
+	"routes": ["/platform"],
+	"emits": [],
+	"kernel": "ui/src/lib/ai-runtime/admin/kernel/instruction.md"
 }

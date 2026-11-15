@@ -18,7 +18,8 @@ const view = readFileSync(new URL('../src/lib/shippin/admin/PortalView.svelte', 
 if (!table.includes('No results found')) throw new Error('empty copy');
 if (!table.includes('href="/login"')) throw new Error('sign-in link');
 if (!view.includes('This feature requires an Enterprise license.')) throw new Error('enterprise copy');
-if (view.includes("from '$lib/adapter") || table.includes("from '$lib/adapter")) throw new Error('catalog fetches');
+if (view.includes("from '$lib/adapter") || table.includes("from '$lib/adapter"))
+	throw new Error('catalog fetches');
 
 const page = readFileSync(
 	new URL('../src/routes/(shippin)/shippin/admin/[...view]/+page.svelte', import.meta.url),

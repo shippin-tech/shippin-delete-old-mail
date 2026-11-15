@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { nextAfterDiscover } from '../src/lib/adapter/discover-call';
 import { classifyMetrics } from '../src/lib/adapter/metrics-call';
-import { mergeRegistryFilter, sanitizeRegistryLimit, sanitizeRegistryPosition } from '../src/lib/adapter/portal';
+import {
+	mergeRegistryFilter,
+	sanitizeRegistryLimit,
+	sanitizeRegistryPosition
+} from '../src/lib/adapter/portal';
 import { cell, registryGet, usingFor } from '../src/lib/adapter/portal-call';
-import { COPY_BLOCKED, copyLabel, writeClipboard } from '../src/lib/portal/copy';
-import { recordPatch, type PortalSchema } from '../src/lib/portal/schema';
 import { views } from '../src/lib/portal/catalog';
+import { COPY_BLOCKED, copyLabel, writeClipboard } from '../src/lib/portal/copy';
+import { type PortalSchema, recordPatch } from '../src/lib/portal/schema';
 import { buildSearchIndex, querySearch, searchLabel } from '../src/lib/portal/search';
 
 describe('catalog field types', () => {
@@ -37,7 +41,12 @@ describe('copy', () => {
 
 describe('search', () => {
 	const index = buildSearchIndex(
-		[{ name: 'Management', items: [{ name: 'Domains', view: '', children: [{ name: 'Domains', view: 'x:Domain' }] }] }],
+		[
+			{
+				name: 'Management',
+				items: [{ name: 'Domains', view: '', children: [{ name: 'Domains', view: 'x:Domain' }] }]
+			}
+		],
 		{
 			'x:Domain': {
 				kind: 'object',
@@ -84,15 +93,28 @@ describe('discover', () => {
 
 describe('schema record writes', () => {
 	it('preserves nested values and excludes server-owned and immutable update properties', () => {
-		const schema = { fields: { example: { properties: {
-			config: { type: { type: 'object' }, update: 'mutable' },
-			id: { type: { type: 'string' }, update: 'serverSet' },
-			name: { type: { type: 'string' }, update: 'immutable' }
-		} } } } as unknown as PortalSchema;
+		const schema = {
+			fields: {
+				example: {
+					properties: {
+						config: { type: { type: 'object' }, update: 'mutable' },
+						id: { type: { type: 'string' }, update: 'serverSet' },
+						name: { type: { type: 'string' }, update: 'immutable' }
+					}
+				}
+			}
+		} as unknown as PortalSchema;
 		const original = { id: 'one', name: 'fixed', config: { '@type': 'Manual' } };
-		const draft = { id: 'changed', name: 'changed', config: { '@type': 'Automatic', nested: ['one', 'two'] } };
+		const draft = {
+			id: 'changed',
+			name: 'changed',
+			config: { '@type': 'Automatic', nested: ['one', 'two'] }
+		};
 		expect(recordPatch(schema, 'example', original, draft, false)).toEqual({ config: draft.config });
-		expect(recordPatch(schema, 'example', {}, draft, true)).toEqual({ name: 'changed', config: draft.config });
+		expect(recordPatch(schema, 'example', {}, draft, true)).toEqual({
+			name: 'changed',
+			config: draft.config
+		});
 	});
 });
 
@@ -102,6 +124,9 @@ describe('registry listing controls', () => {
 		expect(sanitizeRegistryLimit(0)).toBe(1);
 		expect(sanitizeRegistryPosition(-2)).toBe(0);
 		expect(mergeRegistryFilter(undefined, '  ')).toBeUndefined();
-		expect(mergeRegistryFilter({ '@type': 'individual' }, 'alice')).toEqual({ '@type': 'individual', text: 'alice' });
+		expect(mergeRegistryFilter({ '@type': 'individual' }, 'alice')).toEqual({
+			'@type': 'individual',
+			text: 'alice'
+		});
 	});
 });

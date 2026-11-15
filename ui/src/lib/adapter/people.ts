@@ -1,5 +1,12 @@
 import { accountId, jmap, listOf, type MethodResponse } from './jmap';
-import { personProperties, sortPeople, toPerson, type AddressBook, type Person, type PersonDraft } from './people-call';
+import {
+	type AddressBook,
+	type Person,
+	type PersonDraft,
+	personProperties,
+	sortPeople,
+	toPerson
+} from './people-call';
 
 export * from './people-call';
 
@@ -24,7 +31,10 @@ function reason(error: { description?: unknown } | undefined, fallback: string):
 
 export async function listAddressBooks(): Promise<AddressBook[]> {
 	const responses = await jmap([CONTACTS], [['AddressBook/get', { accountId: accountId() }, 'b']]);
-	return listOf<{ id?: unknown; name?: unknown; isDefault?: unknown; myRights?: Record<string, unknown> }>(responses, 'AddressBook/get')
+	return listOf<{ id?: unknown; name?: unknown; isDefault?: unknown; myRights?: Record<string, unknown> }>(
+		responses,
+		'AddressBook/get'
+	)
 		.flatMap((row) =>
 			typeof row.id === 'string'
 				? [
@@ -47,40 +57,62 @@ export async function listPeople(): Promise<Person[]> {
 		[CONTACTS],
 		[
 			['ContactCard/query', { accountId: id }, 'q'],
-			['ContactCard/get', { accountId: id, '#ids': { resultOf: 'q', name: 'ContactCard/query', path: '/ids' } }, 'g']
+			[
+				'ContactCard/get',
+				{ accountId: id, '#ids': { resultOf: 'q', name: 'ContactCard/query', path: '/ids' } },
+				'g'
+			]
 		]
 	);
-	return sortPeople(listOf<Record<string, unknown>>(responses, 'ContactCard/get').flatMap((raw) => toPerson(raw) ?? []));
+	return sortPeople(
+		listOf<Record<string, unknown>>(responses, 'ContactCard/get').flatMap((raw) => toPerson(raw) ?? [])
+	);
 }
 
 export async function savePerson(draft: PersonDraft, original?: Person): Promise<void> {
 	const properties = personProperties(draft, !original);
 	const args = original ? { update: { [original.id]: properties } } : { create: { c: properties } };
-	const payload = setPayload(await jmap([CONTACTS], [['ContactCard/set', { accountId: accountId(), ...args }, 's']]), 'ContactCard/set');
+	const payload = setPayload(
+		await jmap([CONTACTS], [['ContactCard/set', { accountId: accountId(), ...args }, 's']]),
+		'ContactCard/set'
+	);
 	if (original) {
-		if (!payload.updated || !(original.id in payload.updated)) throw new Error(reason(payload.notUpdated?.[original.id], 'The contact could not be saved.'));
+		if (!payload.updated || !(original.id in payload.updated))
+			throw new Error(reason(payload.notUpdated?.[original.id], 'The contact could not be saved.'));
 	} else if (!payload.created?.c?.id) {
 		throw new Error(reason(payload.notCreated?.c, 'The contact could not be created.'));
 	}
 }
 
 export async function deletePerson(id: string): Promise<void> {
-	const payload = setPayload(await jmap([CONTACTS], [['ContactCard/set', { accountId: accountId(), destroy: [id] }, 's']]), 'ContactCard/set');
-	if (!payload.destroyed?.includes(id)) throw new Error(reason(payload.notDestroyed?.[id], 'The contact could not be deleted.'));
+	const payload = setPayload(
+		await jmap([CONTACTS], [['ContactCard/set', { accountId: accountId(), destroy: [id] }, 's']]),
+		'ContactCard/set'
+	);
+	if (!payload.destroyed?.includes(id))
+		throw new Error(reason(payload.notDestroyed?.[id], 'The contact could not be deleted.'));
 }
 
 export async function createAddressBook(name: string): Promise<void> {
 	const payload = setPayload(
-		await jmap([CONTACTS], [['AddressBook/set', { accountId: accountId(), create: { b: { name: name.trim() } } }, 's']]),
+		await jmap(
+			[CONTACTS],
+			[['AddressBook/set', { accountId: accountId(), create: { b: { name: name.trim() } } }, 's']]
+		),
 		'AddressBook/set'
 	);
-	if (!payload.created?.b?.id) throw new Error(reason(payload.notCreated?.b, 'The address book could not be created.'));
+	if (!payload.created?.b?.id)
+		throw new Error(reason(payload.notCreated?.b, 'The address book could not be created.'));
 }
 
 export async function deleteAddressBook(id: string): Promise<void> {
 	const payload = setPayload(
-		await jmap([CONTACTS], [['AddressBook/set', { accountId: accountId(), destroy: [id], onDestroyRemoveContents: true }, 's']]),
+		await jmap(
+			[CONTACTS],
+			[['AddressBook/set', { accountId: accountId(), destroy: [id], onDestroyRemoveContents: true }, 's']]
+		),
 		'AddressBook/set'
 	);
-	if (!payload.destroyed?.includes(id)) throw new Error(reason(payload.notDestroyed?.[id], 'The address book could not be deleted.'));
+	if (!payload.destroyed?.includes(id))
+		throw new Error(reason(payload.notDestroyed?.[id], 'The address book could not be deleted.'));
 }

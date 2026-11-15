@@ -1,5 +1,5 @@
-import queueSource from '../../../porting/work-packages.json?raw';
 import filesSource from '../../../porting/webui-files.json?raw';
+import queueSource from '../../../porting/work-packages.json?raw';
 
 export type PortingPackage = {
 	id: string;

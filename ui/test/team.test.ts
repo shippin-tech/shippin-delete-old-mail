@@ -7,25 +7,47 @@ import {
 	limitText,
 	membersOf,
 	newPersonProperties,
+	type Person,
+	type PersonDraft,
 	passwordProblem,
 	personPatch,
 	personProblem,
 	sortPeople,
 	teamProblem,
 	toPerson,
-	toTeam,
-	type Person,
-	type PersonDraft
+	toTeam
 } from '../src/lib/shippin/people/team-call';
 
 const GB = 1024 ** 3;
 
 function person(overrides: Partial<Person> = {}): Person {
-	return { id: 'p', name: 'ada', domainId: 'd', email: 'ada@x.test', fullName: 'Ada Lovelace', role: 'user', used: 10, limit: 2 * GB, teamIds: ['t1'], passwordKey: '0', createdAt: '', ...overrides };
+	return {
+		id: 'p',
+		name: 'ada',
+		domainId: 'd',
+		email: 'ada@x.test',
+		fullName: 'Ada Lovelace',
+		role: 'user',
+		used: 10,
+		limit: 2 * GB,
+		teamIds: ['t1'],
+		passwordKey: '0',
+		createdAt: '',
+		...overrides
+	};
 }
 
 function draft(overrides: Partial<PersonDraft> = {}): PersonDraft {
-	return { name: 'ada', domainId: 'd', fullName: 'Ada', password: 'long enough secret', role: 'user', limitGb: '', teamIds: [], ...overrides };
+	return {
+		name: 'ada',
+		domainId: 'd',
+		fullName: 'Ada',
+		password: 'long enough secret',
+		role: 'user',
+		limitGb: '',
+		teamIds: [],
+		...overrides
+	};
 }
 
 describe('people and teams helpers', () => {
@@ -47,7 +69,10 @@ describe('people and teams helpers', () => {
 		expect(toPerson({ id: 'g', '@type': 'Group' })).toBeNull();
 		expect(toPerson({ id: 'p', '@type': 'User', quotas: {} })?.limit).toBeNull();
 		expect(toPerson({ id: 'p', '@type': 'User', roles: { '@type': 'Custom' } })?.role).toBe('custom');
-		expect(toTeam({ id: 't', '@type': 'Group', name: 'sales', emailAddress: 'sales@x.test' })).toMatchObject({ name: 'sales', email: 'sales@x.test' });
+		expect(toTeam({ id: 't', '@type': 'Group', name: 'sales', emailAddress: 'sales@x.test' })).toMatchObject({
+			name: 'sales',
+			email: 'sales@x.test'
+		});
 		expect(toTeam({ id: 'p', '@type': 'User' })).toBeNull();
 	});
 
@@ -84,7 +109,9 @@ describe('people and teams helpers', () => {
 	});
 
 	it('builds a new account', () => {
-		expect(newPersonProperties(draft({ name: ' ADA ', limitGb: '1', teamIds: ['t1'], role: 'admin' }))).toEqual({
+		expect(
+			newPersonProperties(draft({ name: ' ADA ', limitGb: '1', teamIds: ['t1'], role: 'admin' }))
+		).toEqual({
 			'@type': 'User',
 			name: 'ada',
 			domainId: 'd',
@@ -100,10 +127,18 @@ describe('people and teams helpers', () => {
 		const current = person();
 		expect(personPatch(draftFromPerson(current), current)).toEqual({});
 		expect(personPatch({ ...draftFromPerson(current), limitGb: '' }, current)).toEqual({ quotas: {} });
-		expect(personPatch({ ...draftFromPerson(current), limitGb: '3' }, current)).toEqual({ quotas: { maxDiskQuota: 3 * GB } });
-		expect(personPatch({ ...draftFromPerson(current), role: 'admin' }, current)).toEqual({ roles: { '@type': 'Admin' } });
-		expect(personPatch({ ...draftFromPerson(current), teamIds: [] }, current)).toEqual({ memberGroupIds: {} });
-		expect(personPatch({ ...draftFromPerson(current), password: 'new long password' }, current)).toEqual({ 'credentials/0/secret': 'new long password' });
+		expect(personPatch({ ...draftFromPerson(current), limitGb: '3' }, current)).toEqual({
+			quotas: { maxDiskQuota: 3 * GB }
+		});
+		expect(personPatch({ ...draftFromPerson(current), role: 'admin' }, current)).toEqual({
+			roles: { '@type': 'Admin' }
+		});
+		expect(personPatch({ ...draftFromPerson(current), teamIds: [] }, current)).toEqual({
+			memberGroupIds: {}
+		});
+		expect(personPatch({ ...draftFromPerson(current), password: 'new long password' }, current)).toEqual({
+			'credentials/0/secret': 'new long password'
+		});
 		const custom = person({ role: 'custom' });
 		expect(personPatch(draftFromPerson(custom), custom)).toEqual({});
 	});

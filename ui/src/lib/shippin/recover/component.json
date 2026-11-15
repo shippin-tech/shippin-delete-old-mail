@@ -1,18 +1,9 @@
 {
-  "id": "recover",
-  "a2ui": "RecoverDeleted",
-  "variants": [
-    "accounts",
-    "messages",
-    "empty"
-  ],
-  "engine": "crates/common/src/shippin/recover.rs",
-  "routes": [
-    "/shippin/admin/recover"
-  ],
-  "emits": [
-    "recover.account.restored",
-    "recover.message.restored"
-  ],
-  "kernel": "ui/src/lib/ai-runtime/admin/kernel/instruction.md"
+	"id": "recover",
+	"a2ui": "RecoverDeleted",
+	"variants": ["accounts", "messages", "empty"],
+	"engine": "crates/common/src/shippin/recover.rs",
+	"routes": ["/shippin/admin/recover"],
+	"emits": ["recover.account.restored", "recover.message.restored"],
+	"kernel": "ui/src/lib/ai-runtime/admin/kernel/instruction.md"
 }

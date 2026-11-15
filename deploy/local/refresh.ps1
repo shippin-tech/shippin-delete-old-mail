@@ -7,7 +7,8 @@
 # touched. Rebuilding under the same tag untags the previous build; nothing is pruned globally,
 # so other projects' images are left alone. To reclaim the old layers: docker image prune.
 param([switch]$NoBuild)
-$ErrorActionPreference = 'Stop'
+# Docker writes progress to stderr; success is judged by exit code, not by stderr text.
+$ErrorActionPreference = 'Continue'
 $root = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 $compose = Join-Path $PSScriptRoot 'compose.yaml'
 if (-not $NoBuild) {

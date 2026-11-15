@@ -32,5 +32,6 @@ export function removeAlert(id: string): Promise<unknown> {
 }
 
 export async function checkAlerts(): Promise<AlertCheck[]> {
-	return (await call<{ results: AlertCheck[] }>('POST', '/check', 'The alerts could not be checked.')).results;
+	return (await call<{ results: AlertCheck[] }>('POST', '/check', 'The alerts could not be checked.'))
+		.results;
 }

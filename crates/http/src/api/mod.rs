@@ -4,6 +4,7 @@
 pub mod telemetry;
 
 pub mod diagnose;
+pub mod v1;
 
 use crate::{
     alerts::AlertsApi,
@@ -16,6 +17,7 @@ use crate::{
     shippin::{assistant::AssistantApi, keys::KeysApi, mcp::McpApi, resources::ResourcesApi},
     sso::SsoApi,
     api::diagnose::{DeliveryStage, spawn_delivery_diagnose},
+    api::v1::V1Api,
     auth::{
         authenticate::Authenticator, oauth::auth::OAuthApiHandler, permissions::AccountApiHandler,
     },
@@ -138,6 +140,7 @@ impl ManagementApi for Server {
                 self.handle_keys_request(req, session, &path[1..], body)
                     .await
             }
+            "v1" => self.handle_v1_request(req, session, &path[1..]).await,
             "mcp" => {
                 self.handle_mcp_request(req, session, &path[1..], body)
                     .await

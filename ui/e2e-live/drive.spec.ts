@@ -1,7 +1,7 @@
-import { expect, test } from '@playwright/test';
-import AxeBuilder from '@axe-core/playwright';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import AxeBuilder from '@axe-core/playwright';
+import { expect, test } from '@playwright/test';
 
 // Drive in a real browser against the local stack: everything a person does with
 // their files, the lesson that teaches it, and the storage limit holding.
@@ -10,7 +10,9 @@ const domain = `drive-${run}.test`;
 const owner = `owner@${domain}`;
 const password = `Drive check ${run} pw`;
 const base = process.env.LIVE_URL ?? 'http://127.0.0.1:28080';
-const admin = JSON.parse(readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')) as {
+const admin = JSON.parse(
+	readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')
+) as {
 	username: string;
 	secret: string;
 };
@@ -20,17 +22,26 @@ async function adminJmap(calls: unknown[]) {
 	const res = await fetch(`${base}/jmap`, {
 		method: 'POST',
 		headers: { Authorization: adminAuth, 'Content-Type': 'application/json' },
-		body: JSON.stringify({ using: ['urn:ietf:params:jmap:core', 'urn:shippin.tech:jmap'], methodCalls: calls })
+		body: JSON.stringify({
+			using: ['urn:ietf:params:jmap:core', 'urn:shippin.tech:jmap'],
+			methodCalls: calls
+		})
 	});
-	return ((await res.json()) as { methodResponses: [string, Record<string, unknown>, string][] }).methodResponses;
+	return ((await res.json()) as { methodResponses: [string, Record<string, unknown>, string][] })
+		.methodResponses;
 }
 
 async function domainId(): Promise<string | undefined> {
 	const found = await adminJmap([
 		['x:Domain/query', {}, 'q'],
-		['x:Domain/get', { '#ids': { resultOf: 'q', name: 'x:Domain/query', path: '/ids' }, properties: ['id', 'name'] }, 'g']
+		[
+			'x:Domain/get',
+			{ '#ids': { resultOf: 'q', name: 'x:Domain/query', path: '/ids' }, properties: ['id', 'name'] },
+			'g'
+		]
 	]);
-	return ((found[1][1].list as { id: string; name: string }[]) ?? []).find((item) => item.name === domain)?.id;
+	return ((found[1][1].list as { id: string; name: string }[]) ?? []).find((item) => item.name === domain)
+		?.id;
 }
 
 test.afterAll(async () => {
@@ -41,9 +52,18 @@ test.afterAll(async () => {
 	if (accountIds.length) await adminJmap([['x:Account/set', { destroy: accountIds }, 'a']]);
 	const keys = await adminJmap([
 		['x:DkimSignature/query', {}, 'q'],
-		['x:DkimSignature/get', { '#ids': { resultOf: 'q', name: 'x:DkimSignature/query', path: '/ids' }, properties: ['id', 'domainId'] }, 'g']
+		[
+			'x:DkimSignature/get',
+			{
+				'#ids': { resultOf: 'q', name: 'x:DkimSignature/query', path: '/ids' },
+				properties: ['id', 'domainId']
+			},
+			'g'
+		]
 	]);
-	const doomed = ((keys[1][1].list as { id: string; domainId: string }[]) ?? []).filter((key) => key.domainId === id).map((key) => key.id);
+	const doomed = ((keys[1][1].list as { id: string; domainId: string }[]) ?? [])
+		.filter((key) => key.domainId === id)
+		.map((key) => key.id);
 	if (doomed.length) await adminJmap([['x:DkimSignature/set', { destroy: doomed }, 'k']]);
 	await adminJmap([['x:Domain/set', { destroy: [id] }, 'd']]);
 });
@@ -75,9 +95,9 @@ test('a person uses their Drive from upload to delete, and the storage limit hol
 	await expect(lesson.getByText('0 of 4 done')).toBeVisible();
 	await expect(page.getByRole('meter', { name: 'Storage used' })).toBeVisible();
 
-	const serious = (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()).violations.filter(
-		(v) => v.impact === 'serious' || v.impact === 'critical'
-	);
+	const serious = (
+		await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
+	).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
 	expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
 
 	const chooser = page.getByLabel('Choose files to upload');
@@ -91,7 +111,9 @@ test('a person uses their Drive from upload to delete, and the storage limit hol
 
 	// A taken name is never overwritten.
 	await chooser.setInputFiles(hello);
-	await expect(page.getByRole('button', { name: 'hello (2).txt', exact: true })).toBeVisible({ timeout: 30_000 });
+	await expect(page.getByRole('button', { name: 'hello (2).txt', exact: true })).toBeVisible({
+		timeout: 30_000
+	});
 
 	// Folders, including a name the server would refuse.
 	await page.getByRole('button', { name: 'New folder' }).click();
@@ -124,7 +146,10 @@ test('a person uses their Drive from upload to delete, and the storage limit hol
 	await expect(page.getByRole('button', { name: 'hello.txt', exact: true })).toBeVisible();
 
 	// Download returns the same bytes.
-	const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download hello.txt' }).click()]);
+	const [download] = await Promise.all([
+		page.waitForEvent('download'),
+		page.getByRole('button', { name: 'Download hello.txt' }).click()
+	]);
 	expect(download.suggestedFilename()).toBe('hello.txt');
 	const stream = await download.createReadStream();
 	const chunks: Buffer[] = [];
@@ -157,12 +182,23 @@ test('a person uses their Drive from upload to delete, and the storage limit hol
 	const id = await domainId();
 	const accounts = await adminJmap([['x:Account/query', { filter: { domainId: id } }, 'q']]);
 	const accountId = (accounts[0][1].ids as string[])[0];
-	const updated = await adminJmap([['x:Account/set', { update: { [accountId]: { quotas: { maxDiskQuota: 4096 } } } }, 'u']]);
+	const updated = await adminJmap([
+		['x:Account/set', { update: { [accountId]: { quotas: { maxDiskQuota: 4096 } } } }, 'u']
+	]);
 	expect(updated[0][1].updated).toBeTruthy();
-	const big = { name: 'too-big.bin', mimeType: 'application/octet-stream', buffer: Buffer.alloc(64 * 1024, 7) };
+	const big = {
+		name: 'too-big.bin',
+		mimeType: 'application/octet-stream',
+		buffer: Buffer.alloc(64 * 1024, 7)
+	};
 	await expect(async () => {
 		await chooser.setInputFiles(big);
-		await expect(page.getByRole('region', { name: 'Uploads' }).getByText('You are out of storage.', { exact: false }).first()).toBeVisible({ timeout: 5_000 });
+		await expect(
+			page
+				.getByRole('region', { name: 'Uploads' })
+				.getByText('You are out of storage.', { exact: false })
+				.first()
+		).toBeVisible({ timeout: 5_000 });
 	}).toPass({ timeout: 30_000 });
 	await expect(page.getByRole('button', { name: 'too-big.bin', exact: true })).toHaveCount(0);
 });

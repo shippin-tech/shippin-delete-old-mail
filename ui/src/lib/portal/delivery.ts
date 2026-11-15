@@ -52,7 +52,11 @@ export function parseDeliveryFrame(frame: string): DeliveryStage[] {
 	if (!line) return [];
 	const parsed = JSON.parse(line.slice('data: '.length)) as unknown;
 	const list = Array.isArray(parsed) ? parsed : [parsed];
-	if (!list.every((item) => item && typeof item === 'object' && typeof (item as { type?: unknown }).type === 'string')) {
+	if (
+		!list.every(
+			(item) => item && typeof item === 'object' && typeof (item as { type?: unknown }).type === 'string'
+		)
+	) {
 		throw new TypeError('Unexpected delivery event');
 	}
 	return list as DeliveryStage[];

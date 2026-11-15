@@ -1,38 +1,37 @@
+import { Me, parse } from '../contract/v1';
 import { authorization } from './session';
 
 /** guest: signed out. user: a mailbox. owner: runs a self-service domain. admin: operates the server. */
 export type Role = 'guest' | 'user' | 'owner' | 'org' | 'admin';
 
-const ADMIN_PERMISSIONS = ['sysDomainCreate', 'sysAccountCreate'];
-
 let cached: { auth: string; role: Role } | null = null;
 
+/** The server decides the role (GET /api/v1/me); this only asks. */
 export async function currentRole(): Promise<Role> {
 	const auth = authorization();
 	if (!auth) return 'guest';
 	if (cached?.auth === auth) return cached.role;
-	const headers = { Authorization: auth, Accept: 'application/json' };
-	let role: Role = 'user';
 	try {
-		const org = await fetch('/api/org', { headers, cache: 'no-store', credentials: 'same-origin' });
-		if (org.ok) {
-			cached = { auth, role: 'org' };
-			return 'org';
+		const res = await fetch('/api/v1/me', {
+			headers: { Authorization: auth, Accept: 'application/json' },
+			cache: 'no-store',
+			credentials: 'same-origin'
+		});
+		const parsed = parse(Me, await res.json().catch(() => null));
+		if (parsed.ok) {
+			cached = { auth, role: parsed.value.role };
+			return parsed.value.role;
 		}
-		const panel = await fetch('/api/panel/domain', { headers, cache: 'no-store', credentials: 'same-origin' });
-		if (panel.ok) role = 'owner';
-		else {
-			const res = await fetch('/api/account', { headers, cache: 'no-store', credentials: 'same-origin' });
-			if (res.status === 401) return 'guest';
-			const body = (await res.json().catch(() => ({}))) as { permissions?: unknown };
-			const permissions = Array.isArray(body.permissions) ? body.permissions : [];
-			if (ADMIN_PERMISSIONS.some((p) => permissions.includes(p))) role = 'admin';
-		}
+		// A 401 from a proxy may carry no problem document, so the status is read too.
+		if (res.status === 401 || parsed.problem.status === 401) return 'guest';
+		// A contract break is shown, not hidden. The lowest role is the safe one to present, and it
+		// is remembered for this sign-in so a broken server is not asked again on every navigation.
+		console.error('GET /api/v1/me', parsed.problem);
+		cached = { auth, role: 'user' };
+		return 'user';
 	} catch {
 		return 'user';
 	}
-	cached = { auth, role };
-	return role;
 }
 
 export function forgetRole(): void {

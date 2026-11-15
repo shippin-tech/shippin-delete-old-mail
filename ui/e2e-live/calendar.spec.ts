@@ -1,5 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { expect, type Page, test } from '@playwright/test';
 
 // The calendar in a real browser against the local stack: events, repeats, a second
 // calendar, an invitation that reaches a real guest, and their reply coming back.
@@ -62,9 +62,9 @@ test('events, repeats, calendars and an invitation answered by a real guest', as
 	await expect(page.getByRole('button', { name: 'New event', exact: true })).toBeVisible({ timeout: 30_000 });
 	const lesson = page.getByRole('complementary', { name: 'Use your calendar' });
 	await expect(lesson.getByText('0 of 3 done')).toBeVisible();
-	const serious = (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()).violations.filter(
-		(v) => v.impact === 'serious' || v.impact === 'critical'
-	);
+	const serious = (
+		await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
+	).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
 	expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
 
 	// A form that is wrong says why.
@@ -103,14 +103,19 @@ test('events, repeats, calendars and an invitation answered by a real guest', as
 	await page.getByLabel('Ends').fill(isoDay(-7));
 	await page.getByLabel('Repeats').selectOption('weekly');
 	await page.getByRole('button', { name: 'Save event' }).click();
-	await expect.poll(() => page.getByRole('button', { name: /Standup day/ }).count(), { timeout: 30_000 }).toBeGreaterThanOrEqual(3);
+	await expect
+		.poll(() => page.getByRole('button', { name: /Standup day/ }).count(), { timeout: 30_000 })
+		.toBeGreaterThanOrEqual(3);
 
 	// A second calendar, shown and hidden.
 	await page.getByRole('button', { name: 'New calendar' }).click();
 	await page.getByLabel('Calendar name').fill('Work');
 	await page.getByRole('button', { name: 'Add', exact: true }).click();
 	await expect(page.getByRole('checkbox', { name: 'Work' })).toBeVisible({ timeout: 30_000 });
-	const defaultCalendar = page.getByRole('complementary', { name: 'Calendars' }).getByRole('checkbox').first();
+	const defaultCalendar = page
+		.getByRole('complementary', { name: 'Calendars' })
+		.getByRole('checkbox')
+		.first();
 	await defaultCalendar.uncheck();
 	await expect(page.getByRole('button', { name: /Budget meeting/ })).toHaveCount(0);
 	await defaultCalendar.check();
@@ -136,7 +141,9 @@ test('events, repeats, calendars and an invitation answered by a real guest', as
 	await expect(async () => {
 		await page.reload();
 		await page.getByRole('button', { name: /Budget meeting/ }).click({ timeout: 5_000 });
-		await expect(page.getByRole('region', { name: 'Event' }).getByText('Going')).toBeVisible({ timeout: 3_000 });
+		await expect(page.getByRole('region', { name: 'Event' }).getByText('Going')).toBeVisible({
+			timeout: 3_000
+		});
 	}).toPass({ timeout: 60_000 });
 
 	// Agenda view, then delete with a warning.

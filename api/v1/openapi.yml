@@ -1,0 +1,67 @@
+openapi: 3.0.3
+info:
+  title: shippin.tech API v1
+  description: 'The management API for alpha 0.5. One prefix, one error shape (RFC 9457 problem details, content
+    type application/problem+json). Configuration and mail data stay in native JMAP (RFC 8620, 8621); routes
+    here are thin layers over it. See api/DESIGN.md. No compatibility is promised for anything in this file
+    before 1.0.
+
+
+    Rules: an absent value is omitted, never null (the UI contract in ui/src/lib/contract/v1.ts rejects null for
+    optional fields). ui/test/contract-v1.test.ts compares the schemas below with that contract.'
+  version: '0.5'
+servers:
+- url: https://{host}
+  variables:
+    host:
+      default: mail.example.com
+paths:
+  /api/v1/me:
+    get:
+      operationId: getMe
+      summary: Who is signed in and what they may do
+      description: The role is decided by the server from live state (organisation, free-plan domain,
+        permissions); clients never infer it.
+      x-auth: any signed-in account
+      x-proof: deploy/local/verify_v1.py
+      responses:
+        '200':
+          description: The caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '401':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+components:
+  responses:
+    Problem:
+      description: Any failure
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    Role:
+      type: string
+      enum: [admin, org, owner, user]
+      description: org runs an organisation, owner runs a free-plan domain, admin operates the server.
+    Me:
+      type: object
+      required: [email, role, permissions]
+      properties:
+        email: {type: string, minLength: 1}
+        role: {$ref: '#/components/schemas/Role'}
+        permissions: {type: array, items: {type: string}}
+        edition: {type: string}
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: {type: string, minLength: 1}
+        title: {type: string, minLength: 1}
+        status: {type: integer, minimum: 400, maximum: 599}
+        detail: {type: string}
+        fields: {type: object, additionalProperties: {type: string}}

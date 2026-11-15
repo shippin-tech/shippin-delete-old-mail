@@ -5,7 +5,8 @@ export function tlsRecordUrl(object: string, id = ''): string {
 export function certificateStatus(record: Record<string, unknown>, now = Date.now()): string {
 	const before = typeof record.notValidBefore === 'string' ? Date.parse(record.notValidBefore) : NaN;
 	const after = typeof record.notValidAfter === 'string' ? Date.parse(record.notValidAfter) : NaN;
-	if (!Number.isFinite(before) || !Number.isFinite(after) || after <= before) return 'Validity dates unavailable';
+	if (!Number.isFinite(before) || !Number.isFinite(after) || after <= before)
+		return 'Validity dates unavailable';
 	if (now < before) return 'Not yet valid';
 	if (now >= after) return 'Expired';
 	return 'Within validity dates';

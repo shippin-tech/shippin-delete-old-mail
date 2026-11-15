@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { dashboards } from '../src/lib/portal/catalog';
 import {
 	barLabels,
 	cardPrevious,
@@ -7,6 +8,8 @@ import {
 	classifyStats,
 	combine,
 	coversPrevious,
+	type DashboardCard,
+	type DashboardChart,
 	deltaPercent,
 	formatValue,
 	fromLocalInput,
@@ -16,13 +19,10 @@ import {
 	niceScale,
 	niceScaleFor,
 	parseStats,
+	type Stats,
 	statsUrl,
-	toLocalInput,
-	type DashboardCard,
-	type DashboardChart,
-	type Stats
+	toLocalInput
 } from '../src/lib/shippin/dashboard/stats-call';
-import { dashboards } from '../src/lib/portal/catalog';
 
 const HOUR = 3600;
 
@@ -64,7 +64,13 @@ function card(overrides: Partial<DashboardCard>): DashboardCard {
 
 describe('dashboard statistics', () => {
 	it('classifies responses', () => {
-		expect([200, 400, 401, 403, 500].map(classifyStats)).toEqual(['ready', 'invalid', 'signed-out', 'forbidden', 'failed']);
+		expect([200, 400, 401, 403, 500].map(classifyStats)).toEqual([
+			'ready',
+			'invalid',
+			'signed-out',
+			'forbidden',
+			'failed'
+		]);
 	});
 
 	it('accepts the server payload and rejects broken ones', () => {
@@ -175,7 +181,13 @@ describe('dashboard statistics', () => {
 		expect(niceScale(930).max).toBe(1000);
 		expect(niceScale(1_000_000_000).ticks.at(-1)).toBe(niceScale(1_000_000_000).max);
 		const memory = niceScaleFor(83_206_144, 'bytes');
-		expect(memory.ticks.map((tick) => formatValue(tick, 'bytes'))).toEqual(['0 B', '20 MB', '40 MB', '60 MB', '80 MB']);
+		expect(memory.ticks.map((tick) => formatValue(tick, 'bytes'))).toEqual([
+			'0 B',
+			'20 MB',
+			'40 MB',
+			'60 MB',
+			'80 MB'
+		]);
 		expect(niceScaleFor(7, 'number')).toEqual(niceScale(7));
 	});
 
@@ -188,7 +200,9 @@ describe('dashboard statistics', () => {
 		]);
 		expect(rows[0]).toMatchObject({ kind: 'average', format: 'duration', total: 1000, previous: 800 });
 		expect(metricRows(sample(), 'delivery').map((row) => row.metric)).toEqual(['delivery.total-time']);
-		expect(metricRows(sample(), 'messages queued').map((row) => row.metric)).toEqual(['queue.message-queued']);
+		expect(metricRows(sample(), 'messages queued').map((row) => row.metric)).toEqual([
+			'queue.message-queued'
+		]);
 	});
 
 	it('carries the whole dashboard definition from the schema', () => {

@@ -4,33 +4,59 @@
  */
 import { writable } from 'svelte/store';
 import type { PortalSignal } from '../portal/signal';
+import authorYourKeys from './lessons/author-your-keys.json';
 import keepYourContacts from './lessons/keep-your-contacts.json';
 import linkGoogleDrive from './lessons/link-google-drive.json';
-import runYourTeam from './lessons/run-your-team.json';
-import watchYourServer from './lessons/watch-your-server.json';
 import maskYourAddress from './lessons/mask-your-address.json';
 import runYourOrganisation from './lessons/run-your-organisation.json';
+import runYourTeam from './lessons/run-your-team.json';
 import setUpAnOrganisation from './lessons/set-up-an-organisation.json';
-import turnOnTheAssistant from './lessons/turn-on-the-assistant.json';
-import authorYourKeys from './lessons/author-your-keys.json';
-import shapeYourOrganisation from './lessons/shape-your-organisation.json';
 import setUpYourDomain from './lessons/set-up-your-domain.json';
+import shapeYourOrganisation from './lessons/shape-your-organisation.json';
+import turnOnTheAssistant from './lessons/turn-on-the-assistant.json';
 import useYourCalendar from './lessons/use-your-calendar.json';
 import useYourDrive from './lessons/use-your-drive.json';
+import watchYourServer from './lessons/watch-your-server.json';
 import writeADocument from './lessons/write-a-document.json';
 
 export type LessonStep = { id: string; say: string; where?: string; doneWhen: string };
-export type Lesson = { id: string; title: string; audience: 'guest' | 'user' | 'owner' | 'admin'; steps: LessonStep[] };
+export type Lesson = {
+	id: string;
+	title: string;
+	audience: 'guest' | 'user' | 'owner' | 'admin';
+	steps: LessonStep[];
+};
 export type Progress = { done: string[]; dismissed: boolean };
 
-export const LESSONS: readonly Lesson[] = [setUpYourDomain as Lesson, useYourDrive as Lesson, useYourCalendar as Lesson, keepYourContacts as Lesson, writeADocument as Lesson, linkGoogleDrive as Lesson, runYourTeam as Lesson, watchYourServer as Lesson, maskYourAddress as Lesson, runYourOrganisation as Lesson, setUpAnOrganisation as Lesson, turnOnTheAssistant as Lesson, shapeYourOrganisation as Lesson, authorYourKeys as Lesson];
+export const LESSONS: readonly Lesson[] = [
+	setUpYourDomain as Lesson,
+	useYourDrive as Lesson,
+	useYourCalendar as Lesson,
+	keepYourContacts as Lesson,
+	writeADocument as Lesson,
+	linkGoogleDrive as Lesson,
+	runYourTeam as Lesson,
+	watchYourServer as Lesson,
+	maskYourAddress as Lesson,
+	runYourOrganisation as Lesson,
+	setUpAnOrganisation as Lesson,
+	turnOnTheAssistant as Lesson,
+	shapeYourOrganisation as Lesson,
+	authorYourKeys as Lesson
+];
 
 export const emptyProgress = (): Progress => ({ done: [], dismissed: false });
 
 /** Marks every unfinished step this event completes. Order does not matter: people skip ahead. */
-export function advance(lesson: Lesson, progress: Progress, event: Pick<PortalSignal, 'channel' | 'eventType'>): Progress {
+export function advance(
+	lesson: Lesson,
+	progress: Progress,
+	event: Pick<PortalSignal, 'channel' | 'eventType'>
+): Progress {
 	if (event.channel !== 'app') return progress;
-	const finished = lesson.steps.filter((step) => step.doneWhen === event.eventType && !progress.done.includes(step.id));
+	const finished = lesson.steps.filter(
+		(step) => step.doneWhen === event.eventType && !progress.done.includes(step.id)
+	);
 	if (finished.length === 0) return progress;
 	return { ...progress, done: [...progress.done, ...finished.map((step) => step.id)] };
 }
@@ -51,7 +77,10 @@ export function loadProgress(account: string, lesson: Lesson): Progress {
 	try {
 		const raw = localStorage.getItem(key(account, lesson));
 		const parsed = raw ? (JSON.parse(raw) as Partial<Progress>) : {};
-		return { done: Array.isArray(parsed.done) ? parsed.done.filter((id) => typeof id === 'string') : [], dismissed: parsed.dismissed === true };
+		return {
+			done: Array.isArray(parsed.done) ? parsed.done.filter((id) => typeof id === 'string') : [],
+			dismissed: parsed.dismissed === true
+		};
 	} catch {
 		return emptyProgress();
 	}

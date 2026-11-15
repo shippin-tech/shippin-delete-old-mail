@@ -1,18 +1,18 @@
-import { beforeEach, describe, expect, it } from 'vitest';
 import { writable } from 'svelte/store';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { appEvent } from '../src/lib/mcpl/events';
-import { createSignal, type PortalSignal } from '../src/lib/portal/signal';
 import {
-	LESSONS,
 	advance,
 	bindLessons,
 	complete,
 	emptyProgress,
+	LESSONS,
+	type Lesson,
 	loadProgress,
 	nextStep,
-	saveProgress,
-	type Lesson
+	saveProgress
 } from '../src/lib/mcpl/lessons';
+import { createSignal, type PortalSignal } from '../src/lib/portal/signal';
 
 const lesson = LESSONS.find((l) => l.id === 'set-up-your-domain') as Lesson;
 const memory = new Map<string, string>();
@@ -40,7 +40,17 @@ describe('MCPL app events', () => {
 describe('lessons', () => {
 	it('advance only on app events, in any order', () => {
 		let progress = emptyProgress();
-		progress = advance(lesson, progress, createSignal({ channel: 'scripted', eventType: 'panel.mailbox.created', resource: 'x', status: 'completed', severity: 'info' }));
+		progress = advance(
+			lesson,
+			progress,
+			createSignal({
+				channel: 'scripted',
+				eventType: 'panel.mailbox.created',
+				resource: 'x',
+				status: 'completed',
+				severity: 'info'
+			})
+		);
 		expect(progress.done).toEqual([]);
 		progress = advance(lesson, progress, appEvent('mail.message.sent', 'me@example.com'));
 		expect(progress.done).toEqual(['send-first-message']);

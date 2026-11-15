@@ -3,16 +3,28 @@ import {
 	draftFromPerson,
 	emptyPersonDraft,
 	initials,
+	type Person,
 	personProblem,
 	personProperties,
 	searchPeople,
 	sortPeople,
-	toPerson,
-	type Person
+	toPerson
 } from '../src/lib/adapter/people-call';
 
 function person(overrides: Partial<Person> = {}): Person {
-	return { id: '1', addressBookIds: ['b'], given: 'Ada', surname: 'Lovelace', displayName: 'Ada Lovelace', emails: ['ada@example.org'], phones: [], organization: 'Analytical', jobTitle: '', notes: '', ...overrides };
+	return {
+		id: '1',
+		addressBookIds: ['b'],
+		given: 'Ada',
+		surname: 'Lovelace',
+		displayName: 'Ada Lovelace',
+		emails: ['ada@example.org'],
+		phones: [],
+		organization: 'Analytical',
+		jobTitle: '',
+		notes: '',
+		...overrides
+	};
 }
 
 describe('contact helpers', () => {
@@ -20,7 +32,13 @@ describe('contact helpers', () => {
 		const parsed = toPerson({
 			id: 'c',
 			addressBookIds: { b: true },
-			name: { full: 'Ada Lovelace', components: [{ kind: 'given', value: 'Ada' }, { kind: 'surname', value: 'Lovelace' }] },
+			name: {
+				full: 'Ada Lovelace',
+				components: [
+					{ kind: 'given', value: 'Ada' },
+					{ kind: 'surname', value: 'Lovelace' }
+				]
+			},
 			emails: { e: { address: 'ada@example.org' } },
 			phones: { p: { number: '+1 555 0100' } },
 			organizations: { o: { name: 'Analytical' } },
@@ -28,8 +46,16 @@ describe('contact helpers', () => {
 			notes: { n: { note: 'Hello' } }
 		})!;
 		expect(parsed).toEqual({
-			id: 'c', addressBookIds: ['b'], given: 'Ada', surname: 'Lovelace', displayName: 'Ada Lovelace',
-			emails: ['ada@example.org'], phones: ['+1 555 0100'], organization: 'Analytical', jobTitle: 'Countess', notes: 'Hello'
+			id: 'c',
+			addressBookIds: ['b'],
+			given: 'Ada',
+			surname: 'Lovelace',
+			displayName: 'Ada Lovelace',
+			emails: ['ada@example.org'],
+			phones: ['+1 555 0100'],
+			organization: 'Analytical',
+			jobTitle: 'Countess',
+			notes: 'Hello'
 		});
 		expect(toPerson({ id: 'x', organizations: { o: { name: 'Acme' } } })?.displayName).toBe('Acme');
 		expect(toPerson({ id: 'x', emails: { e: { address: 'a@b.c' } } })?.displayName).toBe('a@b.c');
@@ -38,7 +64,17 @@ describe('contact helpers', () => {
 	});
 
 	it('sorts by surname and finds people by any detail', () => {
-		const people = [person({ id: '2', given: 'Grace', surname: 'Hopper', displayName: 'Grace Hopper', emails: ['grace@navy.mil'], organization: 'Navy' }), person()];
+		const people = [
+			person({
+				id: '2',
+				given: 'Grace',
+				surname: 'Hopper',
+				displayName: 'Grace Hopper',
+				emails: ['grace@navy.mil'],
+				organization: 'Navy'
+			}),
+			person()
+		];
 		expect(sortPeople(people).map((item) => item.surname)).toEqual(['Hopper', 'Lovelace']);
 		expect(searchPeople(people, 'ada').map((item) => item.id)).toEqual(['1']);
 		expect(searchPeople(people, 'NAVY grace').map((item) => item.id)).toEqual(['2']);
@@ -56,13 +92,20 @@ describe('contact helpers', () => {
 	});
 
 	it('builds what the server stores', () => {
-		const created = personProperties({ ...emptyPersonDraft('b'), given: ' Ada ', emails: ['a@b.co', ' '], phones: [''] }, true);
+		const created = personProperties(
+			{ ...emptyPersonDraft('b'), given: ' Ada ', emails: ['a@b.co', ' '], phones: [''] },
+			true
+		);
 		expect(created).toEqual({
 			'@type': 'Card',
 			version: '1.0',
 			kind: 'individual',
 			addressBookIds: { b: true },
-			name: { '@type': 'Name', components: [{ '@type': 'NameComponent', kind: 'given', value: 'Ada' }], isOrdered: true },
+			name: {
+				'@type': 'Name',
+				components: [{ '@type': 'NameComponent', kind: 'given', value: 'Ada' }],
+				isOrdered: true
+			},
 			emails: { e0: { '@type': 'EmailAddress', address: 'a@b.co' } }
 		});
 		const updated = personProperties({ ...emptyPersonDraft('b'), organization: 'Acme' }, false);
@@ -72,7 +115,12 @@ describe('contact helpers', () => {
 	});
 
 	it('round-trips a person through the form', () => {
-		expect(draftFromPerson(person())).toMatchObject({ addressBookId: 'b', given: 'Ada', emails: ['ada@example.org'], phones: [''] });
+		expect(draftFromPerson(person())).toMatchObject({
+			addressBookId: 'b',
+			given: 'Ada',
+			emails: ['ada@example.org'],
+			phones: ['']
+		});
 		expect(initials(person())).toBe('AL');
 		expect(initials(person({ given: '', surname: '', displayName: 'acme' }))).toBe('A');
 	});

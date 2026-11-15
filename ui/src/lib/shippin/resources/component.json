@@ -1,14 +1,9 @@
 {
-  "id": "resources",
-  "a2ui": "Resources",
-  "variants": [
-    "server",
-    "organisations"
-  ],
-  "engine": "crates/http/src/shippin/resources.rs",
-  "routes": [
-    "/shippin/admin/resources"
-  ],
-  "emits": [],
-  "kernel": "ui/src/lib/ai-runtime/admin/kernel/instruction.md"
+	"id": "resources",
+	"a2ui": "Resources",
+	"variants": ["server", "organisations"],
+	"engine": "crates/http/src/shippin/resources.rs",
+	"routes": ["/shippin/admin/resources"],
+	"emits": [],
+	"kernel": "ui/src/lib/ai-runtime/admin/kernel/instruction.md"
 }

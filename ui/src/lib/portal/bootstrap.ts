@@ -16,8 +16,7 @@ export const CREDENTIALS =
 	'Your administrator account has been created. Write these down now: the password will not be shown again.';
 export const CONFIGURED = `${brand.name} has been configured successfully.`;
 export const NEXT_STEP = 'Next step:';
-export const RESTART =
-	`restart ${brand.name} for the new configuration to take effect. Once restarted, sign in with the credentials above to continue administering your server.`;
+export const RESTART = `restart ${brand.name} for the new configuration to take effect. Once restarted, sign in with the credentials above to continue administering your server.`;
 
 const HIDDEN = new Set(['id', 'blobId', '@type']);
 
@@ -53,7 +52,12 @@ export function valuesFromRecord(
 		for (const field of step.fields) {
 			const raw = record[field.name];
 			if (field.kind === 'boolean') values[field.name] = raw === true;
-			else if (field.kind === 'choice' && raw && typeof raw === 'object' && typeof (raw as { '@type'?: unknown })['@type'] === 'string') {
+			else if (
+				field.kind === 'choice' &&
+				raw &&
+				typeof raw === 'object' &&
+				typeof (raw as { '@type'?: unknown })['@type'] === 'string'
+			) {
 				values[field.name] = (raw as { '@type': string })['@type'];
 			} else if (typeof raw === 'string') values[field.name] = raw;
 		}
@@ -61,12 +65,16 @@ export function valuesFromRecord(
 	return values;
 }
 
-export function bootstrapPatch(steps: readonly Step[], values: Record<string, string | boolean>): Record<string, unknown> {
+export function bootstrapPatch(
+	steps: readonly Step[],
+	values: Record<string, string | boolean>
+): Record<string, unknown> {
 	const patch: Record<string, unknown> = {};
 	for (const step of steps) {
 		for (const field of step.fields) {
 			const value = values[field.name];
-			if (field.kind === 'choice' && typeof value === 'string' && value) patch[field.name] = { '@type': value };
+			if (field.kind === 'choice' && typeof value === 'string' && value)
+				patch[field.name] = { '@type': value };
 			else if (field.kind === 'boolean') patch[field.name] = value === true;
 			else if (typeof value === 'string') patch[field.name] = value;
 		}

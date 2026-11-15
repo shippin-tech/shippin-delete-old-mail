@@ -1,5 +1,12 @@
-import { classifyStats, parseStats, statsUrl, type Stats, type StatsRange, type StatsStatus } from './stats-call';
 import { authorization } from '../../adapter/session';
+import {
+	classifyStats,
+	parseStats,
+	type Stats,
+	type StatsRange,
+	type StatsStatus,
+	statsUrl
+} from './stats-call';
 
 export * from './stats-call';
 

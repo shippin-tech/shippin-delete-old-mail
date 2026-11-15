@@ -126,7 +126,9 @@ function stringField(record: Record<string, unknown>, name: string): string | un
 
 function objectField(record: Record<string, unknown>, name: string): Record<string, unknown> | undefined {
 	const value = record[name];
-	return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
+	return value && typeof value === 'object' && !Array.isArray(value)
+		? (value as Record<string, unknown>)
+		: undefined;
 }
 
 function signalChannel(value: unknown): SignalChannel {
@@ -136,7 +138,11 @@ function signalChannel(value: unknown): SignalChannel {
 }
 
 function signalStatus(value: unknown): SignalStatus {
-	return value === 'pending' || value === 'open' || value === 'completed' || value === 'cancelled' || value === 'failed'
+	return value === 'pending' ||
+		value === 'open' ||
+		value === 'completed' ||
+		value === 'cancelled' ||
+		value === 'failed'
 		? value
 		: 'info';
 }
@@ -147,7 +153,13 @@ function signalSeverity(value: unknown): SignalSeverity {
 
 function traceSeverity(name: string): SignalSeverity {
 	const lower = name.toLowerCase();
-	if (lower.includes('error') || lower.includes('failed') || lower.includes('invalid') || lower.includes('reject')) return 'error';
+	if (
+		lower.includes('error') ||
+		lower.includes('failed') ||
+		lower.includes('invalid') ||
+		lower.includes('reject')
+	)
+		return 'error';
 	if (lower.includes('warn') || lower.includes('notfound')) return 'warn';
 	return 'info';
 }

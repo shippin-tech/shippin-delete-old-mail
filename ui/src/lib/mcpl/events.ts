@@ -9,8 +9,19 @@
 import { publishSignals } from '../adapter/signal';
 import { createSignal, type PortalSignal } from '../portal/signal';
 
-export function appEvent(eventType: string, resource: string, payload: Record<string, unknown> = {}): PortalSignal {
-	return createSignal({ channel: 'app', eventType, resource, status: 'completed', severity: 'info', payload });
+export function appEvent(
+	eventType: string,
+	resource: string,
+	payload: Record<string, unknown> = {}
+): PortalSignal {
+	return createSignal({
+		channel: 'app',
+		eventType,
+		resource,
+		status: 'completed',
+		severity: 'info',
+		payload
+	});
 }
 
 export function mcplEmit(eventType: string, resource: string, payload: Record<string, unknown> = {}): void {

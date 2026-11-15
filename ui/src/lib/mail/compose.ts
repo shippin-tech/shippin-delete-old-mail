@@ -72,7 +72,12 @@ export function parseAddresses(input: string): { addresses: Address[]; invalid: 
 	for (const raw of parts.map((part) => part.trim()).filter(Boolean)) {
 		const angled = /^(.*)<([^<>]+)>$/.exec(raw);
 		const email = (angled ? angled[2] : raw).trim();
-		const name = angled ? angled[1].trim().replace(/^"(.*)"$/, '$1').replace(/\\"/g, '"') || null : null;
+		const name = angled
+			? angled[1]
+					.trim()
+					.replace(/^"(.*)"$/, '$1')
+					.replace(/\\"/g, '"') || null
+			: null;
 		if (EMAIL.test(email)) addresses.push({ name, email });
 		else invalid.push(raw);
 	}
@@ -159,7 +164,12 @@ export function draftRecord(draft: Draft, from: Address, draftsId: string): Reco
 		subject: draft.subject,
 		bodyValues: { body: { value: draft.body } },
 		textBody: [{ partId: 'body', type: 'text/plain' }],
-		attachments: draft.attachments.map((a) => ({ blobId: a.blobId, name: a.name, type: a.type, disposition: 'attachment' }))
+		attachments: draft.attachments.map((a) => ({
+			blobId: a.blobId,
+			name: a.name,
+			type: a.type,
+			disposition: 'attachment'
+		}))
 	};
 	if (draft.inReplyTo.length) record.inReplyTo = draft.inReplyTo;
 	if (draft.references.length) record.references = draft.references;

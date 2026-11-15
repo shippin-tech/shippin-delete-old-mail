@@ -1,5 +1,17 @@
 import { jmap, listOf } from '../../adapter/jmap';
-import { newPersonProperties, personPatch, sortPeople, teamSet, toPerson, toTeam, type Person, type PersonDraft, type Team, type TeamDomain, type TeamDraft } from './team-call';
+import {
+	newPersonProperties,
+	type Person,
+	type PersonDraft,
+	personPatch,
+	sortPeople,
+	type Team,
+	type TeamDomain,
+	type TeamDraft,
+	teamSet,
+	toPerson,
+	toTeam
+} from './team-call';
 
 export * from './team-call';
 
@@ -31,7 +43,11 @@ export async function loadDirectory(): Promise<{ people: Person[]; teams: Team[]
 			['x:Account/query', {}, 'a'],
 			['x:Account/get', { '#ids': { resultOf: 'a', name: 'x:Account/query', path: '/ids' } }, 'b'],
 			['x:Domain/query', {}, 'c'],
-			['x:Domain/get', { '#ids': { resultOf: 'c', name: 'x:Domain/query', path: '/ids' }, properties: ['id', 'name'] }, 'd']
+			[
+				'x:Domain/get',
+				{ '#ids': { resultOf: 'c', name: 'x:Domain/query', path: '/ids' }, properties: ['id', 'name'] },
+				'd'
+			]
 		]
 	);
 	const accounts = listOf<Record<string, unknown>>(responses, 'x:Account/get');
@@ -46,32 +62,46 @@ export async function loadDirectory(): Promise<{ people: Person[]; teams: Team[]
 
 export async function createPerson(draft: PersonDraft): Promise<void> {
 	const payload = await setAccounts({ create: { p: newPersonProperties(draft) } });
-	if (!payload.created?.p?.id) throw new Error(reason(payload.notCreated?.p, 'The person could not be added.'));
+	if (!payload.created?.p?.id)
+		throw new Error(reason(payload.notCreated?.p, 'The person could not be added.'));
 }
 
 export async function updatePerson(person: Person, draft: PersonDraft): Promise<boolean> {
 	const patch = personPatch(draft, person);
 	if (Object.keys(patch).length === 0) return false;
 	const payload = await setAccounts({ update: { [person.id]: patch } });
-	if (!payload.updated || !(person.id in payload.updated)) throw new Error(reason(payload.notUpdated?.[person.id], 'The changes could not be saved.'));
+	if (!payload.updated || !(person.id in payload.updated))
+		throw new Error(reason(payload.notUpdated?.[person.id], 'The changes could not be saved.'));
 	return true;
 }
 
 export async function removeAccount(id: string): Promise<void> {
 	const payload = await setAccounts({ destroy: [id] });
-	if (!payload.destroyed?.includes(id)) throw new Error(reason(payload.notDestroyed?.[id], 'It could not be removed.'));
+	if (!payload.destroyed?.includes(id))
+		throw new Error(reason(payload.notDestroyed?.[id], 'It could not be removed.'));
 }
 
 export async function createTeam(draft: TeamDraft): Promise<void> {
 	const payload = await setAccounts({
-		create: { t: { '@type': 'Group', name: draft.name.trim().toLowerCase(), domainId: draft.domainId, ...(draft.description.trim() ? { description: draft.description.trim() } : {}) } }
+		create: {
+			t: {
+				'@type': 'Group',
+				name: draft.name.trim().toLowerCase(),
+				domainId: draft.domainId,
+				...(draft.description.trim() ? { description: draft.description.trim() } : {})
+			}
+		}
 	});
-	if (!payload.created?.t?.id) throw new Error(reason(payload.notCreated?.t, 'The team could not be created.'));
+	if (!payload.created?.t?.id)
+		throw new Error(reason(payload.notCreated?.t, 'The team could not be created.'));
 }
 
 /** Adds or removes one person from one team. */
 export async function setMembership(person: Person, teamId: string, member: boolean): Promise<void> {
-	const teamIds = member ? [...new Set([...person.teamIds, teamId])] : person.teamIds.filter((id) => id !== teamId);
+	const teamIds = member
+		? [...new Set([...person.teamIds, teamId])]
+		: person.teamIds.filter((id) => id !== teamId);
 	const payload = await setAccounts({ update: { [person.id]: { memberGroupIds: teamSet(teamIds) } } });
-	if (!payload.updated || !(person.id in payload.updated)) throw new Error(reason(payload.notUpdated?.[person.id], 'The team could not be changed.'));
+	if (!payload.updated || !(person.id in payload.updated))
+		throw new Error(reason(payload.notUpdated?.[person.id], 'The team could not be changed.'));
 }

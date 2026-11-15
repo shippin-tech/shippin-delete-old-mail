@@ -1,5 +1,5 @@
+import { connect, createServer, type Server, type Socket } from 'node:net';
 import { expect, test } from '@playwright/test';
-import { createServer, connect, type Server, type Socket } from 'node:net';
 
 // A domain shared with another mail system (RELEASE.md H1), on the local stack, with a
 // stand-in for that system on the host (deploy/local/compose.yaml lists the domain).
@@ -71,7 +71,8 @@ async function api(method: string, path: string, user: string, body?: unknown) {
 
 async function jmap(user: string, calls: unknown[]) {
 	const res = await api('POST', '/jmap', user, { using: MAIL, methodCalls: calls });
-	return ((await res.json()) as { methodResponses: [string, Record<string, unknown>, string][] }).methodResponses;
+	return ((await res.json()) as { methodResponses: [string, Record<string, unknown>, string][] })
+		.methodResponses;
 }
 
 /** One SMTP conversation with the server's public port; returns the reply to RCPT. */
@@ -100,10 +101,17 @@ function smtpFromTheInternet(rcpt: string): Promise<string> {
 }
 
 async function send(to: string, subject: string) {
-	const session = (await (await api('GET', '/jmap/session', owner)).json()) as { primaryAccounts: Record<string, string> };
+	const session = (await (await api('GET', '/jmap/session', owner)).json()) as {
+		primaryAccounts: Record<string, string>;
+	};
 	const account = session.primaryAccounts['urn:ietf:params:jmap:mail'];
-	const mailboxes = await jmap(owner, [['Mailbox/get', { accountId: account, properties: ['id', 'role'] }, 'm'], ['Identity/get', { accountId: account }, 'i']]);
-	const drafts = (mailboxes[0][1].list as { id: string; role: string }[]).find((box) => box.role === 'drafts')!.id;
+	const mailboxes = await jmap(owner, [
+		['Mailbox/get', { accountId: account, properties: ['id', 'role'] }, 'm'],
+		['Identity/get', { accountId: account }, 'i']
+	]);
+	const drafts = (mailboxes[0][1].list as { id: string; role: string }[]).find(
+		(box) => box.role === 'drafts'
+	)!.id;
 	const identity = (mailboxes[1][1].list as { id: string }[])[0].id;
 	return jmap(owner, [
 		[
@@ -123,7 +131,11 @@ async function send(to: string, subject: string) {
 			},
 			'e'
 		],
-		['EmailSubmission/set', { accountId: account, create: { s: { emailId: '#d', identityId: identity } } }, 's']
+		[
+			'EmailSubmission/set',
+			{ accountId: account, create: { s: { emailId: '#d', identityId: identity } } },
+			's'
+		]
 	]);
 }
 
@@ -154,17 +166,23 @@ test('a shared domain reaches the other system for signed-in senders only, with 
 	const subject = `To the other system ${Math.random().toString(16).slice(2, 8)}`;
 	const sent = await send(elsewhere, subject);
 	expect(sent[1][1].created).toBeTruthy();
-	await expect.poll(() => received.find((item) => item.data.includes(subject))?.to, { timeout: 60_000 }).toEqual([elsewhere]);
+	await expect
+		.poll(() => received.find((item) => item.data.includes(subject))?.to, { timeout: 60_000 })
+		.toEqual([elsewhere]);
 
 	// Someone who lives here still gets their mail here, not over there.
 	const local = `Stays here ${Math.random().toString(16).slice(2, 8)}`;
 	await send(owner, local);
-	const session = (await (await api('GET', '/jmap/session', owner)).json()) as { primaryAccounts: Record<string, string> };
+	const session = (await (await api('GET', '/jmap/session', owner)).json()) as {
+		primaryAccounts: Record<string, string>;
+	};
 	const account = session.primaryAccounts['urn:ietf:params:jmap:mail'];
 	await expect
 		.poll(
 			async () => {
-				const found = await jmap(owner, [['Email/query', { accountId: account, filter: { subject: local, inMailbox: undefined } }, 'q']]);
+				const found = await jmap(owner, [
+					['Email/query', { accountId: account, filter: { subject: local, inMailbox: undefined } }, 'q']
+				]);
 				return (found[0][1].ids as string[]).length;
 			},
 			{ timeout: 60_000 }

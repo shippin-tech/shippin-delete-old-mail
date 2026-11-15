@@ -6,7 +6,7 @@
  */
 import { goto } from '$app/navigation';
 import { authorization } from '../../adapter/session';
-import { onRoute, parseCall, type AgentCall, type AgentOutcome } from './agent-call';
+import { type AgentCall, type AgentOutcome, onRoute, parseCall } from './agent-call';
 
 export type ActionResult = { text: string; data?: unknown };
 type Args = Record<string, unknown>;
@@ -112,7 +112,8 @@ async function run(call: AgentCall): Promise<AgentOutcome> {
 			decide = resolve;
 			setTimeout(() => resolve(false), Math.max(5, call.seconds - 5) * 1000);
 		});
-		if (agent.call?.callId !== call.callId) return { ok: false, text: 'Nothing was done: the call was cancelled.' };
+		if (agent.call?.callId !== call.callId)
+			return { ok: false, text: 'Nothing was done: the call was cancelled.' };
 		if (!allowed) return { ok: false, text: 'Nothing was done: the operator did not allow it.' };
 	}
 	agent.phase = 'working';

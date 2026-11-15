@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
+import { homeFor, navFor } from '../src/lib/adapter/home';
 import {
 	checkFor,
 	connectionSettings,
-	stateLabel,
 	formatBytes,
 	parseZone,
 	passwordProblem,
 	remaining,
+	stateLabel,
 	validDomain,
 	validLocalPart
 } from '../src/lib/panel/model';
-import { homeFor, navFor } from '../src/lib/adapter/home';
 
 // Shape produced by dns-update's BindSerializer (name IN TYPE value; long TXT split in parentheses).
 const zone = [
@@ -49,7 +49,9 @@ describe('parseZone', () => {
 
 	it('joins split TXT chunks and strips quotes and trailing dots', () => {
 		const dkim = rows.find((r) => r.name.includes('_domainkey'))!;
-		expect(dkim.value).toBe('v=DKIM1; k=rsa; h=sha256; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAZm9vYmFy');
+		expect(dkim.value).toBe(
+			'v=DKIM1; k=rsa; h=sha256; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAZm9vYmFy'
+		);
 		expect(rows.find((r) => r.type === 'MX')!.value).toBe('10 mail.shippin.tech');
 		expect(rows.find((r) => r.type === 'TXT' && r.host === '@')!.value).toBe('v=spf1 mx ra=postmaster -all');
 	});
@@ -132,12 +134,25 @@ describe('live DNS status', () => {
 	const rows = parseZone(zone, 'example.com');
 	const checks = [
 		{ kind: 'MX', name: 'example.com', expected: 'mail.shippin.tech', state: 'found', actual: null },
-		{ kind: 'SPF', name: 'example.com', expected: 'v=spf1 mx ra=postmaster -all', state: 'different', actual: 'v=spf1 include:_spf.google.com ~all' },
-		{ kind: 'DKIM', name: '202611r._domainkey.example.com', expected: 'v=DKIM1', state: 'missing', actual: null }
+		{
+			kind: 'SPF',
+			name: 'example.com',
+			expected: 'v=spf1 mx ra=postmaster -all',
+			state: 'different',
+			actual: 'v=spf1 include:_spf.google.com ~all'
+		},
+		{
+			kind: 'DKIM',
+			name: '202611r._domainkey.example.com',
+			expected: 'v=DKIM1',
+			state: 'missing',
+			actual: null
+		}
 	] as const;
 
 	it('pairs each required row with its check', () => {
-		const label = (purpose: string) => stateLabel(checkFor(rows.find((r) => r.purpose.startsWith(purpose))!, [...checks]));
+		const label = (purpose: string) =>
+			stateLabel(checkFor(rows.find((r) => r.purpose.startsWith(purpose))!, [...checks]));
 		expect(label('Receive mail')).toBe('Published');
 		expect(label('SPF')).toBe('Different value');
 		expect(label('DKIM')).toBe('Missing');

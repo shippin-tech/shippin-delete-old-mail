@@ -1,6 +1,14 @@
+import { createFolder, type DriveNode, listFolder, uploadFile } from './drive';
+import {
+	copyName,
+	type GoogleFile,
+	type GoogleListing,
+	type GoogleStatus,
+	IMPORT_FOLDER,
+	parseStatus,
+	toGoogleFile
+} from './google-call';
 import { authorization } from './session';
-import { createFolder, listFolder, uploadFile, type DriveNode } from './drive';
-import { IMPORT_FOLDER, copyName, parseStatus, toGoogleFile, type GoogleFile, type GoogleListing, type GoogleStatus } from './google-call';
 
 export * from './google-call';
 
@@ -16,14 +24,22 @@ async function failure(res: Response, fallback: string): Promise<Error> {
 }
 
 export async function googleStatus(): Promise<GoogleStatus> {
-	const res = await fetch('/api/google', { credentials: 'same-origin', cache: 'no-store', headers: headers() });
+	const res = await fetch('/api/google', {
+		credentials: 'same-origin',
+		cache: 'no-store',
+		headers: headers()
+	});
 	if (!res.ok) throw await failure(res, 'The Google link could not be checked.');
 	return parseStatus(await res.json());
 }
 
 /** Sends the browser to Google; it comes back to /files?view=google. */
 export async function connectGoogle(): Promise<void> {
-	const res = await fetch('/api/google/connect', { method: 'POST', credentials: 'same-origin', headers: headers() });
+	const res = await fetch('/api/google/connect', {
+		method: 'POST',
+		credentials: 'same-origin',
+		headers: headers()
+	});
 	if (!res.ok) throw await failure(res, 'Google could not be reached.');
 	const body = (await res.json()) as { url?: unknown };
 	if (typeof body.url !== 'string') throw new Error('Google could not be reached.');
@@ -31,17 +47,30 @@ export async function connectGoogle(): Promise<void> {
 }
 
 export async function disconnectGoogle(): Promise<void> {
-	const res = await fetch('/api/google/disconnect', { method: 'POST', credentials: 'same-origin', headers: headers() });
+	const res = await fetch('/api/google/disconnect', {
+		method: 'POST',
+		credentials: 'same-origin',
+		headers: headers()
+	});
 	if (!res.ok) throw await failure(res, 'The link could not be removed.');
 }
 
-export async function listGoogle(options: { folder?: string; search?: string; shared?: boolean; page?: string }): Promise<GoogleListing> {
+export async function listGoogle(options: {
+	folder?: string;
+	search?: string;
+	shared?: boolean;
+	page?: string;
+}): Promise<GoogleListing> {
 	const params = new URLSearchParams();
 	if (options.folder) params.set('folder', options.folder);
 	if (options.search?.trim()) params.set('search', options.search.trim());
 	if (options.shared) params.set('shared', '1');
 	if (options.page) params.set('pageToken', options.page);
-	const res = await fetch(`/api/google/files?${params.toString()}`, { credentials: 'same-origin', cache: 'no-store', headers: headers() });
+	const res = await fetch(`/api/google/files?${params.toString()}`, {
+		credentials: 'same-origin',
+		cache: 'no-store',
+		headers: headers()
+	});
 	if (!res.ok) throw await failure(res, 'Your Google files could not be loaded.');
 	const body = (await res.json()) as { files?: Record<string, unknown>[]; nextPage?: unknown };
 	return {
@@ -52,7 +81,10 @@ export async function listGoogle(options: { folder?: string; search?: string; sh
 
 async function fetchContent(file: GoogleFile, format?: string): Promise<File> {
 	const query = format ? `?export=${encodeURIComponent(format)}` : '';
-	const res = await fetch(`/api/google/content/${encodeURIComponent(file.id)}${query}`, { credentials: 'same-origin', headers: headers() });
+	const res = await fetch(`/api/google/content/${encodeURIComponent(file.id)}${query}`, {
+		credentials: 'same-origin',
+		headers: headers()
+	});
 	if (!res.ok) throw await failure(res, `${file.name} could not be fetched from Google.`);
 	const blob = await res.blob();
 	const name = copyName(file.name, res.headers.get('X-File-Extension') ?? '');
@@ -73,7 +105,9 @@ export async function downloadGoogle(file: GoogleFile, format?: string): Promise
 export async function importFromGoogle(file: GoogleFile, format?: string): Promise<void> {
 	const content = await fetchContent(file, format);
 	const top = await listFolder(null);
-	const folder = top.find((node) => node.kind === 'folder' && node.name === IMPORT_FOLDER)?.id ?? (await createFolder(null, IMPORT_FOLDER));
+	const folder =
+		top.find((node) => node.kind === 'folder' && node.name === IMPORT_FOLDER)?.id ??
+		(await createFolder(null, IMPORT_FOLDER));
 	await uploadFile(content, folder, () => undefined);
 }
 

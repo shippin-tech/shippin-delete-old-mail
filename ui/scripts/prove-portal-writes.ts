@@ -4,22 +4,26 @@
  */
 import { registrySet, setResult } from '../src/lib/adapter/writes-call.ts';
 import {
-	NOT_CONFIRMED,
-	NO_CHANGES,
 	createLabel,
 	deleteDescription,
+	deletedSuccess,
 	deleteItem,
 	deleteTitle,
-	deletedSuccess,
+	NO_CHANGES,
+	NOT_CONFIRMED,
 	writeNotice
 } from '../src/lib/portal/writes.ts';
 
 if (createLabel('Domain') !== 'Create Domain') throw new Error('create');
 if (deleteTitle('Domain') !== 'Delete Domain?') throw new Error('delete title');
-if (deleteItem('example.org') !== 'Are you sure you want to delete example.org? This action cannot be undone.') {
+if (
+	deleteItem('example.org') !== 'Are you sure you want to delete example.org? This action cannot be undone.'
+) {
 	throw new Error('delete item');
 }
-if (deleteDescription('Domain') !== 'This action cannot be undone. This will permanently delete this Domain.') {
+if (
+	deleteDescription('Domain') !== 'This action cannot be undone. This will permanently delete this Domain.'
+) {
 	throw new Error('delete description');
 }
 if (deletedSuccess('Domain') !== 'Domain deleted successfully') throw new Error('deleted');
@@ -35,7 +39,8 @@ if (!updated[1].update || !('d1' in (updated[1].update as object))) throw new Er
 const destroyed = registrySet('x:Domain', 'acct', { destroy: ['d1'] });
 if (JSON.stringify(destroyed[1].destroy) !== JSON.stringify(['d1'])) throw new Error('destroy call');
 if (setResult({ destroyed: ['d1'] }, 'd1') !== 'saved') throw new Error('destroyed');
-if (setResult({ notDestroyed: { d1: { type: 'forbidden' } } }, 'd1') !== 'rejected') throw new Error('rejected');
+if (setResult({ notDestroyed: { d1: { type: 'forbidden' } } }, 'd1') !== 'rejected')
+	throw new Error('rejected');
 if (setResult({}, 'd1') !== 'missing') throw new Error('missing');
 
 console.log('Registry call contracts passed. Real persistence: node scripts/prove-portal-records.mjs');

@@ -1,14 +1,18 @@
-import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { expect, test } from '@playwright/test';
 
 // MCPL lesson progress kept on the server, against the local stack.
 const base = process.env.LIVE_URL ?? 'http://127.0.0.1:28080';
-const admin = JSON.parse(readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')) as {
+const admin = JSON.parse(
+	readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')
+) as {
 	username: string;
 	secret: string;
 };
-const auth = { Authorization: 'Basic ' + Buffer.from(`${admin.username}:${admin.secret}`).toString('base64') };
+const auth = {
+	Authorization: 'Basic ' + Buffer.from(`${admin.username}:${admin.secret}`).toString('base64')
+};
 const lesson = 'set-up-your-domain';
 
 async function post(body: unknown, id = lesson) {
@@ -21,9 +25,14 @@ async function post(body: unknown, id = lesson) {
 
 test('lesson progress is kept per person, merged, and follows them to a new browser', async ({ page }) => {
 	expect((await fetch(`${base}/api/learn/progress`)).status).toBe(401);
-	expect((await fetch(`${base}/api/learn/progress/${lesson}`, { method: 'DELETE', headers: auth })).status).toBe(200);
+	expect(
+		(await fetch(`${base}/api/learn/progress/${lesson}`, { method: 'DELETE', headers: auth })).status
+	).toBe(200);
 
-	expect(await (await post({ done: ['publish-dns'], dismissed: false })).json()).toEqual({ done: ['publish-dns'], dismissed: false });
+	expect(await (await post({ done: ['publish-dns'], dismissed: false })).json()).toEqual({
+		done: ['publish-dns'],
+		dismissed: false
+	});
 	// Another device that only knows a different step never takes the first one away.
 	expect(await (await post({ done: ['add-mailbox'], dismissed: false })).json()).toEqual({
 		done: ['publish-dns', 'add-mailbox'],
@@ -50,7 +59,11 @@ test('lesson progress is kept per person, merged, and follows them to a new brow
 		.toContain('add-mailbox');
 
 	// Starting over clears it.
-	expect((await fetch(`${base}/api/learn/progress/${lesson}`, { method: 'DELETE', headers: auth })).status).toBe(200);
-	const after = (await (await fetch(`${base}/api/learn/progress`, { headers: auth })).json()) as { lessons: Record<string, unknown> };
+	expect(
+		(await fetch(`${base}/api/learn/progress/${lesson}`, { method: 'DELETE', headers: auth })).status
+	).toBe(200);
+	const after = (await (await fetch(`${base}/api/learn/progress`, { headers: auth })).json()) as {
+		lessons: Record<string, unknown>;
+	};
 	expect(after.lessons[lesson]).toBeUndefined();
 });

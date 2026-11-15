@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { inventoryStatusCounts, packageBacklog, portingQueue, webuiInventory } from '../src/lib/porting/inventory';
+import {
+	inventoryStatusCounts,
+	packageBacklog,
+	portingQueue,
+	webuiInventory
+} from '../src/lib/porting/inventory';
 
 describe('porting inventory', () => {
 	it('loads queue + webui inventory and computes status/backlog counts', () => {

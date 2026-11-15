@@ -67,7 +67,8 @@ export const BASELINES: readonly Baseline[] = [
 	{
 		id: 'transport',
 		title: 'Enforce strict transport and DMARC',
-		summary: 'Browsers are pinned to HTTPS, DKIM signatures must align exactly, and inbound DMARC is verified strictly on port 25.',
+		summary:
+			'Browsers are pinned to HTTPS, DKIM signatures must align exactly, and inbound DMARC is verified strictly on port 25.',
 		settings: [
 			{
 				object: 'x:Http',
@@ -91,7 +92,8 @@ export const BASELINES: readonly Baseline[] = [
 				label: 'DMARC verification on port 25',
 				on: onPort25('strict'),
 				off: onPort25('relaxed'),
-				effect: 'Inbound mail on port 25 is checked against the sender domain’s DMARC policy in strict alignment mode, so failing mail is treated as the policy says, including reject.'
+				effect:
+					'Inbound mail on port 25 is checked against the sender domain’s DMARC policy in strict alignment mode, so failing mail is treated as the policy says, including reject.'
 			}
 		]
 	},
@@ -114,14 +116,16 @@ export const BASELINES: readonly Baseline[] = [
 				label: 'SMTP SASL mechanisms',
 				on: SASL_TLS_ONLY,
 				off: SASL_TLS_ONLY,
-				effect: 'Submission ports offer PLAIN and LOGIN only inside TLS; without TLS only token mechanisms are offered; port 25 offers none.'
+				effect:
+					'Submission ports offer PLAIN and LOGIN only inside TLS; without TLS only token mechanisms are offered; port 25 offers none.'
 			}
 		]
 	},
 	{
 		id: 'brute-force',
 		title: 'Rate-limit and lock out brute-force attempts',
-		summary: 'Ten failed logins in an hour ban the source address for a day; IMAP drops a session after three failures.',
+		summary:
+			'Ten failed logins in an hour ban the source address for a day; IMAP drops a session after three failures.',
 		settings: [
 			{
 				object: 'x:Security',
@@ -170,7 +174,7 @@ export function objectsFor(baselines: readonly Baseline[] = BASELINES): string[]
 /** Deep equality for the small JSON shapes the settings use. */
 export function sameValue(a: unknown, b: unknown): boolean {
 	if (a === b) return true;
-	if (a == null || b == null) return a == b;
+	if (a == null || b == null) return a == null && b == null;
 	if (typeof a !== 'object' || typeof b !== 'object') return false;
 	const left = a as Record<string, unknown>;
 	const right = b as Record<string, unknown>;
@@ -201,10 +205,14 @@ export function baselineState(baseline: Baseline, records: BaselineRecords): Bas
 }
 
 /** Per-object patches to apply when the baseline is switched on or off. */
-export function baselinePatches(baseline: Baseline, on: boolean): Record<string, Record<string, SettingValue>> {
+export function baselinePatches(
+	baseline: Baseline,
+	on: boolean
+): Record<string, Record<string, SettingValue>> {
 	const patches: Record<string, Record<string, SettingValue>> = {};
 	for (const setting of baseline.settings) {
-		(patches[setting.object] ??= {})[setting.property] = on ? setting.on : setting.off;
+		patches[setting.object] ??= {};
+		patches[setting.object][setting.property] = on ? setting.on : setting.off;
 	}
 	return patches;
 }

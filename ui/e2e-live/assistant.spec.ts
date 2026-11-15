@@ -1,15 +1,17 @@
-import { expect, test } from '@playwright/test';
-import AxeBuilder from '@axe-core/playwright';
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { resolve } from 'node:path';
+import AxeBuilder from '@axe-core/playwright';
+import { expect, test } from '@playwright/test';
 
 // The assistant in a real browser against the local stack, with stand-ins for both kinds
 // of AI service on the host. It is off until set, keeps the key to itself, and tells
 // each person only what their role should see.
 const run = Math.random().toString(16).slice(2, 8);
 const base = process.env.LIVE_URL ?? 'http://127.0.0.1:28080';
-const admin = JSON.parse(readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')) as {
+const admin = JSON.parse(
+	readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')
+) as {
 	username: string;
 	secret: string;
 };
@@ -20,7 +22,18 @@ const owner = `owner@${domain}`;
 const key = `stand-in-key-${run}`;
 const standIn = 'http://host.docker.internal:28028';
 
-type Seen = { path: string; auth: string; xKey: string; version: string; body: { model: string; system?: string; messages: { role: string; content: string }[]; max_tokens?: number } };
+type Seen = {
+	path: string;
+	auth: string;
+	xKey: string;
+	version: string;
+	body: {
+		model: string;
+		system?: string;
+		messages: { role: string; content: string }[];
+		max_tokens?: number;
+	};
+};
 const seen: Seen[] = [];
 let mode: 'ok' | 'refuse' | 'down' = 'ok';
 
@@ -40,11 +53,23 @@ const service = createServer((req, res) => {
 			res.statusCode = 500;
 			res.end('{"error":"down"}');
 		} else if (req.url === '/v1/chat/completions') {
-			res.end(JSON.stringify({ choices: [{ message: { role: 'assistant', content: 'Open /mail to read your mail.' } }] }));
+			res.end(
+				JSON.stringify({
+					choices: [{ message: { role: 'assistant', content: 'Open /mail to read your mail.' } }]
+				})
+			);
 		} else if (mode === 'refuse') {
 			res.end(JSON.stringify({ stop_reason: 'refusal', content: [] }));
 		} else {
-			res.end(JSON.stringify({ stop_reason: 'end_turn', content: [{ type: 'thinking', thinking: '' }, { type: 'text', text: 'Open /calendar for that.' }] }));
+			res.end(
+				JSON.stringify({
+					stop_reason: 'end_turn',
+					content: [
+						{ type: 'thinking', thinking: '' },
+						{ type: 'text', text: 'Open /calendar for that.' }
+					]
+				})
+			);
 		}
 	});
 });
@@ -79,7 +104,10 @@ async function settings(body: unknown) {
 	});
 }
 
-test('the assistant is off until set, answers from the guide, and keeps its key', async ({ page, browser }) => {
+test('the assistant is off until set, answers from the guide, and keeps its key', async ({
+	page,
+	browser
+}) => {
 	test.setTimeout(180_000);
 	await fetch(`${base}/api/ai/settings`, { method: 'DELETE', headers: { Authorization: adminAuth } });
 	const created = await fetch(`${base}/api/panel/signup`, {
@@ -91,7 +119,9 @@ test('the assistant is off until set, answers from the guide, and keeps its key'
 
 	expect((await fetch(`${base}/api/assistant`)).status).toBe(401);
 	expect((await fetch(`${base}/api/ai/settings`, { headers: { Authorization: basic() } })).status).toBe(403);
-	expect((await (await fetch(`${base}/api/assistant`, { headers: { Authorization: basic() } })).json()) as unknown).toEqual({ enabled: false });
+	expect(
+		(await (await fetch(`${base}/api/assistant`, { headers: { Authorization: basic() } })).json()) as unknown
+	).toEqual({ enabled: false });
 	const off = await fetch(`${base}/api/assistant`, {
 		method: 'POST',
 		headers: { Authorization: basic(), 'Content-Type': 'application/json' },
@@ -109,9 +139,9 @@ test('the assistant is off until set, answers from the guide, and keeps its key'
 	await expect(page.getByRole('button', { name: 'Ask for help' })).toHaveCount(0);
 	await page.getByRole('navigation', { name: 'Admin' }).getByRole('link', { name: 'AI settings' }).click();
 	await expect(page.getByRole('heading', { name: 'AI settings', level: 1 })).toBeVisible({ timeout: 30_000 });
-	const serious = (await new AxeBuilder({ page }).include('main').withTags(['wcag2a', 'wcag2aa']).analyze()).violations.filter(
-		(v) => v.impact === 'serious' || v.impact === 'critical'
-	);
+	const serious = (
+		await new AxeBuilder({ page }).include('main').withTags(['wcag2a', 'wcag2aa']).analyze()
+	).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
 	expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
 
 	const form = page.getByRole('form', { name: 'AI settings' });
@@ -129,25 +159,38 @@ test('the assistant is off until set, answers from the guide, and keeps its key'
 	await expect(page.getByText('Saved.')).toBeVisible({ timeout: 30_000 });
 
 	await form.getByRole('button', { name: 'Test the connection' }).click();
-	await expect(page.getByText('It works. The model answered: Open /mail to read your mail.')).toBeVisible({ timeout: 30_000 });
-	await expect(page.getByRole('complementary', { name: 'Turn on the assistant' }).getByText('All done.')).toBeVisible({ timeout: 30_000 });
+	await expect(page.getByText('It works. The model answered: Open /mail to read your mail.')).toBeVisible({
+		timeout: 30_000
+	});
+	await expect(
+		page.getByRole('complementary', { name: 'Turn on the assistant' }).getByText('All done.')
+	).toBeVisible({ timeout: 30_000 });
 	expect(seen.at(-1)).toMatchObject({ path: '/v1/chat/completions', auth: `Bearer ${key}` });
 	expect(seen.at(-1)?.body.model).toBe('local-model');
 
 	// Every key on the server, explained in one place.
 	const keys = await (await browser.newContext()).newPage();
 	await keys.goto('/keys');
-	await expect(keys.getByRole('heading', { name: 'Your keys on this server', level: 1 })).toBeVisible({ timeout: 30_000 });
+	await expect(keys.getByRole('heading', { name: 'Your keys on this server', level: 1 })).toBeVisible({
+		timeout: 30_000
+	});
 	await expect(keys.getByRole('heading', { level: 2 })).toHaveCount(6);
-	const keysSerious = (await new AxeBuilder({ page: keys }).include('main').withTags(['wcag2a', 'wcag2aa']).analyze()).violations.filter(
-		(v) => v.impact === 'serious' || v.impact === 'critical'
-	);
+	const keysSerious = (
+		await new AxeBuilder({ page: keys }).include('main').withTags(['wcag2a', 'wcag2aa']).analyze()
+	).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
 	expect(keysSerious.map((v) => v.id)).toEqual([]);
 
 	// The key never comes back.
-	const read = await (await fetch(`${base}/api/ai/settings`, { headers: { Authorization: adminAuth } })).text();
+	const read = await (
+		await fetch(`${base}/api/ai/settings`, { headers: { Authorization: adminAuth } })
+	).text();
 	expect(read).not.toContain(key);
-	expect(JSON.parse(read)).toMatchObject({ kind: 'openai', model: 'local-model', hasKey: true, assistant: true });
+	expect(JSON.parse(read)).toMatchObject({
+		kind: 'openai',
+		model: 'local-model',
+		hasKey: true,
+		assistant: true
+	});
 
 	// A domain owner asks, and the guide fits their role.
 	const person = await (await browser.newContext()).newPage();
@@ -175,7 +218,12 @@ test('the assistant is off until set, answers from the guide, and keeps its key'
 	await panel.getByLabel('Your question').fill('And my calendar?');
 	await panel.getByRole('button', { name: 'Ask', exact: true }).click();
 	await expect(panel.getByText('Open /mail to read your mail.')).toHaveCount(2, { timeout: 30_000 });
-	expect(seen.at(-1)!.body.messages.map((item) => item.role)).toEqual(['system', 'user', 'assistant', 'user']);
+	expect(seen.at(-1)!.body.messages.map((item) => item.role)).toEqual([
+		'system',
+		'user',
+		'assistant',
+		'user'
+	]);
 
 	// When the service is down, the person is told plainly.
 	mode = 'down';
@@ -185,7 +233,17 @@ test('the assistant is off until set, answers from the guide, and keeps its key'
 	mode = 'ok';
 
 	// The other kind of service, with its own request shape.
-	expect((await settings({ kind: 'anthropic', endpoint: standIn, model: 'a-model', key: `${key}-2`, assistant: true })).status).toBe(200);
+	expect(
+		(
+			await settings({
+				kind: 'anthropic',
+				endpoint: standIn,
+				model: 'a-model',
+				key: `${key}-2`,
+				assistant: true
+			})
+		).status
+	).toBe(200);
 	const ask = () =>
 		fetch(`${base}/api/assistant`, {
 			method: 'POST',
@@ -194,7 +252,12 @@ test('the assistant is off until set, answers from the guide, and keeps its key'
 		});
 	expect(((await (await ask()).json()) as { answer: string }).answer).toBe('Open /calendar for that.');
 	const anthropic = seen.at(-1)!;
-	expect(anthropic).toMatchObject({ path: '/v1/messages', xKey: `${key}-2`, version: '2026-10-21', auth: '' });
+	expect(anthropic).toMatchObject({
+		path: '/v1/messages',
+		xKey: `${key}-2`,
+		version: '2026-10-21',
+		auth: ''
+	});
 	expect(anthropic.body.system).toContain('Set up your domain');
 	expect(anthropic.body.max_tokens).toBeGreaterThan(0);
 	expect(anthropic.body.messages).toEqual([{ role: 'user', content: 'Where is my calendar?' }]);
@@ -204,8 +267,15 @@ test('the assistant is off until set, answers from the guide, and keeps its key'
 	mode = 'ok';
 
 	// An empty key keeps the saved one, and turning it off takes it away from everyone.
-	expect((await settings({ kind: 'anthropic', endpoint: standIn, model: 'a-model', key: '', assistant: false })).status).toBe(200);
-	expect((await (await fetch(`${base}/api/ai/settings`, { headers: { Authorization: adminAuth } })).json()) as { hasKey: boolean }).toMatchObject({ hasKey: true });
+	expect(
+		(await settings({ kind: 'anthropic', endpoint: standIn, model: 'a-model', key: '', assistant: false }))
+			.status
+	).toBe(200);
+	expect(
+		(await (await fetch(`${base}/api/ai/settings`, { headers: { Authorization: adminAuth } })).json()) as {
+			hasKey: boolean;
+		}
+	).toMatchObject({ hasKey: true });
 	expect((await ask()).status).toBe(409);
 	await person.reload();
 	await expect(person.getByRole('heading', { name: domain, level: 1 })).toBeVisible({ timeout: 30_000 });

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 // Sharing between two people on one domain, and the wall between domains, on the
 // local stack. The rights are checked through the API as well as the screen.
@@ -10,7 +10,11 @@ const ownerA = `owner@${domainA}`;
 const colleague = `sam@${domainA}`;
 const ownerB = `owner@${domainB}`;
 const base = process.env.LIVE_URL ?? 'http://127.0.0.1:28080';
-const FILES = ['urn:ietf:params:jmap:core', 'urn:ietf:params:jmap:filenode', 'urn:ietf:params:jmap:principals'];
+const FILES = [
+	'urn:ietf:params:jmap:core',
+	'urn:ietf:params:jmap:filenode',
+	'urn:ietf:params:jmap:principals'
+];
 
 function basic(user: string) {
 	return 'Basic ' + Buffer.from(`${user}:${password}`).toString('base64');
@@ -26,11 +30,14 @@ async function api(method: string, path: string, user: string, body?: unknown) {
 
 async function jmap(user: string, calls: unknown[]) {
 	const res = await api('POST', '/jmap', user, { using: FILES, methodCalls: calls });
-	return ((await res.json()) as { methodResponses: [string, Record<string, unknown>, string][] }).methodResponses;
+	return ((await res.json()) as { methodResponses: [string, Record<string, unknown>, string][] })
+		.methodResponses;
 }
 
 async function accountOf(user: string): Promise<string> {
-	const session = (await (await api('GET', '/jmap/session', user)).json()) as { primaryAccounts: Record<string, string> };
+	const session = (await (await api('GET', '/jmap/session', user)).json()) as {
+		primaryAccounts: Record<string, string>;
+	};
 	return session.primaryAccounts['urn:ietf:params:jmap:filenode'];
 }
 
@@ -57,7 +64,9 @@ test.afterAll(async () => {
 	await api('POST', '/api/panel/domain/close', ownerB, { confirm: domainB });
 });
 
-test('sharing gives exactly the access chosen, follows folders, and stays inside the domain', async ({ browser }) => {
+test('sharing gives exactly the access chosen, follows folders, and stays inside the domain', async ({
+	browser
+}) => {
 	test.setTimeout(180_000);
 	await signup(domainA);
 	await signup(domainB);
@@ -69,7 +78,9 @@ test('sharing gives exactly the access chosen, follows folders, and stays inside
 	// One customer of the server cannot see another's people.
 	const seenByB = await jmap(ownerB, [['Principal/query', { accountId: accountB }, 'q']]);
 	expect(seenByB[0][1].ids).toEqual([accountB]);
-	const lookup = await jmap(ownerB, [['Principal/query', { accountId: accountB, filter: { email: ownerA } }, 'q']]);
+	const lookup = await jmap(ownerB, [
+		['Principal/query', { accountId: accountB, filter: { email: ownerA } }, 'q']
+	]);
 	expect(lookup[0][1].ids).toEqual([]);
 	const byId = await jmap(ownerB, [['Principal/get', { accountId: accountB, ids: [accountA] }, 'g']]);
 	expect(byId[0][1].notFound).toEqual([accountA]);
@@ -91,14 +102,20 @@ test('sharing gives exactly the access chosen, follows folders, and stays inside
 	await owner.getByRole('button', { name: 'Create folder' }).click();
 	await owner.getByRole('button', { name: 'Team', exact: true }).click();
 	await expect(owner).toHaveURL(/folder=/);
-	await owner.getByLabel('Choose files to upload').setInputFiles({ name: 'plan.txt', mimeType: 'text/plain', buffer: Buffer.from('the plan') });
+	await owner
+		.getByLabel('Choose files to upload')
+		.setInputFiles({ name: 'plan.txt', mimeType: 'text/plain', buffer: Buffer.from('the plan') });
 	await expect(owner.getByRole('button', { name: 'plan.txt', exact: true })).toBeVisible({ timeout: 30_000 });
 	await owner.getByRole('button', { name: 'New folder' }).click();
 	await owner.getByLabel('Folder name').fill('Deep');
 	await owner.getByRole('button', { name: 'Create folder' }).click();
 	await owner.getByRole('button', { name: 'Deep', exact: true }).click();
-	await expect(owner.getByText('This folder is empty.').or(owner.getByText('Nothing here yet.', { exact: false }))).toBeVisible();
-	await owner.getByLabel('Choose files to upload').setInputFiles({ name: 'deep.txt', mimeType: 'text/plain', buffer: Buffer.from('deep bytes') });
+	await expect(
+		owner.getByText('This folder is empty.').or(owner.getByText('Nothing here yet.', { exact: false }))
+	).toBeVisible();
+	await owner
+		.getByLabel('Choose files to upload')
+		.setInputFiles({ name: 'deep.txt', mimeType: 'text/plain', buffer: Buffer.from('deep bytes') });
 	await expect(owner.getByRole('button', { name: 'deep.txt', exact: true })).toBeVisible({ timeout: 30_000 });
 
 	// Before sharing, Sam has nothing.
@@ -114,7 +131,9 @@ test('sharing gives exactly the access chosen, follows folders, and stays inside
 	await expect(owner.getByRole('alert')).toContainText('No one with that address');
 	await owner.getByLabel('Their address').fill(colleague);
 	await owner.getByRole('button', { name: 'Share', exact: true }).click();
-	await expect(owner.getByRole('list', { name: 'People with access' }).getByText(colleague, { exact: true })).toBeVisible();
+	await expect(
+		owner.getByRole('list', { name: 'People with access' }).getByText(colleague, { exact: true })
+	).toBeVisible();
 	await owner.getByRole('button', { name: 'Done' }).click();
 	await expect(owner.getByText('Shared', { exact: true })).toBeVisible();
 
@@ -129,13 +148,24 @@ test('sharing gives exactly the access chosen, follows folders, and stays inside
 	await expect(sam.getByRole('button', { name: 'Upload' })).toHaveCount(0);
 	await sam.getByRole('button', { name: 'Deep', exact: true }).click();
 	await expect(sam.getByRole('button', { name: 'deep.txt', exact: true })).toBeVisible({ timeout: 30_000 });
-	const [download] = await Promise.all([sam.waitForEvent('download'), sam.getByRole('button', { name: 'Download deep.txt' }).click()]);
+	const [download] = await Promise.all([
+		sam.waitForEvent('download'),
+		sam.getByRole('button', { name: 'Download deep.txt' }).click()
+	]);
 	expect(download.suggestedFilename()).toBe('deep.txt');
 
 	// The server refuses a view-only person, whatever the screen shows.
 	const listed = await jmap(colleague, [
 		['FileNode/query', { accountId: accountA }, 'q'],
-		['FileNode/get', { accountId: accountA, '#ids': { resultOf: 'q', name: 'FileNode/query', path: '/ids' }, properties: ['id', 'name'] }, 'g']
+		[
+			'FileNode/get',
+			{
+				accountId: accountA,
+				'#ids': { resultOf: 'q', name: 'FileNode/query', path: '/ids' },
+				properties: ['id', 'name']
+			},
+			'g'
+		]
 	]);
 	const nodes = listed[1][1].list as { id: string; name: string }[];
 	const id = (name: string) => nodes.find((node) => node.name === name)!.id;
@@ -161,20 +191,28 @@ test('sharing gives exactly the access chosen, follows folders, and stays inside
 	await expect(owner.getByLabel(`Access for ${colleague}`)).toHaveValue('editor');
 	await expect
 		.poll(async () => {
-			const rights = await jmap(colleague, [['FileNode/get', { accountId: accountA, ids: [id('deep.txt')], properties: ['myRights'] }, 'g']]);
+			const rights = await jmap(colleague, [
+				['FileNode/get', { accountId: accountA, ids: [id('deep.txt')], properties: ['myRights'] }, 'g']
+			]);
 			return (rights[0][1].list as { myRights: { mayRename: boolean } }[])[0].myRights.mayRename;
 		})
 		.toBe(true);
 	await sam.goto(`/files?folder=${id('Team')}&drive=${accountA}`);
-	await sam.getByLabel('Choose files to upload').setInputFiles({ name: 'from-sam.txt', mimeType: 'text/plain', buffer: Buffer.from('hi') });
-	await expect(sam.getByRole('button', { name: 'from-sam.txt', exact: true })).toBeVisible({ timeout: 30_000 });
+	await sam
+		.getByLabel('Choose files to upload')
+		.setInputFiles({ name: 'from-sam.txt', mimeType: 'text/plain', buffer: Buffer.from('hi') });
+	await expect(sam.getByRole('button', { name: 'from-sam.txt', exact: true })).toBeVisible({
+		timeout: 30_000
+	});
 
 	// Removing the share takes everything away, including what was added meanwhile.
 	await owner.getByRole('button', { name: `Remove ${colleague}` }).click();
 	await expect(owner.getByText('Only you can see this.')).toBeVisible();
 	await expect
 		.poll(async () => {
-			const session = (await (await api('GET', '/jmap/session', colleague)).json()) as { accounts: Record<string, unknown> };
+			const session = (await (await api('GET', '/jmap/session', colleague)).json()) as {
+				accounts: Record<string, unknown>;
+			};
 			return accountA in session.accounts;
 		})
 		.toBe(false);

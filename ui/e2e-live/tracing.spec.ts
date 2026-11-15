@@ -1,12 +1,14 @@
-import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { connect } from 'node:net';
 import { resolve } from 'node:path';
+import { expect, test } from '@playwright/test';
 
 // Live tracing on our own endpoints, against the local stack: a real failed
 // sign-in shows up in the portal's Live Tracing screen while it streams.
 const base = process.env.LIVE_URL ?? 'http://127.0.0.1:28080';
-const admin = JSON.parse(readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')) as {
+const admin = JSON.parse(
+	readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')
+) as {
 	username: string;
 	secret: string;
 };
@@ -25,7 +27,9 @@ test('live tracing streams real events with filters, without any licence', async
 	const token = (await issued.text()).trim();
 	expect(token.length).toBeGreaterThan(20);
 	expect((await fetch(`${base}/api/trace/live`)).status).toBe(401);
-	expect((await fetch(`${base}/api/trace/live?token=${encodeURIComponent(token)}&level=loud`)).status).toBe(400);
+	expect((await fetch(`${base}/api/trace/live?token=${encodeURIComponent(token)}&level=loud`)).status).toBe(
+		400
+	);
 
 	// The raw stream: it opens with a ready event.
 	const raw = await fetch(`${base}/api/trace/live?token=${encodeURIComponent(token)}`);
@@ -98,7 +102,9 @@ test('finished mail sessions are stored and can be searched and opened', async (
 	await expect
 		.poll(
 			async () => {
-				const res = await fetch(`${base}/api/trace/history?q=${encodeURIComponent(sender)}`, { headers: { Authorization: adminAuth } });
+				const res = await fetch(`${base}/api/trace/history?q=${encodeURIComponent(sender)}`, {
+					headers: { Authorization: adminAuth }
+				});
 				return ((await res.json()) as { traces: { from: string[] }[] }).traces.length;
 			},
 			{ timeout: 60_000, intervals: [1_000] }
@@ -119,5 +125,7 @@ test('finished mail sessions are stored and can be searched and opened', async (
 	const row = page.getByRole('button', { name: new RegExp(sender) });
 	await expect(row).toBeVisible({ timeout: 30_000 });
 	await row.click();
-	await expect(page.getByRole('region', { name: 'Stored trace' }).getByRole('button', { name: 'smtp.connection-start' })).toBeVisible({ timeout: 30_000 });
+	await expect(
+		page.getByRole('region', { name: 'Stored trace' }).getByRole('button', { name: 'smtp.connection-start' })
+	).toBeVisible({ timeout: 30_000 });
 });

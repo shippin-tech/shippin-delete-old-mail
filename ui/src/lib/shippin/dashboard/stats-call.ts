@@ -206,16 +206,25 @@ export function combine(stats: Stats, metrics: readonly string[], aggregate: Agg
 	});
 }
 
-function fold(values: (number | null | undefined)[], aggregate: Aggregate, missing: number | null): number | null {
+function fold(
+	values: (number | null | undefined)[],
+	aggregate: Aggregate,
+	missing: number | null
+): number | null {
 	const present = values.map((value) => (value === undefined ? missing : value)).filter(isNumber);
-	if (aggregate === 'sum') return present.length || missing !== null ? present.reduce((a, b) => a + b, 0) : null;
+	if (aggregate === 'sum')
+		return present.length || missing !== null ? present.reduce((a, b) => a + b, 0) : null;
 	return mean(present);
 }
 
 /** The headline number of a card. */
 export function cardValue(card: DashboardCard, stats: Stats): number | null {
 	if (card.source === 'live') {
-		return fold(card.metrics.map((metric) => stats.live[metric]), card.aggregate, null);
+		return fold(
+			card.metrics.map((metric) => stats.live[metric]),
+			card.aggregate,
+			null
+		);
 	}
 	return fold(
 		card.metrics.map((metric) => stats.history[metric]?.total),
@@ -253,7 +262,11 @@ export function chartSeries(chart: DashboardChart, stats: Stats): ChartSeries[] 
 }
 
 function trim(value: number): string {
-	return value >= 100 ? value.toFixed(0) : value >= 10 ? value.toFixed(1).replace(/\.0$/, '') : value.toFixed(2).replace(/\.?0+$/, '');
+	return value >= 100
+		? value.toFixed(0)
+		: value >= 10
+			? value.toFixed(1).replace(/\.0$/, '')
+			: value.toFixed(2).replace(/\.?0+$/, '');
 }
 
 export function formatValue(value: number | null, format: ValueFormat): string {
@@ -293,7 +306,12 @@ export function metricFormat(metric: string): ValueFormat {
 export function barLabels(stats: Stats, timeZone?: string): string[] {
 	const time = new Intl.DateTimeFormat('en', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone });
 	const day = new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', timeZone });
-	const dayTime = new Intl.DateTimeFormat('en', { weekday: 'short', hour: '2-digit', hour12: false, timeZone });
+	const dayTime = new Intl.DateTimeFormat('en', {
+		weekday: 'short',
+		hour: '2-digit',
+		hour12: false,
+		timeZone
+	});
 	const withDay = stats.step >= 6 * 3600 || stats.step * stats.points > 86_400;
 	return Array.from({ length: stats.points }, (_, bar) => {
 		const at = new Date((stats.start + bar * stats.step) * 1000);
@@ -335,7 +353,8 @@ export function niceScale(max: number, ticks = 4): { max: number; ticks: number[
 	if (!Number.isFinite(max) || max <= 0) return { max: 1, ticks: [0, 1] };
 	const rough = max / ticks;
 	const power = 10 ** Math.floor(Math.log10(rough));
-	const step = [1, 2, 2.5, 5, 10].map((factor) => factor * power).find((candidate) => candidate >= rough) ?? 10 * power;
+	const step =
+		[1, 2, 2.5, 5, 10].map((factor) => factor * power).find((candidate) => candidate >= rough) ?? 10 * power;
 	const top = Math.ceil(max / step) * step;
 	return { max: top, ticks: Array.from({ length: Math.round(top / step) + 1 }, (_, index) => index * step) };
 }

@@ -1,9 +1,9 @@
 import { writable } from 'svelte/store';
 import {
 	createSignal,
+	type PortalSignal,
 	parseScriptedSignal,
-	SCRIPTED_SIGNAL_EVENT,
-	type PortalSignal
+	SCRIPTED_SIGNAL_EVENT
 } from '../portal/signal';
 
 export const MAX_PORTAL_SIGNALS = 4000;
@@ -22,15 +22,22 @@ export function publishSignals(next: readonly PortalSignal[]): void {
 	void publishWebhook(next);
 }
 
-export function publishStatusSignal(channel: PortalSignal['channel'], eventType: string, status: PortalSignal['status'], payload: Record<string, unknown> = {}): void {
-	publishSignals([createSignal({
-		channel,
-		eventType,
-		resource: channel,
-		status,
-		severity: status === 'failed' ? 'error' : status === 'cancelled' ? 'warn' : 'info',
-		payload
-	})]);
+export function publishStatusSignal(
+	channel: PortalSignal['channel'],
+	eventType: string,
+	status: PortalSignal['status'],
+	payload: Record<string, unknown> = {}
+): void {
+	publishSignals([
+		createSignal({
+			channel,
+			eventType,
+			resource: channel,
+			status,
+			severity: status === 'failed' ? 'error' : status === 'cancelled' ? 'warn' : 'info',
+			payload
+		})
+	]);
 }
 
 export function configureSignalWebhook(url: string | null): { ok: boolean; message?: string } {

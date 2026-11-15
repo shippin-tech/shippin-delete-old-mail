@@ -125,7 +125,10 @@ function page<V extends ViewLike>(
 }
 
 export function querySearch(entries: readonly SearchEntry[], query: string): SearchEntry[] {
-	const tokens = query.toLowerCase().split(/\s+/).filter((token) => token.length > 0);
+	const tokens = query
+		.toLowerCase()
+		.split(/\s+/)
+		.filter((token) => token.length > 0);
 	if (tokens.length === 0) return [];
 	const matched = entries.filter((entry) => {
 		const haystack = `${entry.text} ${entry.keywords.join(' ')}`.toLowerCase();
@@ -135,7 +138,9 @@ export function querySearch(entries: readonly SearchEntry[], query: string): Sea
 	return matched.slice(0, limit);
 }
 
-export function groupSearch(entries: readonly SearchEntry[]): { type: SearchKind; heading: string; entries: SearchEntry[] }[] {
+export function groupSearch(
+	entries: readonly SearchEntry[]
+): { type: SearchKind; heading: string; entries: SearchEntry[] }[] {
 	const headings: Record<SearchKind, string> = {
 		link: 'Pages',
 		form: 'Form Sections',

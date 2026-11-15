@@ -1,13 +1,15 @@
-import { expect, test } from '@playwright/test';
-import AxeBuilder from '@axe-core/playwright';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import AxeBuilder from '@axe-core/playwright';
+import { expect, test } from '@playwright/test';
 
 // Calendar emails in a real browser against the local stack: an administrator's own
 // wording reaches a real guest's mailbox, and resetting goes back to the built-in one.
 const run = Math.random().toString(16).slice(2, 8);
 const base = process.env.LIVE_URL ?? 'http://127.0.0.1:28080';
-const admin = JSON.parse(readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')) as {
+const admin = JSON.parse(
+	readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')
+) as {
 	username: string;
 	secret: string;
 };
@@ -31,12 +33,18 @@ async function api(method: string, path: string, user: string, body?: unknown) {
 }
 
 async function jmap(user: string, using: string[], calls: unknown[]) {
-	const res = await api('POST', '/jmap', user, { using: ['urn:ietf:params:jmap:core', ...using], methodCalls: calls });
-	return ((await res.json()) as { methodResponses: [string, Record<string, unknown>, string][] }).methodResponses;
+	const res = await api('POST', '/jmap', user, {
+		using: ['urn:ietf:params:jmap:core', ...using],
+		methodCalls: calls
+	});
+	return ((await res.json()) as { methodResponses: [string, Record<string, unknown>, string][] })
+		.methodResponses;
 }
 
 async function primary(user: string, capability: string): Promise<string> {
-	const session = (await (await api('GET', '/jmap/session', user)).json()) as { primaryAccounts: Record<string, string> };
+	const session = (await (await api('GET', '/jmap/session', user)).json()) as {
+		primaryAccounts: Record<string, string>;
+	};
 	return session.primaryAccounts[capability];
 }
 
@@ -47,46 +55,80 @@ async function invite(title: string) {
 	const accountId = await primary(owner, CALENDARS);
 	const calendars = await jmap(owner, [CALENDARS], [['Calendar/get', { accountId }, 'c']]);
 	const calendarId = (calendars[0][1].list as { id: string }[])[0].id;
-	const set = await jmap(owner, [CALENDARS], [
+	const set = await jmap(
+		owner,
+		[CALENDARS],
 		[
-			'CalendarEvent/set',
-			{
-				accountId,
-				sendSchedulingMessages: true,
-				create: {
-					e: {
-						'@type': 'Event',
-						title,
-						calendarIds: { [calendarId]: true },
-						start: '2030-06-15T10:00:00',
-						duration: 'PT1H',
-						timeZone: 'UTC',
-						organizerCalendarAddress: `mailto:${owner}`,
-						participants: {
-							owner: { '@type': 'Participant', calendarAddress: `mailto:${owner}`, roles: { owner: true, attendee: true }, participationStatus: 'accepted' },
-							guest0: { '@type': 'Participant', calendarAddress: `mailto:${guest}`, roles: { attendee: true }, participationStatus: 'needs-action', expectReply: true }
+			[
+				'CalendarEvent/set',
+				{
+					accountId,
+					sendSchedulingMessages: true,
+					create: {
+						e: {
+							'@type': 'Event',
+							title,
+							calendarIds: { [calendarId]: true },
+							start: '2030-06-15T10:00:00',
+							duration: 'PT1H',
+							timeZone: 'UTC',
+							organizerCalendarAddress: `mailto:${owner}`,
+							participants: {
+								owner: {
+									'@type': 'Participant',
+									calendarAddress: `mailto:${owner}`,
+									roles: { owner: true, attendee: true },
+									participationStatus: 'accepted'
+								},
+								guest0: {
+									'@type': 'Participant',
+									calendarAddress: `mailto:${guest}`,
+									roles: { attendee: true },
+									participationStatus: 'needs-action',
+									expectReply: true
+								}
+							}
 						}
 					}
-				}
-			},
-			's'
+				},
+				's'
+			]
 		]
-	]);
+	);
 	expect((set[0][1].created as Record<string, unknown> | undefined)?.e).toBeTruthy();
 }
 
 async function invitationHtml(title: string): Promise<string> {
 	const accountId = await primary(guest, MAIL);
-	const found = await jmap(guest, [MAIL], [
-		['Email/query', { accountId, filter: { subject: title } }, 'q'],
-		['Email/get', { accountId, '#ids': { resultOf: 'q', name: 'Email/query', path: '/ids' }, properties: ['htmlBody', 'bodyValues'], fetchHTMLBodyValues: true }, 'g']
-	]);
-	const list = (found[1][1].list as { htmlBody: { partId: string }[]; bodyValues: Record<string, { value: string }> }[] | undefined) ?? [];
+	const found = await jmap(
+		guest,
+		[MAIL],
+		[
+			['Email/query', { accountId, filter: { subject: title } }, 'q'],
+			[
+				'Email/get',
+				{
+					accountId,
+					'#ids': { resultOf: 'q', name: 'Email/query', path: '/ids' },
+					properties: ['htmlBody', 'bodyValues'],
+					fetchHTMLBodyValues: true
+				},
+				'g'
+			]
+		]
+	);
+	const list =
+		(found[1][1].list as
+			| { htmlBody: { partId: string }[]; bodyValues: Record<string, { value: string }> }[]
+			| undefined) ?? [];
 	return list[0] ? (list[0].bodyValues[list[0].htmlBody[0].partId]?.value ?? '') : '';
 }
 
 test.afterAll(async () => {
-	await fetch(`${base}/api/calendar-templates/invite`, { method: 'DELETE', headers: { Authorization: adminAuth } });
+	await fetch(`${base}/api/calendar-templates/invite`, {
+		method: 'DELETE',
+		headers: { Authorization: adminAuth }
+	});
 	await api('POST', '/api/panel/domain/close', owner, { confirm: domain });
 });
 
@@ -109,13 +151,18 @@ test('an administrator rewords the invitation and a real guest receives it', asy
 	await page.getByLabel('Password').fill(admin.secret);
 	await page.getByRole('button', { name: 'Sign in' }).click();
 	await page.waitForURL(/\/shippin\/admin/, { timeout: 30_000 });
-	await page.getByRole('navigation', { name: 'Admin' }).getByRole('link', { name: 'Calendar emails' }).click();
-	await expect(page.getByRole('heading', { name: 'Calendar emails', level: 1 })).toBeVisible({ timeout: 30_000 });
+	await page
+		.getByRole('navigation', { name: 'Admin' })
+		.getByRole('link', { name: 'Calendar emails' })
+		.click();
+	await expect(page.getByRole('heading', { name: 'Calendar emails', level: 1 })).toBeVisible({
+		timeout: 30_000
+	});
 	await expect(page.getByText('Using the built-in email.')).toBeVisible({ timeout: 30_000 });
 
-	const serious = (await new AxeBuilder({ page }).include('main').withTags(['wcag2a', 'wcag2aa']).analyze()).violations.filter(
-		(v) => v.impact === 'serious' || v.impact === 'critical'
-	);
+	const serious = (
+		await new AxeBuilder({ page }).include('main').withTags(['wcag2a', 'wcag2aa']).analyze()
+	).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
 	expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
 
 	// A mistake is refused and explained.

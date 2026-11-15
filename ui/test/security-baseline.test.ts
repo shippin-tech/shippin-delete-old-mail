@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
 	BASELINES,
-	SASL_TLS_ONLY,
+	type BaselineRecords,
 	baselinePatches,
 	baselineState,
 	describeValue,
 	objectsFor,
 	pendingChanges,
-	sameValue,
-	type BaselineRecords
+	SASL_TLS_ONLY,
+	sameValue
 } from '../src/lib/portal/baseline';
 
 const DAY = 86_400_000;
@@ -33,7 +33,8 @@ describe('security baseline catalogue', () => {
 		expect(BASELINES.map((b) => b.id)).toEqual(['mfa', 'transport', 'plaintext', 'brute-force']);
 		expect(byId.mfa.unavailable).toMatch(/no account-wide MFA/);
 		expect(byId.mfa.settings).toEqual([]);
-		for (const baseline of BASELINES.filter((b) => !b.unavailable)) expect(baseline.settings.length).toBeGreaterThan(0);
+		for (const baseline of BASELINES.filter((b) => !b.unavailable))
+			expect(baseline.settings.length).toBeGreaterThan(0);
 	});
 
 	it('only touches singleton objects that exist on the server schema', () => {
@@ -100,7 +101,9 @@ describe('baselinePatches', () => {
 
 describe('pendingChanges and descriptions', () => {
 	it('names exactly the settings whose server value differs from the target', () => {
-		const changes = pendingChanges(byId.transport, serverDefaults, true).map((s) => `${s.object}.${s.property}`);
+		const changes = pendingChanges(byId.transport, serverDefaults, true).map(
+			(s) => `${s.object}.${s.property}`
+		);
 		expect(changes).toEqual(['x:Http.enableHsts', 'x:SenderAuth.dmarcVerify']);
 		expect(pendingChanges(byId.plaintext, serverDefaults, true)).toEqual([]);
 	});
@@ -110,9 +113,9 @@ describe('pendingChanges and descriptions', () => {
 		expect(describeValue(null)).toBe('unset');
 		expect(describeValue(DAY)).toBe('1 day');
 		expect(describeValue({ count: 10, period: 3_600_000 })).toBe('10 per 1 hour');
-		expect(describeValue({ match: { '0': { if: 'local_port == 25', then: 'strict' } }, else: 'disable' })).toBe(
-			'if local_port == 25 then strict; else disable'
-		);
+		expect(
+			describeValue({ match: { '0': { if: 'local_port == 25', then: 'strict' } }, else: 'disable' })
+		).toBe('if local_port == 25 then strict; else disable');
 	});
 
 	it('compares nested JSON structurally', () => {

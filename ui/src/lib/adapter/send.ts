@@ -1,7 +1,7 @@
+import { type Address, type Attachment, type Draft, draftRecord, type Original } from '$lib/mail/compose';
 import { accountId, jmap, listOf, type MethodResponse } from './jmap';
-import { account, authorization } from './session';
 import { loadFolders } from './mail';
-import { draftRecord, type Address, type Attachment, type Draft, type Original } from '$lib/mail/compose';
+import { account, authorization } from './session';
 
 const MAIL = 'urn:ietf:params:jmap:mail';
 const SUBMISSION = 'urn:ietf:params:jmap:submission';
@@ -36,14 +36,18 @@ function created(payload: Record<string, unknown>, key: string): Record<string, 
 
 /** Reads why the server refused a create, in the words it gave. */
 export function refusal(payload: Record<string, unknown>, key: string, fallback: string): string {
-	const error = (payload.notCreated as Record<string, { description?: unknown; type?: unknown }> | undefined)?.[key];
+	const error = (
+		payload.notCreated as Record<string, { description?: unknown; type?: unknown }> | undefined
+	)?.[key];
 	if (error && typeof error.description === 'string') return error.description;
 	if (error && typeof error.type === 'string') return `${fallback} (${error.type})`;
 	return fallback;
 }
 
 /** Everything reply, forward and the reader need about one message. Marks it read. */
-export async function loadOriginal(id: string): Promise<(Original & { draft: boolean; truncated: boolean }) | null> {
+export async function loadOriginal(
+	id: string
+): Promise<(Original & { draft: boolean; truncated: boolean }) | null> {
 	const responses = await jmap(
 		[MAIL],
 		[
@@ -52,7 +56,21 @@ export async function loadOriginal(id: string): Promise<(Original & { draft: boo
 				{
 					accountId: accountId(),
 					ids: [id],
-					properties: ['id', 'subject', 'from', 'to', 'cc', 'replyTo', 'messageId', 'references', 'receivedAt', 'attachments', 'keywords', 'textBody', 'bodyValues'],
+					properties: [
+						'id',
+						'subject',
+						'from',
+						'to',
+						'cc',
+						'replyTo',
+						'messageId',
+						'references',
+						'receivedAt',
+						'attachments',
+						'keywords',
+						'textBody',
+						'bodyValues'
+					],
 					fetchTextBodyValues: true,
 					maxBodyValueBytes: 1_000_000
 				},
@@ -63,7 +81,10 @@ export async function loadOriginal(id: string): Promise<(Original & { draft: boo
 	const row = listOf<FullRow>(responses, 'Email/get')[0];
 	if (!row) return null;
 	if (!row.keywords?.$seen) {
-		await jmap([MAIL], [['Email/set', { accountId: accountId(), update: { [id]: { 'keywords/$seen': true } } }, 's0']]).catch(() => undefined);
+		await jmap(
+			[MAIL],
+			[['Email/set', { accountId: accountId(), update: { [id]: { 'keywords/$seen': true } } }, 's0']]
+		).catch(() => undefined);
 	}
 	const parts = (row.textBody ?? [])
 		.map((part) => (part.partId ? row.bodyValues?.[part.partId] : undefined))
@@ -82,7 +103,12 @@ export async function loadOriginal(id: string): Promise<(Original & { draft: boo
 		truncated: parts.some((part) => part.isTruncated === true),
 		attachments: (row.attachments ?? [])
 			.filter((a) => a.blobId)
-			.map((a) => ({ blobId: String(a.blobId), name: a.name || 'attachment', type: a.type || 'application/octet-stream', size: a.size ?? 0 })),
+			.map((a) => ({
+				blobId: String(a.blobId),
+				name: a.name || 'attachment',
+				type: a.type || 'application/octet-stream',
+				size: a.size ?? 0
+			})),
 		draft: row.keywords?.$draft === true
 	};
 }
@@ -102,17 +128,25 @@ export async function senderIdentity(): Promise<{ id: string; from: Address }> {
 	const responses = await jmap([MAIL, SUBMISSION], [['Identity/get', { accountId: accountId() }, 'i0']]);
 	const list = listOf<{ id?: string; name?: string | null; email?: string }>(responses, 'Identity/get');
 	const match = list.find((i) => i.email?.toLowerCase() === email.toLowerCase()) ?? list[0];
-	if (match?.id && match.email) return { id: String(match.id), from: { name: match.name || null, email: String(match.email) } };
-	const made = await jmap([MAIL, SUBMISSION], [['Identity/set', { accountId: accountId(), create: { me: { name: '', email } } }, 'i1']]);
+	if (match?.id && match.email)
+		return { id: String(match.id), from: { name: match.name || null, email: String(match.email) } };
+	const made = await jmap(
+		[MAIL, SUBMISSION],
+		[['Identity/set', { accountId: accountId(), create: { me: { name: '', email } } }, 'i1']]
+	);
 	const payload = payloadOf(made, 'Identity/set');
 	const id = created(payload, 'me')?.id;
-	if (typeof id !== 'string') throw new Error(refusal(payload, 'me', 'No sending identity could be created.'));
+	if (typeof id !== 'string')
+		throw new Error(refusal(payload, 'me', 'No sending identity could be created.'));
 	return { id, from: { name: null, email } };
 }
 
 export async function saveDraft(draft: Draft): Promise<string> {
 	const [{ drafts }, identity] = await Promise.all([specialFolders(), senderIdentity()]);
-	const call: Record<string, unknown> = { accountId: accountId(), create: { draft: draftRecord(draft, identity.from, drafts) } };
+	const call: Record<string, unknown> = {
+		accountId: accountId(),
+		create: { draft: draftRecord(draft, identity.from, drafts) }
+	};
 	if (draft.draftId) call.destroy = [draft.draftId];
 	const payload = payloadOf(await jmap([MAIL], [['Email/set', call, 'd0']]), 'Email/set');
 	const id = created(payload, 'draft')?.id;
@@ -123,7 +157,10 @@ export async function saveDraft(draft: Draft): Promise<string> {
 /** Stores the message, submits it, and on success moves it from Drafts to Sent. */
 export async function sendDraft(draft: Draft): Promise<void> {
 	const [{ drafts, sent }, identity] = await Promise.all([specialFolders(), senderIdentity()]);
-	const store: Record<string, unknown> = { accountId: accountId(), create: { draft: draftRecord(draft, identity.from, drafts) } };
+	const store: Record<string, unknown> = {
+		accountId: accountId(),
+		create: { draft: draftRecord(draft, identity.from, drafts) }
+	};
 	if (draft.draftId) store.destroy = [draft.draftId];
 	const responses = await jmap(
 		[MAIL, SUBMISSION],
@@ -143,9 +180,11 @@ export async function sendDraft(draft: Draft): Promise<void> {
 		]
 	);
 	const stored = payloadOf(responses, 'Email/set');
-	if (!created(stored, 'draft')) throw new Error(refusal(stored, 'draft', 'The message could not be prepared.'));
+	if (!created(stored, 'draft'))
+		throw new Error(refusal(stored, 'draft', 'The message could not be prepared.'));
 	const submitted = payloadOf(responses, 'EmailSubmission/set');
-	if (!created(submitted, 'send')) throw new Error(refusal(submitted, 'send', 'The message was saved in Drafts but not sent.'));
+	if (!created(submitted, 'send'))
+		throw new Error(refusal(submitted, 'send', 'The message was saved in Drafts but not sent.'));
 }
 
 export async function uploadAttachment(file: File): Promise<Attachment> {
@@ -157,11 +196,25 @@ export async function uploadAttachment(file: File): Promise<Attachment> {
 		headers: { Authorization: auth, 'Content-Type': file.type || 'application/octet-stream' },
 		body: file
 	});
-	const body = (await res.json().catch(() => ({}))) as { blobId?: string; size?: number; type?: string; detail?: string };
+	const body = (await res.json().catch(() => ({}))) as {
+		blobId?: string;
+		size?: number;
+		type?: string;
+		detail?: string;
+	};
 	if (!res.ok || !body.blobId) {
-		throw new Error(res.status === 413 ? `${file.name} is too large to attach.` : body.detail || `${file.name} could not be uploaded.`);
+		throw new Error(
+			res.status === 413
+				? `${file.name} is too large to attach.`
+				: body.detail || `${file.name} could not be uploaded.`
+		);
 	}
-	return { blobId: body.blobId, name: file.name, type: file.type || body.type || 'application/octet-stream', size: body.size ?? file.size };
+	return {
+		blobId: body.blobId,
+		name: file.name,
+		type: file.type || body.type || 'application/octet-stream',
+		size: body.size ?? file.size
+	};
 }
 
 /** Downloads with the session's credentials, which a plain link cannot carry. */

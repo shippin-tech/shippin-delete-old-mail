@@ -18,7 +18,8 @@ const pyzor = querySearch(index, 'pyzor');
 const described = pyzor.find((entry) => entry.type === 'link' && entry.text.includes('Pyzor'));
 const section = pyzor.find((entry) => entry.type === 'form' && entry.text === 'Pyzor Settings');
 if (!described || !section) throw new Error('pyzor');
-if (searchLabel(described) !== 'Settings' || searchLabel(section) !== 'Settings') throw new Error('pyzor label');
+if (searchLabel(described) !== 'Settings' || searchLabel(section) !== 'Settings')
+	throw new Error('pyzor label');
 
 const capacity = querySearch(index, 'reservoirCapacity').find(
 	(entry) => entry.type === 'field' && entry.text === 'Capacity'
@@ -54,7 +55,8 @@ for (const heading of ['Pages', 'Form Sections', 'Fields']) {
 }
 if (!search.includes('group.heading')) throw new Error('headings');
 if (!search.includes("event.key.toLowerCase() === 'k'")) throw new Error('shortcut');
-if (shell.includes("from '$lib/adapter") || search.includes("from '$lib/adapter")) throw new Error('catalog fetches');
+if (shell.includes("from '$lib/adapter") || search.includes("from '$lib/adapter"))
+	throw new Error('catalog fetches');
 if (!shell.includes('Search.svelte')) throw new Error('shell');
 
 console.log('ok');

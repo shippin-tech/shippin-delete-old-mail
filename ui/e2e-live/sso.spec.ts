@@ -1,15 +1,17 @@
-import { expect, test, type Page } from '@playwright/test';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
+import { expect, type Page, test } from '@playwright/test';
 
 // Signing in through a domain's own identity provider, in a real browser against the
 // local stack, with a stand-in provider on the host. Each attack here is one the server
 // must refuse: another domain's address, an unverified one, an administrator, a replay.
 const run = Math.random().toString(16).slice(2, 8);
 const base = process.env.LIVE_URL ?? 'http://127.0.0.1:28080';
-const admin = JSON.parse(readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')) as {
+const admin = JSON.parse(
+	readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')
+) as {
 	username: string;
 	secret: string;
 };
@@ -34,18 +36,31 @@ const provider = createServer((req, res) => {
 	req.on('end', () => {
 		res.setHeader('Content-Type', 'application/json');
 		if (url.pathname === '/.well-known/openid-configuration') {
-			res.end(JSON.stringify({ issuer, authorization_endpoint: 'http://127.0.0.1:28027/authorize', token_endpoint: `${issuer}/token`, userinfo_endpoint: `${issuer}/userinfo` }));
+			res.end(
+				JSON.stringify({
+					issuer,
+					authorization_endpoint: 'http://127.0.0.1:28027/authorize',
+					token_endpoint: `${issuer}/token`,
+					userinfo_endpoint: `${issuer}/userinfo`
+				})
+			);
 		} else if (url.pathname === '/authorize') {
 			challenge = url.searchParams.get('code_challenge') ?? '';
 			seen.state = url.searchParams.get('state') ?? '';
 			seen.code = `code-${Math.random()}`;
 			res.statusCode = 302;
-			res.setHeader('Location', `${url.searchParams.get('redirect_uri')}?code=${seen.code}&state=${seen.state}`);
+			res.setHeader(
+				'Location',
+				`${url.searchParams.get('redirect_uri')}?code=${seen.code}&state=${seen.state}`
+			);
 			res.end();
 		} else if (url.pathname === '/token') {
 			const form = new URLSearchParams(body);
 			seen.secret = form.get('client_secret') ?? '';
-			seen.verified = createHash('sha256').update(form.get('code_verifier') ?? '').digest('base64url') === challenge;
+			seen.verified =
+				createHash('sha256')
+					.update(form.get('code_verifier') ?? '')
+					.digest('base64url') === challenge;
 			res.end(JSON.stringify({ access_token: 'provider-access', token_type: 'Bearer' }));
 		} else if (url.pathname === '/userinfo') {
 			res.end(JSON.stringify(identity));
@@ -66,7 +81,10 @@ test.afterEach(async ({ browser }) => {
 
 test.afterAll(async () => {
 	provider.close();
-	for (const [user, domain] of [[hillBoss, hill], [valeBoss, vale]]) {
+	for (const [user, domain] of [
+		[hillBoss, hill],
+		[valeBoss, vale]
+	]) {
 		await fetch(`${base}/api/panel/domain/close`, {
 			method: 'POST',
 			headers: { Authorization: basic(user), 'Content-Type': 'application/json' },
@@ -96,7 +114,8 @@ async function toPasswordStep(page: Page, account: string) {
 }
 
 const button = (page: Page) => page.getByRole('button', { name: 'Use your organisation sign-in' });
-const refused = (page: Page) => expect(page.getByText('Your organisation sign-in did not work')).toBeVisible({ timeout: 30_000 });
+const refused = (page: Page) =>
+	expect(page.getByText('Your organisation sign-in did not work')).toBeVisible({ timeout: 30_000 });
 
 test('people sign in through their domain provider and nobody else can', async ({ browser }) => {
 	test.setTimeout(240_000);
@@ -109,7 +128,15 @@ test('people sign in through their domain provider and nobody else can', async (
 	const form = JSON.stringify({ issuer, clientId: 'shippin', clientSecret, enabled: true });
 	const json = { 'Content-Type': 'application/json' };
 	expect((await fetch(`${base}${settings}`, { method: 'POST', headers: json, body: form })).status).toBe(401);
-	expect((await fetch(`${base}${settings}`, { method: 'POST', headers: { ...json, Authorization: basic(valeBoss) }, body: form })).status).toBe(403);
+	expect(
+		(
+			await fetch(`${base}${settings}`, {
+				method: 'POST',
+				headers: { ...json, Authorization: basic(valeBoss) },
+				body: form
+			})
+		).status
+	).toBe(403);
 
 	const context = await browser.newContext();
 	const page = await context.newPage();
@@ -126,13 +153,17 @@ test('people sign in through their domain provider and nobody else can', async (
 	await editor.getByLabel('Provider address').fill(issuer);
 	await editor.getByLabel('Client ID').fill('shippin');
 	await editor.getByLabel('Client secret').fill(clientSecret);
-	await expect(editor.getByRole('complementary', { name: 'About this key' })).toContainText('Paste your client secret here. This is the right place for it.');
+	await expect(editor.getByRole('complementary', { name: 'About this key' })).toContainText(
+		'Paste your client secret here. This is the right place for it.'
+	);
 	await editor.getByLabel('Offer this sign-in').check();
 	await editor.getByRole('button', { name: 'Save sign-in' }).click();
 	await expect(page.getByText(`signs in through ${issuer}`)).toBeVisible({ timeout: 30_000 });
 
 	// The secret never comes back.
-	const read = await (await fetch(`${base}${settings}`, { headers: { Authorization: basic(hillBoss) } })).text();
+	const read = await (
+		await fetch(`${base}${settings}`, { headers: { Authorization: basic(hillBoss) } })
+	).text();
 	expect(read).not.toContain(clientSecret);
 	expect(JSON.parse(read)).toMatchObject({ issuer, clientId: 'shippin', hasSecret: true, enabled: true });
 
@@ -147,7 +178,9 @@ test('people sign in through their domain provider and nobody else can', async (
 	expect(seen.verified).toBe(true);
 
 	// A used sign-in cannot be replayed.
-	const replay = await fetch(`${base}/api/sso/callback?code=${seen.code}&state=${seen.state}`, { redirect: 'manual' });
+	const replay = await fetch(`${base}/api/sso/callback?code=${seen.code}&state=${seen.state}`, {
+		redirect: 'manual'
+	});
 	expect(replay.status).toBe(302);
 	expect(replay.headers.get('location')).toBe('/login?sso=failed');
 
@@ -169,17 +202,37 @@ test('people sign in through their domain provider and nobody else can', async (
 	}
 
 	// A server administrator on the domain can never come in this way.
-	const domains = (await (await fetch(`${base}/api/orgs`, { headers: { Authorization: adminAuth } })).json()) as { domains: { id: string; name: string }[] };
+	const domains = (await (
+		await fetch(`${base}/api/orgs`, { headers: { Authorization: adminAuth } })
+	).json()) as { domains: { id: string; name: string }[] };
 	const domainId = domains.domains.find((item) => item.name === hill)!.id;
 	const made = await fetch(`${base}/jmap`, {
 		method: 'POST',
 		headers: { Authorization: adminAuth, 'Content-Type': 'application/json' },
 		body: JSON.stringify({
 			using: ['urn:ietf:params:jmap:core', 'urn:shippin.tech:jmap'],
-			methodCalls: [['x:Account/set', { create: { a: { '@type': 'User', name: 'root', domainId, credentials: { '0': { '@type': 'Password', secret: password } }, roles: { '@type': 'Admin' } } } }, 's']]
+			methodCalls: [
+				[
+					'x:Account/set',
+					{
+						create: {
+							a: {
+								'@type': 'User',
+								name: 'root',
+								domainId,
+								credentials: { '0': { '@type': 'Password', secret: password } },
+								roles: { '@type': 'Admin' }
+							}
+						}
+					},
+					's'
+				]
+			]
 		})
 	});
-	const madeReply = (await made.json()) as { methodResponses: [string, { created?: Record<string, { id: string }> }, string][] };
+	const madeReply = (await made.json()) as {
+		methodResponses: [string, { created?: Record<string, { id: string }> }, string][];
+	};
 	const rootId = madeReply.methodResponses[0][1].created?.a?.id;
 	expect(rootId).toBeTruthy();
 	identity = { email: `root@${hill}`, email_verified: true };
@@ -190,12 +243,23 @@ test('people sign in through their domain provider and nobody else can', async (
 	await fetch(`${base}/jmap`, {
 		method: 'POST',
 		headers: { Authorization: adminAuth, 'Content-Type': 'application/json' },
-		body: JSON.stringify({ using: ['urn:ietf:params:jmap:core', 'urn:shippin.tech:jmap'], methodCalls: [['x:Account/set', { destroy: [rootId] }, 'd']] })
+		body: JSON.stringify({
+			using: ['urn:ietf:params:jmap:core', 'urn:shippin.tech:jmap'],
+			methodCalls: [['x:Account/set', { destroy: [rootId] }, 'd']]
+		})
 	});
 
 	// A private address is refused unless the operator allows it; here it is allowed,
 	// so check the other side: switching it off takes the button away.
-	expect((await fetch(`${base}${settings}`, { method: 'POST', headers: { ...json, Authorization: basic(hillBoss) }, body: JSON.stringify({ issuer, clientId: 'shippin', clientSecret: '', enabled: false }) })).status).toBe(200);
+	expect(
+		(
+			await fetch(`${base}${settings}`, {
+				method: 'POST',
+				headers: { ...json, Authorization: basic(hillBoss) },
+				body: JSON.stringify({ issuer, clientId: 'shippin', clientSecret: '', enabled: false })
+			})
+		).status
+	).toBe(200);
 	expect((await (await fetch(`${base}/api/sso/${hill}`)).json()) as unknown).toEqual({ enabled: false });
 	const page4 = await (await browser.newContext()).newPage();
 	await toPasswordStep(page4, hillBoss);

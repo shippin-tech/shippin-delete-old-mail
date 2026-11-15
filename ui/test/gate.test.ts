@@ -79,7 +79,10 @@ describe('the request gate', () => {
 
 	it('passes every other answer through untouched', async () => {
 		const answers = [
-			new Response('{"limit":"maxCallsInRequest"}', { status: 400, headers: { 'Content-Type': 'application/problem+json' } }),
+			new Response('{"limit":"maxCallsInRequest"}', {
+				status: 400,
+				headers: { 'Content-Type': 'application/problem+json' }
+			}),
 			new Response('bad', { status: 400 }),
 			new Response('', { status: 429 })
 		];
@@ -100,7 +103,11 @@ describe('the request gate', () => {
 		void gate.fetch('https://hooks.example/alert');
 		void gate.fetch(ORIGIN + '/_app/version.json');
 		await tick();
-		expect([...server.seen].sort()).toEqual(['/api/slow', ORIGIN + '/_app/version.json', 'https://hooks.example/alert']);
+		expect([...server.seen].sort()).toEqual([
+			'/api/slow',
+			ORIGIN + '/_app/version.json',
+			'https://hooks.example/alert'
+		]);
 	});
 
 	it('drops a waiting request that is cancelled', async () => {

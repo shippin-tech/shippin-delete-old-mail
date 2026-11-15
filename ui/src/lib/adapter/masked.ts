@@ -1,5 +1,5 @@
+import { type MaskedAddress, maskedLocal } from './masked-call';
 import { authorization } from './session';
-import { maskedLocal, type MaskedAddress } from './masked-call';
 
 export * from './masked-call';
 
@@ -27,9 +27,18 @@ export function createMasked(label: string): Promise<MaskedAddress> {
 }
 
 export function setMaskedEnabled(item: MaskedAddress, enabled: boolean): Promise<MaskedAddress> {
-	return call('POST', `/${encodeURIComponent(maskedLocal(item.address))}`, 'The address could not be changed.', { enabled });
+	return call(
+		'POST',
+		`/${encodeURIComponent(maskedLocal(item.address))}`,
+		'The address could not be changed.',
+		{ enabled }
+	);
 }
 
 export function removeMasked(item: MaskedAddress): Promise<unknown> {
-	return call('DELETE', `/${encodeURIComponent(maskedLocal(item.address))}`, 'The address could not be removed.');
+	return call(
+		'DELETE',
+		`/${encodeURIComponent(maskedLocal(item.address))}`,
+		'The address could not be removed.'
+	);
 }

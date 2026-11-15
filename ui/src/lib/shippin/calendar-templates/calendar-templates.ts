@@ -20,7 +20,9 @@ async function call<T>(method: string, path: string, fallback: string, body?: un
 }
 
 export async function loadCalendarTemplates(): Promise<CalendarTemplate[]> {
-	return (await call<{ templates: CalendarTemplate[] }>('GET', '', 'The calendar emails could not be loaded.')).templates;
+	return (
+		await call<{ templates: CalendarTemplate[] }>('GET', '', 'The calendar emails could not be loaded.')
+	).templates;
 }
 
 export function saveCalendarTemplate(id: string, source: string): Promise<unknown> {

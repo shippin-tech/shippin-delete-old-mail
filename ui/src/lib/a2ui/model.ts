@@ -1,16 +1,32 @@
-import { SHIPPIN_CATALOG, type A2UIComponent, type A2UIMessage, type Dynamic, type Surface } from './types';
+import { type A2UIComponent, type A2UIMessage, type Dynamic, SHIPPIN_CATALOG, type Surface } from './types';
 
 /** Surfaces by id. Pure functions so the renderer, the chat and the tests share one state machine. */
 export type Surfaces = Record<string, Surface>;
 
 export const KNOWN = new Set([
-	'Text', 'Button', 'Card', 'Column', 'Row', 'List', 'TextField', 'CheckBox', 'ChoicePicker', 'Divider', 'Code'
+	'Text',
+	'Button',
+	'Card',
+	'Column',
+	'Row',
+	'List',
+	'TextField',
+	'CheckBox',
+	'ChoicePicker',
+	'Divider',
+	'Code'
 ]);
-const CATALOGS = new Set([SHIPPIN_CATALOG, 'https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json']);
+const CATALOGS = new Set([
+	SHIPPIN_CATALOG,
+	'https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json'
+]);
 const UNSAFE = new Set(['__proto__', 'constructor', 'prototype']);
 
 const segs = (p: string) =>
-	p.split('/').filter(Boolean).map((s) => s.replace(/~1/g, '/').replace(/~0/g, '~'));
+	p
+		.split('/')
+		.filter(Boolean)
+		.map((s) => s.replace(/~1/g, '/').replace(/~0/g, '~'));
 
 /** JSON Pointer read (RFC 6901); A2UI relative paths resolve against `scope`. */
 export function getPath(data: unknown, path: string, scope = ''): unknown {

@@ -1,10 +1,17 @@
 import type { MethodCall } from './jmap';
 
-export function actionCreate(name: string, parameters: Record<string, unknown> = {}): Record<string, unknown> {
+export function actionCreate(
+	name: string,
+	parameters: Record<string, unknown> = {}
+): Record<string, unknown> {
 	return { ...parameters, '@type': name };
 }
 
-export function actionSet(accountId: string, name: string, parameters: Record<string, unknown> = {}): MethodCall {
+export function actionSet(
+	accountId: string,
+	name: string,
+	parameters: Record<string, unknown> = {}
+): MethodCall {
 	return ['x:Action/set', { accountId, create: { a0: actionCreate(name, parameters) } }, 's0'];
 }
 

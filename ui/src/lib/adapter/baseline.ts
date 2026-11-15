@@ -1,10 +1,18 @@
+import {
+	BASELINES,
+	type Baseline,
+	type BaselineRecords,
+	baselinePatches,
+	objectsFor
+} from '$lib/portal/baseline';
 import { loadRegistry, writeRegistry } from './portal';
-import { BASELINES, baselinePatches, objectsFor, type Baseline, type BaselineRecords } from '$lib/portal/baseline';
 
 const SINGLETON = 'singleton';
 
 /** Reads every singleton the baselines touch. A missing object leaves its entry undefined. */
-export async function loadBaselineRecords(baselines: readonly Baseline[] = BASELINES): Promise<BaselineRecords> {
+export async function loadBaselineRecords(
+	baselines: readonly Baseline[] = BASELINES
+): Promise<BaselineRecords> {
 	const records: BaselineRecords = {};
 	await Promise.all(
 		objectsFor(baselines).map(async (object) => {

@@ -1,8 +1,23 @@
 /** Pure helpers for recovering deleted accounts and messages; the calls are in shippin/recover/recover.ts. */
 
-export type HeldAccount = { id: string; name: string; email: string; kind: string; deletedAt: number; until: number };
+export type HeldAccount = {
+	id: string;
+	name: string;
+	email: string;
+	kind: string;
+	deletedAt: number;
+	until: number;
+};
 
-export type KeptMessage = { id: string; subject: string; from: string; receivedAt: number; deletedAt: number; until: number; size: number };
+export type KeptMessage = {
+	id: string;
+	subject: string;
+	from: string;
+	receivedAt: number;
+	deletedAt: number;
+	until: number;
+	size: number;
+};
 
 export const KEPT_PAGE = 100;
 
@@ -23,7 +38,9 @@ export function messageSize(bytes: number): string {
 
 export function keptIntro(days: number): string {
 	if (days === 0) return 'Deleted accounts and messages are not being kept on this server.';
-	return days === 1 ? 'Deleted accounts and messages are kept for 1 day.' : `Deleted accounts and messages are kept for ${days} days.`;
+	return days === 1
+		? 'Deleted accounts and messages are kept for 1 day.'
+		: `Deleted accounts and messages are kept for ${days} days.`;
 }
 
 export function subjectOrPlaceholder(subject: string): string {

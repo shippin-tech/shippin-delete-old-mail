@@ -1,8 +1,8 @@
-@import './lib/token/color.css';
-@import './lib/token/brand.generated.css';
-@import './lib/token/fluid.css';
-@import './lib/token/motion.css';
-@import './lib/token/interaction.css';
+@import "./lib/token/color.css";
+@import "./lib/token/brand.generated.css";
+@import "./lib/token/fluid.css";
+@import "./lib/token/motion.css";
+@import "./lib/token/interaction.css";
 
 body {
 	margin: 0;
@@ -21,9 +21,15 @@ h3 {
 	font-family: var(--font-display);
 }
 
-h1 { font-size: var(--step-2xl); }
-h2 { font-size: var(--step-xl); }
-h3 { font-size: var(--step-l); }
+h1 {
+	font-size: var(--step-2xl);
+}
+h2 {
+	font-size: var(--step-xl);
+}
+h3 {
+	font-size: var(--step-l);
+}
 
 code,
 pre {

@@ -15,7 +15,15 @@ describe('bootstrap calls', () => {
 	});
 
 	it('creates patch values and returns credentials only for visible strings', () => {
-		const steps = [{ fields: [{ name: 'hostname', kind: 'string' }, { name: 'enabled', kind: 'boolean' }, { name: 'variant', kind: 'choice' }] }];
+		const steps = [
+			{
+				fields: [
+					{ name: 'hostname', kind: 'string' },
+					{ name: 'enabled', kind: 'boolean' },
+					{ name: 'variant', kind: 'choice' }
+				]
+			}
+		];
 		const patch = bootstrapPatch(steps, { hostname: 'mx.example.org', enabled: true, variant: 'clustered' });
 		expect(patch).toEqual({
 			hostname: 'mx.example.org',

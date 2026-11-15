@@ -5,17 +5,23 @@ import {
 	emptyDraft,
 	formatAddress,
 	forwardDraft,
+	type Original,
 	parseAddresses,
-	replyDraft,
-	type Original
+	replyDraft
 } from '../src/lib/mail/compose';
 
 const original: Original = {
 	id: 'm1',
 	subject: 'Lunch plans',
 	from: [{ name: 'Ann Lee', email: 'ann@example.com' }],
-	to: [{ name: null, email: 'me@acme.test' }, { name: 'Bob', email: 'bob@example.org' }],
-	cc: [{ name: null, email: 'cat@example.net' }, { name: null, email: 'ME@acme.test' }],
+	to: [
+		{ name: null, email: 'me@acme.test' },
+		{ name: 'Bob', email: 'bob@example.org' }
+	],
+	cc: [
+		{ name: null, email: 'cat@example.net' },
+		{ name: null, email: 'ME@acme.test' }
+	],
 	replyTo: [],
 	messageId: ['<abc@example.com>'],
 	references: ['<root@example.com>'],
@@ -65,13 +71,20 @@ describe('reply', () => {
 	});
 
 	it('uses Reply-To when set and does not stack prefixes', () => {
-		const draft = replyDraft({ ...original, subject: 'RE: Lunch', replyTo: [{ name: null, email: 'list@example.com' }] }, 'me@acme.test');
+		const draft = replyDraft(
+			{ ...original, subject: 'RE: Lunch', replyTo: [{ name: null, email: 'list@example.com' }] },
+			'me@acme.test'
+		);
 		expect(draft.to).toBe('list@example.com');
 		expect(draft.subject).toBe('RE: Lunch');
 	});
 
 	it('replying to your own sent message goes to its recipients', () => {
-		const sent = { ...original, from: [{ name: null, email: 'me@acme.test' }], to: [{ name: null, email: 'ann@example.com' }] };
+		const sent = {
+			...original,
+			from: [{ name: null, email: 'me@acme.test' }],
+			to: [{ name: null, email: 'ann@example.com' }]
+		};
 		expect(replyDraft(sent, 'me@acme.test').to).toBe('ann@example.com');
 	});
 });
@@ -107,7 +120,9 @@ describe('draft checks and record', () => {
 		expect(record.to).toEqual([{ name: 'Ann Lee', email: 'ann@example.com' }]);
 		expect(record.textBody).toEqual([{ partId: 'body', type: 'text/plain' }]);
 		expect((record.bodyValues as Record<string, { value: string }>).body.value).toContain('> Shall we meet');
-		expect(record.attachments).toEqual([{ blobId: 'b1', name: 'menu.pdf', type: 'application/pdf', disposition: 'attachment' }]);
+		expect(record.attachments).toEqual([
+			{ blobId: 'b1', name: 'menu.pdf', type: 'application/pdf', disposition: 'attachment' }
+		]);
 		expect(record.inReplyTo).toEqual(['<abc@example.com>']);
 	});
 });

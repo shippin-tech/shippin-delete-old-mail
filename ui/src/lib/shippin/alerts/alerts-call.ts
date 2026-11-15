@@ -34,10 +34,24 @@ export type AlertDraft = {
 	cooldownMinutes: string;
 };
 
-export type AlertPayload = Pick<AlertRule, 'id' | 'name' | 'metric' | 'window' | 'above' | 'threshold' | 'email' | 'enabled' | 'cooldownMinutes'> & { webhook: string | null };
+export type AlertPayload = Pick<
+	AlertRule,
+	'id' | 'name' | 'metric' | 'window' | 'above' | 'threshold' | 'email' | 'enabled' | 'cooldownMinutes'
+> & { webhook: string | null };
 
 export function emptyAlertDraft(): AlertDraft {
-	return { id: '', name: '', metric: '', window: '1h', above: true, threshold: '', email: '', webhook: '', enabled: true, cooldownMinutes: '60' };
+	return {
+		id: '',
+		name: '',
+		metric: '',
+		window: '1h',
+		above: true,
+		threshold: '',
+		email: '',
+		webhook: '',
+		enabled: true,
+		cooldownMinutes: '60'
+	};
 }
 
 export function draftFromAlert(rule: AlertRule): AlertDraft {
@@ -67,10 +81,13 @@ export function alertProblem(draft: AlertDraft, metrics: readonly AlertMetric[])
 	if (!draft.name.trim()) return 'Give the alert a name.';
 	if (!metrics.some((metric) => metric.name === draft.metric)) return 'Choose a metric from the list.';
 	const threshold = Number(draft.threshold);
-	if (draft.threshold.trim() === '' || !Number.isFinite(threshold) || threshold < 0) return 'The threshold must be zero or more.';
+	if (draft.threshold.trim() === '' || !Number.isFinite(threshold) || threshold < 0)
+		return 'The threshold must be zero or more.';
 	const cooldown = Number(draft.cooldownMinutes);
-	if (!Number.isInteger(cooldown) || cooldown < 1 || cooldown > 10080) return 'Wait between 1 minute and 7 days before alerting again.';
-	if (alertAddresses(draft.email).length === 0 && !draft.webhook.trim()) return 'Add an email address or a webhook to send the alert to.';
+	if (!Number.isInteger(cooldown) || cooldown < 1 || cooldown > 10080)
+		return 'Wait between 1 minute and 7 days before alerting again.';
+	if (alertAddresses(draft.email).length === 0 && !draft.webhook.trim())
+		return 'Add an email address or a webhook to send the alert to.';
 	return '';
 }
 

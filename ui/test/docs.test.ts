@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { bodyOf, docFileName, docTitle, escapeHtml, exportName, isDocName, safeLink, titleProblem, wordDocument, wrapDocument } from '../src/lib/adapter/docs-call';
+import {
+	bodyOf,
+	docFileName,
+	docTitle,
+	escapeHtml,
+	exportName,
+	isDocName,
+	safeLink,
+	titleProblem,
+	wordDocument,
+	wrapDocument
+} from '../src/lib/adapter/docs-call';
 
 describe('Docs helpers', () => {
 	it('names documents and reads titles back', () => {

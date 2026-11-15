@@ -15,9 +15,22 @@ describe('the admin menu', () => {
 
 	it('keeps our own screens out of All settings and drops what is left empty', () => {
 		const menu = settingsMenu([
-			{ name: 'Management', items: [{ name: 'Dashboard', view: 'CustomComponent/Dashboard', children: [] }, { name: 'Domains', view: 'x:Domain', children: [] }] },
-			{ name: 'Telemetry', items: [{ name: 'Live', view: '', children: [{ name: 'Tracing', view: 'CustomComponent/LiveTracing' }] }] }
+			{
+				name: 'Management',
+				items: [
+					{ name: 'Dashboard', view: 'CustomComponent/Dashboard', children: [] },
+					{ name: 'Domains', view: 'x:Domain', children: [] }
+				]
+			},
+			{
+				name: 'Telemetry',
+				items: [
+					{ name: 'Live', view: '', children: [{ name: 'Tracing', view: 'CustomComponent/LiveTracing' }] }
+				]
+			}
 		]);
-		expect(menu).toEqual([{ name: 'Management', items: [{ name: 'Domains', view: 'x:Domain', children: [] }] }]);
+		expect(menu).toEqual([
+			{ name: 'Management', items: [{ name: 'Domains', view: 'x:Domain', children: [] }] }
+		]);
 	});
 });

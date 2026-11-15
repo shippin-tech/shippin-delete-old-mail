@@ -4,21 +4,21 @@
  */
 import { readFileSync } from 'node:fs';
 import {
+	appendTrace,
 	DISCONNECTED,
+	durationLabel,
+	eventTone,
 	FAILED_LOAD,
 	FAILED_START,
 	NO_EVENTS,
 	NOT_FOUND,
+	parseTracePayload,
 	REFUSED,
 	SPAN_TYPE,
 	START_TRACING,
-	UNRESOLVED,
-	appendTrace,
-	durationLabel,
-	eventTone,
-	parseTracePayload,
+	traceSummary,
 	tracingStreamUrl,
-	traceSummary
+	UNRESOLVED
 } from '../src/lib/portal/trace.ts';
 
 const body = JSON.stringify([
@@ -38,10 +38,13 @@ const summary = traceSummary(events);
 if (summary.span !== 'delivery.mx-lookup-start' || summary.count !== 2) throw new Error('summary');
 if (NO_EVENTS !== 'No trace events to display.') throw new Error('empty copy');
 if (SPAN_TYPE !== 'Span Type' || FAILED_LOAD !== 'Failed to load trace') throw new Error('detail copy');
-if (NOT_FOUND !== 'Trace not found' || UNRESOLVED !== 'Could not resolve object') throw new Error('detail miss');
-if (START_TRACING !== 'Start tracing' || FAILED_START !== 'Failed to start live tracing.') throw new Error('start copy');
+if (NOT_FOUND !== 'Trace not found' || UNRESOLVED !== 'Could not resolve object')
+	throw new Error('detail miss');
+if (START_TRACING !== 'Start tracing' || FAILED_START !== 'Failed to start live tracing.')
+	throw new Error('start copy');
 if (REFUSED !== 'The server refused the live tracing stream.') throw new Error('refused');
-if (DISCONNECTED !== 'Live tracing stream disconnected after multiple retries.') throw new Error('disconnected');
+if (DISCONNECTED !== 'Live tracing stream disconnected after multiple retries.')
+	throw new Error('disconnected');
 
 let threw = false;
 try {
@@ -56,7 +59,11 @@ const url = tracingStreamUrl('tok', 'example.org', [
 	{ key: 'token', value: 'nope' },
 	{ key: 'domain', value: 'example.org' }
 ]);
-if (!url.startsWith('/api/trace/live?') || !url.includes('token=tok') || !url.includes('filter=example.org')) {
+if (
+	!url.startsWith('/api/trace/live?') ||
+	!url.includes('token=tok') ||
+	!url.includes('filter=example.org')
+) {
 	throw new Error('url ' + url);
 }
 if (url.includes('nope')) throw new Error('token filter leaked');
@@ -67,19 +74,33 @@ const filled = appendTrace(
 );
 if (filled.events.length !== 1000 || filled.dropped !== 1) throw new Error('buffer');
 
-const panel = readFileSync(new URL('../src/lib/shippin/admin/LiveTracingPanel.svelte', import.meta.url), 'utf8');
+const panel = readFileSync(
+	new URL('../src/lib/shippin/admin/LiveTracingPanel.svelte', import.meta.url),
+	'utf8'
+);
 const detail = readFileSync(new URL('../src/lib/shippin/admin/TraceDetail.svelte', import.meta.url), 'utf8');
-const timeline = readFileSync(new URL('../src/lib/shippin/admin/TraceTimeline.svelte', import.meta.url), 'utf8');
+const timeline = readFileSync(
+	new URL('../src/lib/shippin/admin/TraceTimeline.svelte', import.meta.url),
+	'utf8'
+);
 const page = readFileSync(new URL('../src/lib/shippin/admin/LiveTracing.svelte', import.meta.url), 'utf8');
 for (const file of [panel, detail, timeline]) {
-	if (file.includes("from '$lib/adapter") || file.includes('EventSource') || file.includes('/api/trace/live')) {
+	if (
+		file.includes("from '$lib/adapter") ||
+		file.includes('EventSource') ||
+		file.includes('/api/trace/live')
+	) {
 		throw new Error('catalog fetches');
 	}
 }
 if (!panel.includes('START_TRACING') || !timeline.includes('NO_EVENTS') || !detail.includes('SPAN_TYPE')) {
 	throw new Error('bindings');
 }
-if (!page.includes('requestLiveTracing') || !page.includes("next.status !== 'ready'") || !page.includes('EventSource')) {
+if (
+	!page.includes('requestLiveTracing') ||
+	!page.includes("next.status !== 'ready'") ||
+	!page.includes('EventSource')
+) {
 	throw new Error('route guard');
 }
 if (!page.includes('!account()')) throw new Error('signed-out guard');

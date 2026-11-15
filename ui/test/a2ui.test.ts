@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyAll, getPath, parseJSONL, resolve, safeUrl, setPath } from '../src/lib/a2ui/model';
-import { SHIPPIN_CATALOG, type A2UIMessage } from '../src/lib/a2ui/types';
+import { type A2UIMessage, SHIPPIN_CATALOG } from '../src/lib/a2ui/types';
 
 const basic = 'https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json';
 const spec = parseJSONL(`{"version":"v0.9","createSurface":{"surfaceId":"main","catalogId":"${basic}"}}
@@ -24,7 +24,10 @@ describe('A2UI surface state', () => {
 				version: 'v0.9',
 				updateComponents: {
 					surfaceId: 'y',
-					components: [{ id: 'root', component: 'Script', src: 'x' }, { id: 'ok', component: 'Divider' }]
+					components: [
+						{ id: 'root', component: 'Script', src: 'x' },
+						{ id: 'ok', component: 'Divider' }
+					]
 				}
 			},
 			{ version: 'v0.8', deleteSurface: { surfaceId: 'y' } }

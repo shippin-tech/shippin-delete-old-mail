@@ -1,12 +1,14 @@
-import { expect, test } from '@playwright/test';
-import AxeBuilder from '@axe-core/playwright';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import AxeBuilder from '@axe-core/playwright';
+import { expect, test } from '@playwright/test';
 
 // People and teams in a real browser against the local stack, as the administrator.
 const run = Math.random().toString(16).slice(2, 8);
 const base = process.env.LIVE_URL ?? 'http://127.0.0.1:28080';
-const admin = JSON.parse(readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')) as {
+const admin = JSON.parse(
+	readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')
+) as {
 	username: string;
 	secret: string;
 };
@@ -25,9 +27,13 @@ async function adminJmap(calls: unknown[]) {
 	const res = await fetch(`${base}/jmap`, {
 		method: 'POST',
 		headers: { Authorization: adminAuth, 'Content-Type': 'application/json' },
-		body: JSON.stringify({ using: ['urn:ietf:params:jmap:core', 'urn:shippin.tech:jmap'], methodCalls: calls })
+		body: JSON.stringify({
+			using: ['urn:ietf:params:jmap:core', 'urn:shippin.tech:jmap'],
+			methodCalls: calls
+		})
 	});
-	return ((await res.json()) as { methodResponses: [string, Record<string, unknown>, string][] }).methodResponses;
+	return ((await res.json()) as { methodResponses: [string, Record<string, unknown>, string][] })
+		.methodResponses;
 }
 
 test('an administrator adds people, makes a team, sets limits and removes them', async ({ page }) => {
@@ -39,11 +45,16 @@ test('an administrator adds people, makes a team, sets limits and removes them',
 	await page.getByRole('button', { name: 'Sign in' }).click();
 	await page.waitForURL(/\/shippin\/admin/, { timeout: 30_000 });
 
-	await page.getByRole('navigation', { name: 'Admin' }).getByRole('link', { name: 'People and teams' }).click();
-	await expect(page.getByRole('heading', { name: 'People and teams', level: 1 })).toBeVisible({ timeout: 30_000 });
-	const serious = (await new AxeBuilder({ page }).include('main').withTags(['wcag2a', 'wcag2aa']).analyze()).violations.filter(
-		(v) => v.impact === 'serious' || v.impact === 'critical'
-	);
+	await page
+		.getByRole('navigation', { name: 'Admin' })
+		.getByRole('link', { name: 'People and teams' })
+		.click();
+	await expect(page.getByRole('heading', { name: 'People and teams', level: 1 })).toBeVisible({
+		timeout: 30_000
+	});
+	const serious = (
+		await new AxeBuilder({ page }).include('main').withTags(['wcag2a', 'wcag2aa']).analyze()
+	).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
 	expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
 
 	// A team first.
@@ -53,7 +64,10 @@ test('an administrator adds people, makes a team, sets limits and removes them',
 	await page.getByRole('button', { name: 'Create team' }).click();
 	await expect(page.getByRole('alert')).toContainText('team name');
 	await page.getByLabel('Team name').fill(team);
-	await page.getByRole('region', { name: 'Details' }).getByLabel('Domain').selectOption({ label: 'local.test' });
+	await page
+		.getByRole('region', { name: 'Details' })
+		.getByLabel('Domain')
+		.selectOption({ label: 'local.test' });
 	await page.getByRole('button', { name: 'Create team' }).click();
 	await expect(page.getByRole('button', { name: team, exact: true })).toBeVisible({ timeout: 30_000 });
 
@@ -62,7 +76,10 @@ test('an administrator adds people, makes a team, sets limits and removes them',
 	await page.getByRole('button', { name: 'Add person' }).click();
 	await page.getByLabel('Full name').fill('Test Person');
 	await page.getByLabel('Username').fill(username);
-	await page.getByRole('region', { name: 'Details' }).getByLabel('Domain').selectOption({ label: 'local.test' });
+	await page
+		.getByRole('region', { name: 'Details' })
+		.getByLabel('Domain')
+		.selectOption({ label: 'local.test' });
 	await page.getByLabel('Password').fill('short');
 	await page.getByRole('region', { name: 'Details' }).getByRole('button', { name: 'Add person' }).click();
 	await expect(page.getByRole('alert')).toContainText('10 characters');
@@ -74,12 +91,17 @@ test('an administrator adds people, makes a team, sets limits and removes them',
 	await expect(row).toBeVisible({ timeout: 30_000 });
 	await expect(row).toContainText(team);
 	await expect(row).toContainText('2 GB');
-	expect((await fetch(`${base}/api/account`, { headers: { Authorization: basic(email, firstPassword) } })).status).toBe(200);
+	expect(
+		(await fetch(`${base}/api/account`, { headers: { Authorization: basic(email, firstPassword) } })).status
+	).toBe(200);
 
 	// A duplicate is refused in words.
 	await page.getByRole('button', { name: 'Add person' }).click();
 	await page.getByLabel('Username').fill(username);
-	await page.getByRole('region', { name: 'Details' }).getByLabel('Domain').selectOption({ label: 'local.test' });
+	await page
+		.getByRole('region', { name: 'Details' })
+		.getByLabel('Domain')
+		.selectOption({ label: 'local.test' });
 	await page.getByLabel('Password').fill(firstPassword);
 	await page.getByRole('region', { name: 'Details' }).getByRole('button', { name: 'Add person' }).click();
 	await expect(page.getByRole('alert')).toContainText('already', { timeout: 30_000 });
@@ -92,7 +114,11 @@ test('an administrator adds people, makes a team, sets limits and removes them',
 	await page.getByRole('button', { name: 'Save changes' }).click();
 	await expect(row).toContainText('5 GB', { timeout: 30_000 });
 	await expect
-		.poll(async () => (await fetch(`${base}/api/account`, { headers: { Authorization: basic(email, secondPassword) } })).status)
+		.poll(
+			async () =>
+				(await fetch(`${base}/api/account`, { headers: { Authorization: basic(email, secondPassword) } }))
+					.status
+		)
 		.toBe(200);
 
 	// Team membership from the team's side.
@@ -113,7 +139,9 @@ test('an administrator adds people, makes a team, sets limits and removes them',
 
 	// Remove the person, then the team.
 	await page.getByRole('button', { name: `Remove ${email}` }).click();
-	await expect(page.getByText('You can bring them back from Recover deleted', { exact: false })).toBeVisible();
+	await expect(
+		page.getByText('You can bring them back from Recover deleted', { exact: false })
+	).toBeVisible();
 	await page.getByRole('button', { name: 'Remove person', exact: true }).click();
 	await expect(row).toHaveCount(0, { timeout: 30_000 });
 	await page.getByRole('button', { name: /^Teams/ }).click();

@@ -1,11 +1,19 @@
 import { jmap } from './jmap';
-import { authorization, account, openSession } from './session';
+import { account, authorization, openSession } from './session';
 
 const USING = ['urn:shippin.tech:jmap'];
 
-export type AppPassword = { id: string; description: string; createdAt: string | null; expiresAt: string | null };
+export type AppPassword = {
+	id: string;
+	description: string;
+	createdAt: string | null;
+	expiresAt: string | null;
+};
 
-function result(responses: [string, Record<string, unknown>, string][], name: string): Record<string, unknown> {
+function result(
+	responses: [string, Record<string, unknown>, string][],
+	name: string
+): Record<string, unknown> {
 	return responses.find(([method]) => method === name)?.[1] ?? {};
 }
 
@@ -21,7 +29,9 @@ function reason(error: unknown, fallback: string): string {
 /** Whether two-factor sign-in is on. The server masks the secret but keeps the field set. */
 export async function loadTwoFactor(): Promise<boolean> {
 	const responses = await jmap(USING, [['x:AccountPassword/get', { ids: ['singleton'] }, 'g']]);
-	const record = ((result(responses, 'x:AccountPassword/get').list as Record<string, unknown>[] | undefined) ?? [])[0];
+	const record = ((result(responses, 'x:AccountPassword/get').list as
+		| Record<string, unknown>[]
+		| undefined) ?? [])[0];
 	const otp = (record?.otpAuth ?? {}) as { otpUrl?: unknown };
 	return typeof otp.otpUrl === 'string' && otp.otpUrl.length > 0;
 }
@@ -81,12 +91,22 @@ export async function createAppPassword(description: string): Promise<string> {
 	const payload = result(responses, 'x:AppPassword/set');
 	const created = (payload.created as Record<string, { secret?: unknown }> | undefined)?.a;
 	if (created && typeof created.secret === 'string') return created.secret;
-	throw new Error(reason((payload.notCreated as Record<string, unknown> | undefined)?.a, 'The app password was not created.'));
+	throw new Error(
+		reason(
+			(payload.notCreated as Record<string, unknown> | undefined)?.a,
+			'The app password was not created.'
+		)
+	);
 }
 
 export async function revokeAppPassword(id: string): Promise<void> {
 	const responses = await jmap(USING, [['x:AppPassword/set', { destroy: [id] }, 's']]);
 	const payload = result(responses, 'x:AppPassword/set');
 	if (((payload.destroyed as string[] | undefined) ?? []).includes(id)) return;
-	throw new Error(reason((payload.notDestroyed as Record<string, unknown> | undefined)?.[id], 'The app password was not revoked.'));
+	throw new Error(
+		reason(
+			(payload.notDestroyed as Record<string, unknown> | undefined)?.[id],
+			'The app password was not revoked.'
+		)
+	);
 }

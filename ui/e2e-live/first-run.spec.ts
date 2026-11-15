@@ -21,7 +21,9 @@ test('the setup key leads to creating the administrator, then stops working', as
 	await page.getByRole('button', { name: 'Continue' }).click();
 	await page.getByLabel('Password').fill(key!);
 	await page.getByRole('button', { name: 'Sign in' }).click();
-	await expect(page.getByRole('heading', { name: 'Create your administrator' })).toBeVisible({ timeout: 30_000 });
+	await expect(page.getByRole('heading', { name: 'Create your administrator' })).toBeVisible({
+		timeout: 30_000
+	});
 	await expect(page.getByRole('navigation', { name: 'Admin' })).toHaveCount(0);
 
 	await page.getByLabel('Your administrator address').fill(admin);
@@ -29,10 +31,14 @@ test('the setup key leads to creating the administrator, then stops working', as
 	await page.getByLabel('Repeat password').fill(password);
 	await page.getByRole('button', { name: 'Create administrator' }).click();
 	await page.waitForURL(/\/login\?.*admin=1/, { timeout: 30_000 });
-	await expect(page.getByText('Your administrator was created and the setup key no longer works.')).toBeVisible();
+	await expect(
+		page.getByText('Your administrator was created and the setup key no longer works.')
+	).toBeVisible();
 
 	expect((await (await fetch(`${url}/api/setup`)).json()).pending).toBe(false);
-	const withKey = await fetch(`${url}/api/account`, { headers: { Authorization: 'Basic ' + Buffer.from(`admin:${key}`).toString('base64') } });
+	const withKey = await fetch(`${url}/api/account`, {
+		headers: { Authorization: 'Basic ' + Buffer.from(`admin:${key}`).toString('base64') }
+	});
 	expect(withKey.status).toBe(401);
 
 	await page.getByLabel('Account name').fill(admin);
@@ -41,5 +47,7 @@ test('the setup key leads to creating the administrator, then stops working', as
 	await page.getByRole('button', { name: 'Sign in' }).click();
 	await page.waitForURL(/\/shippin\/admin/, { timeout: 30_000 });
 	await expect(page.getByRole('heading', { name: 'Create your administrator' })).toHaveCount(0);
-	await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Admin' })).toBeVisible();
+	await expect(
+		page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Admin' })
+	).toBeVisible();
 });

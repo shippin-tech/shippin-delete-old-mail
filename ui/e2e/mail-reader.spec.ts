@@ -9,10 +9,27 @@ test('opens a plain-text JMAP message without executing message content', async 
 		const request = route.request().postDataJSON();
 		if (request.methodCalls[0][0] !== 'Email/get') return route.fulfill({ json: { methodResponses: [] } });
 		expect(request.methodCalls[0][1].fetchTextBodyValues).toBe(true);
-		await route.fulfill({ json: { methodResponses: [['Email/get', { list: [{
-			id: 'one', subject: 'Hello', from: [{ name: 'Sender' }],
-			textBody: [{ partId: '1' }], bodyValues: { '1': { value: '<img src=x onerror=alert(1)>\nHello there' } }
-		}] }, 'e0']] } });
+		await route.fulfill({
+			json: {
+				methodResponses: [
+					[
+						'Email/get',
+						{
+							list: [
+								{
+									id: 'one',
+									subject: 'Hello',
+									from: [{ name: 'Sender' }],
+									textBody: [{ partId: '1' }],
+									bodyValues: { '1': { value: '<img src=x onerror=alert(1)>\nHello there' } }
+								}
+							]
+						},
+						'e0'
+					]
+				]
+			}
+		});
 	});
 	await page.goto('/mail/email?id=one');
 	await expect(page.getByRole('heading', { name: 'Hello' })).toBeVisible();

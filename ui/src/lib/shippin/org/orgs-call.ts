@@ -16,7 +16,14 @@ export type Organisation = {
 	storageHeld: number;
 };
 
-export type OrgDraft = { id: string; name: string; domains: string[]; admins: string; maxPeople: string; maxStorageGb: string };
+export type OrgDraft = {
+	id: string;
+	name: string;
+	domains: string[];
+	admins: string;
+	maxPeople: string;
+	maxStorageGb: string;
+};
 
 export type OrgPerson = {
 	id: string;
@@ -48,7 +55,13 @@ export type MyOrg = {
 	me: string;
 };
 
-export type OrgPersonDraft = { name: string; domainId: string; fullName: string; password: string; limitGb: string };
+export type OrgPersonDraft = {
+	name: string;
+	domainId: string;
+	fullName: string;
+	password: string;
+	limitGb: string;
+};
 
 const GB = 1024 ** 3;
 
@@ -79,9 +92,11 @@ export function orgProblem(draft: OrgDraft): string {
 	if (draft.domains.length === 0) return 'Choose at least one domain.';
 	if (orgAddresses(draft.admins).length === 0) return 'Name at least one administrator.';
 	const people = Number(draft.maxPeople);
-	if (!Number.isInteger(people) || people < 1 || people > 100000) return 'Allow between 1 and 100,000 people.';
+	if (!Number.isInteger(people) || people < 1 || people > 100000)
+		return 'Allow between 1 and 100,000 people.';
 	const storage = Number(draft.maxStorageGb);
-	if (!Number.isInteger(storage) || storage < 0) return 'Storage is a whole number of gigabytes, or 0 for no limit.';
+	if (!Number.isInteger(storage) || storage < 0)
+		return 'Storage is a whole number of gigabytes, or 0 for no limit.';
 	return '';
 }
 
@@ -102,7 +117,9 @@ export function storageText(bytes: number): string {
 }
 
 export function storageUse(held: number, max: number): string {
-	return max === 0 ? `${storageText(held)} set aside, no overall limit` : `${storageText(held)} of ${storageText(max)} set aside`;
+	return max === 0
+		? `${storageText(held)} set aside, no overall limit`
+		: `${storageText(held)} of ${storageText(max)} set aside`;
 }
 
 export function peopleUse(count: number, max: number): string {
@@ -122,7 +139,8 @@ export function orgPersonProblem(draft: OrgPersonDraft, needsLimit: boolean): st
 }
 
 export function limitProblem(limitGb: string, needsLimit: boolean): string {
-	if (limitGb.trim() === '') return needsLimit ? 'Your organisation shares its storage, so set a limit for this person.' : '';
+	if (limitGb.trim() === '')
+		return needsLimit ? 'Your organisation shares its storage, so set a limit for this person.' : '';
 	const value = Number(limitGb);
 	return Number.isFinite(value) && value > 0 ? '' : 'Storage must be more than zero.';
 }

@@ -1,9 +1,13 @@
+import { type DeliveryStage, deliveryStreamUrl, parseDeliveryFrame, validTarget } from '$lib/portal/delivery';
 import { authorization } from './session';
-import { deliveryStreamUrl, parseDeliveryFrame, validTarget, type DeliveryStage } from '$lib/portal/delivery';
 
 export type DeliveryPhase = 'idle' | 'connecting' | 'running' | 'completed' | 'cancelled' | 'failed';
 
-export function startDelivery(target: string, onstage: (stages: DeliveryStage[]) => void, onstatus: (phase: DeliveryPhase, notice: string) => void): () => void {
+export function startDelivery(
+	target: string,
+	onstage: (stages: DeliveryStage[]) => void,
+	onstatus: (phase: DeliveryPhase, notice: string) => void
+): () => void {
 	const controller = new AbortController();
 	let source: EventSource | undefined;
 	let timer: ReturnType<typeof setTimeout> | undefined;
@@ -14,7 +18,10 @@ export function startDelivery(target: string, onstage: (stages: DeliveryStage[])
 		source?.close();
 		if (timer) clearTimeout(timer);
 	}
-	function fail(message: string) { stop(); onstatus('failed', message); }
+	function fail(message: string) {
+		stop();
+		onstatus('failed', message);
+	}
 	onstatus('connecting', 'Starting delivery trace...');
 	void (async () => {
 		try {
@@ -22,7 +29,11 @@ export function startDelivery(target: string, onstage: (stages: DeliveryStage[])
 			const auth = authorization();
 			if (!auth) throw new Error('Sign in to start a delivery trace.');
 			timer = setTimeout(() => fail('Trace timed out after 120 seconds.'), 120000);
-			const response = await fetch('/api/token/delivery', { headers: { Authorization: auth }, cache: 'no-store', signal: controller.signal });
+			const response = await fetch('/api/token/delivery', {
+				headers: { Authorization: auth },
+				cache: 'no-store',
+				signal: controller.signal
+			});
 			if (!response.ok) throw new Error(`The server refused the delivery trace: HTTP ${response.status}.`);
 			const token = (await response.text()).trim();
 			if (stopped) return;
@@ -37,8 +48,13 @@ export function startDelivery(target: string, onstage: (stages: DeliveryStage[])
 					const stages = parseDeliveryFrame(`data: ${(event as MessageEvent).data}`);
 					const end = stages.findIndex((stage) => stage.type === 'completed');
 					onstage(end < 0 ? stages : stages.slice(0, end));
-					if (end >= 0) { stop(); onstatus('completed', 'Trace completed. Review the delivery stages for the outcome.'); }
-				} catch { fail('The server returned an invalid delivery event.'); }
+					if (end >= 0) {
+						stop();
+						onstatus('completed', 'Trace completed. Review the delivery stages for the outcome.');
+					}
+				} catch {
+					fail('The server returned an invalid delivery event.');
+				}
 			});
 		} catch (cause) {
 			if (!stopped) fail(cause instanceof Error ? cause.message : 'Could not start the delivery trace.');

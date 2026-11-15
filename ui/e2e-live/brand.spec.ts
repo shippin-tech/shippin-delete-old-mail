@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { expect, test } from '@playwright/test';
 
 // Domain logos in a real browser against the local stack: each domain's sign-in and
 // webmail show its own, and only someone who manages the domain can change it.
@@ -12,7 +12,10 @@ const hillBoss = `owner@${hill}`;
 const valeBoss = `owner@${vale}`;
 
 // A real 1 by 1 PNG.
-const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+const png = Buffer.from(
+	'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+	'base64'
+);
 
 function basic(user: string) {
 	return 'Basic ' + Buffer.from(`${user}:${password}`).toString('base64');
@@ -36,7 +39,10 @@ test.afterEach(async ({ browser }) => {
 });
 
 test.afterAll(async () => {
-	for (const [user, domain] of [[hillBoss, hill], [valeBoss, vale]]) {
+	for (const [user, domain] of [
+		[hillBoss, hill],
+		[valeBoss, vale]
+	]) {
 		await fetch(`${base}/api/panel/domain/close`, {
 			method: 'POST',
 			headers: { Authorization: basic(user), 'Content-Type': 'application/json' },
@@ -59,12 +65,16 @@ test('each domain shows its own logo and only its manager can change it', async 
 	await page.getByRole('button', { name: 'Sign in' }).click();
 	await page.waitForURL(/\/manage/, { timeout: 30_000 });
 	await expect(page.getByText(`No logo for ${hill}`)).toBeVisible({ timeout: 30_000 });
-	const serious = (await new AxeBuilder({ page }).include('main').withTags(['wcag2a', 'wcag2aa']).analyze()).violations.filter(
-		(v) => v.impact === 'serious' || v.impact === 'critical'
-	);
+	const serious = (
+		await new AxeBuilder({ page }).include('main').withTags(['wcag2a', 'wcag2aa']).analyze()
+	).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
 	expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
-	await page.locator('input[type="file"]').setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: png });
-	await expect(page.getByRole('main').getByRole('img', { name: `${hill} logo` })).toBeVisible({ timeout: 30_000 });
+	await page
+		.locator('input[type="file"]')
+		.setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: png });
+	await expect(page.getByRole('main').getByRole('img', { name: `${hill} logo` })).toBeVisible({
+		timeout: 30_000
+	});
 
 	// Anyone can fetch it, safely typed.
 	const fetched = await send(`/api/brand/${hill}`, 'GET', null);
@@ -75,26 +85,41 @@ test('each domain shows its own logo and only its manager can change it', async 
 
 	// Webmail shows it to this domain's people.
 	await page.goto('/mail');
-	await expect(page.getByRole('banner').getByRole('img', { name: `${hill} logo` })).toBeVisible({ timeout: 30_000 });
+	await expect(page.getByRole('banner').getByRole('img', { name: `${hill} logo` })).toBeVisible({
+		timeout: 30_000
+	});
 
 	// Nobody else can change it, and scripts cannot get in as logos.
 	expect((await send(`/api/brand/${hill}`, 'POST', null, png)).status).toBe(401);
 	expect((await send(`/api/brand/${hill}`, 'POST', valeBoss, png)).status).toBe(403);
 	expect((await send(`/api/brand/${hill}`, 'DELETE', valeBoss)).status).toBe(403);
-	const svg = await send(`/api/brand/${vale}`, 'POST', valeBoss, '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
+	const svg = await send(
+		`/api/brand/${vale}`,
+		'POST',
+		valeBoss,
+		'<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'
+	);
 	expect(svg.status).toBe(400);
 	expect(((await svg.json()) as { message: string }).message).toMatch(/PNG/);
-	expect((await send(`/api/brand/${vale}`, 'POST', valeBoss, Buffer.concat([png, Buffer.alloc(95_000)]))).status).toBe(400);
+	expect(
+		(await send(`/api/brand/${vale}`, 'POST', valeBoss, Buffer.concat([png, Buffer.alloc(95_000)]))).status
+	).toBe(400);
 	expect((await send(`/api/brand/${vale}`, 'GET', null)).status).toBe(404);
 
 	// A signed-out visitor sees each domain's own sign-in.
 	const visitor = await (await browser.newContext()).newPage();
 	await visitor.goto(`/login?login_hint=${encodeURIComponent(hillBoss)}`);
 	await visitor.getByLabel('Account name').fill(hillBoss);
-	await expect(visitor.locator('form').getByRole('img', { name: `${hill} logo`, includeHidden: true })).toBeVisible({ timeout: 30_000 });
+	await expect(
+		visitor.locator('form').getByRole('img', { name: `${hill} logo`, includeHidden: true })
+	).toBeVisible({ timeout: 30_000 });
 	await visitor.getByLabel('Account name').fill(valeBoss);
-	await expect(visitor.locator('form').getByRole('img', { name: `${vale} logo`, includeHidden: true })).toHaveCount(0, { timeout: 30_000 });
-	await expect(visitor.locator('form').getByRole('img', { name: `${hill} logo`, includeHidden: true })).toHaveCount(0);
+	await expect(
+		visitor.locator('form').getByRole('img', { name: `${vale} logo`, includeHidden: true })
+	).toHaveCount(0, { timeout: 30_000 });
+	await expect(
+		visitor.locator('form').getByRole('img', { name: `${hill} logo`, includeHidden: true })
+	).toHaveCount(0);
 
 	// Removed, it is gone.
 	await page.goto('/manage');

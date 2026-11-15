@@ -1,18 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import type { DeliveryStage } from '../src/lib/portal/delivery';
 import type { MetricSample } from '../src/lib/adapter/metrics-call';
+import type { DeliveryStage } from '../src/lib/portal/delivery';
+import { deliverySignals, metricSignals, parseScriptedSignal, traceSignals } from '../src/lib/portal/signal';
 import type { TraceEvent } from '../src/lib/portal/trace';
-import {
-	deliverySignals,
-	metricSignals,
-	parseScriptedSignal,
-	traceSignals
-} from '../src/lib/portal/signal';
 
 describe('portal signal contract', () => {
 	it('normalizes metrics, tracing and delivery updates into canonical signals', () => {
 		const metrics: MetricSample[] = [{ metric: 'user.count', type: 'Gauge', count: 7 }];
-		const traces: TraceEvent[] = [{ event: 'delivery-start', timestamp: '2026-11-08T00:00:00Z', keyValues: [] }];
+		const traces: TraceEvent[] = [
+			{ event: 'delivery-start', timestamp: '2026-11-08T00:00:00Z', keyValues: [] }
+		];
 		const stages: DeliveryStage[] = [{ type: 'mxLookup' }, { type: 'connectionError' }];
 		const metric = metricSignals(metrics)[0];
 		const trace = traceSignals(traces)[0];
@@ -64,5 +61,4 @@ describe('portal signal contract', () => {
 		expect(invalid.signal).toBeUndefined();
 		expect(invalid.error).toContain('eventType');
 	});
-
 });

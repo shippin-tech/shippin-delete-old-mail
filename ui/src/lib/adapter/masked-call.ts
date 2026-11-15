@@ -1,6 +1,12 @@
 /** Pure helpers for masked addresses; the calls are in adapter/masked.ts. */
 
-export type MaskedAddress = { address: string; accountId: number; label: string; enabled: boolean; createdAt: number };
+export type MaskedAddress = {
+	address: string;
+	accountId: number;
+	label: string;
+	enabled: boolean;
+	createdAt: number;
+};
 
 export function maskedLocal(address: string): string {
 	return address.split('@')[0];

@@ -1,8 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { bytesText, diskUsed, levelOf, percentOf, sortByAttention, type OrgUsage } from '../src/lib/shippin/resources/resources-call';
+import {
+	bytesText,
+	diskUsed,
+	levelOf,
+	type OrgUsage,
+	percentOf,
+	sortByAttention
+} from '../src/lib/shippin/resources/resources-call';
 
 function org(overrides: Partial<OrgUsage>): OrgUsage {
-	return { id: 'a', name: 'A', domains: [], people: 1, maxPeople: 10, peopleLevel: 'fine', storageUsed: 0, storageHeld: 0, maxStorage: 0, storageLevel: 'none', ...overrides };
+	return {
+		id: 'a',
+		name: 'A',
+		domains: [],
+		people: 1,
+		maxPeople: 10,
+		peopleLevel: 'fine',
+		storageUsed: 0,
+		storageHeld: 0,
+		maxStorage: 0,
+		storageLevel: 'none',
+		...overrides
+	};
 }
 
 describe('resource helpers', () => {

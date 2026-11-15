@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { expect, test } from '@playwright/test';
 
 // Contacts in a real browser against the local stack.
 const run = Math.random().toString(16).slice(2, 8);
@@ -11,7 +11,10 @@ const base = process.env.LIVE_URL ?? 'http://127.0.0.1:28080';
 test.afterAll(async () => {
 	await fetch(`${base}/api/panel/domain/close`, {
 		method: 'POST',
-		headers: { Authorization: 'Basic ' + Buffer.from(`${owner}:${password}`).toString('base64'), 'Content-Type': 'application/json' },
+		headers: {
+			Authorization: 'Basic ' + Buffer.from(`${owner}:${password}`).toString('base64'),
+			'Content-Type': 'application/json'
+		},
 		body: JSON.stringify({ confirm: domain })
 	});
 });
@@ -36,9 +39,9 @@ test('a person keeps their contacts: add, find, change, write to, remove', async
 	await expect(page.getByText('No contacts yet.', { exact: false })).toBeVisible({ timeout: 30_000 });
 	const lesson = page.getByRole('complementary', { name: 'Keep your contacts' });
 	await expect(lesson.getByText('0 of 2 done')).toBeVisible();
-	const serious = (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()).violations.filter(
-		(v) => v.impact === 'serious' || v.impact === 'critical'
-	);
+	const serious = (
+		await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()
+	).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
 	expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
 
 	// An empty form says what it needs; a bad address is refused.
@@ -94,7 +97,9 @@ test('a person keeps their contacts: add, find, change, write to, remove', async
 	await page.getByRole('button', { name: 'Add', exact: true }).click();
 	await expect(page.getByRole('button', { name: 'Clients', exact: true })).toBeVisible({ timeout: 30_000 });
 	await page.getByRole('button', { name: 'Delete address book Clients' }).click();
-	await expect(page.getByRole('button', { name: 'Clients', exact: true })).toHaveCount(0, { timeout: 30_000 });
+	await expect(page.getByRole('button', { name: 'Clients', exact: true })).toHaveCount(0, {
+		timeout: 30_000
+	});
 
 	await page.getByRole('button', { name: /Grace Hopper/ }).click();
 	await panel.getByRole('button', { name: 'Delete' }).click();

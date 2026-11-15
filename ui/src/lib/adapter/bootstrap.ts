@@ -1,7 +1,7 @@
-import { accountId, jmap, listOf } from './jmap';
-import { bootstrapResult, bootstrapSet } from './bootstrap-call';
-import { registryGet } from './portal-call';
 import { bootstrapPatch, credentialLines, type FinishResult } from '$lib/portal/bootstrap';
+import { bootstrapResult, bootstrapSet } from './bootstrap-call';
+import { accountId, jmap, listOf } from './jmap';
+import { registryGet } from './portal-call';
 
 export async function loadBootstrap(): Promise<Record<string, unknown>[]> {
 	const responses = await jmap([], [registryGet('x:Bootstrap', accountId())]);

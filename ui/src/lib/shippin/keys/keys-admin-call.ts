@@ -21,12 +21,23 @@ export type KeysReport = {
 
 export type Replaced = { id: number; resealed: number; failed: number; retired: number };
 
-export type NewKeyDraft = { from: 'random' | 'value' | 'environmentVariable' | 'file'; value: string; name: string; path: string };
+export type NewKeyDraft = {
+	from: 'random' | 'value' | 'environmentVariable' | 'file';
+	value: string;
+	name: string;
+	path: string;
+};
 
 export const SERVICES: Record<ServiceName, { name: string; job: string }> = {
-	ai: { name: 'AI provider key', job: 'Seals the AI provider key an administrator pastes, and nothing else.' },
+	ai: {
+		name: 'AI provider key',
+		job: 'Seals the AI provider key an administrator pastes, and nothing else.'
+	},
 	sso: { name: 'Sign-in secrets', job: 'Seals each domain’s sign-in client secret, and nothing else.' },
-	google: { name: 'Google link', job: 'Seals the Google tokens kept for people who connected Drive, and nothing else.' },
+	google: {
+		name: 'Google link',
+		job: 'Seals the Google tokens kept for people who connected Drive, and nothing else.'
+	},
 	'domain-proof': {
 		name: 'Domain proof',
 		job: 'Signs the DNS value a free-plan owner publishes to prove a domain. It seals nothing. Replaced keys are kept, so a value already published still counts.'
@@ -45,13 +56,16 @@ export function keyText(key: KeyView): string {
 			: key.kept === 'environmentVariable'
 				? `read from the environment variable ${key.place}`
 				: `read from the file ${key.place}`;
-	const state = key.state === 'primary' ? 'In use.' : 'Replaced: opens only what it sealed, until that is sealed again.';
+	const state =
+		key.state === 'primary' ? 'In use.' : 'Replaced: opens only what it sealed, until that is sealed again.';
 	const readable = key.readable ? '' : ' The server cannot read it right now.';
 	return `Key ${key.id}: ${origin}, ${kept}. ${state}${readable}`;
 }
 
 export function missingServices(report: KeysReport): ServiceName[] {
-	return report.services.filter((item) => !item.keys.some((key) => key.state === 'primary')).map((item) => item.service);
+	return report.services
+		.filter((item) => !item.keys.some((key) => key.state === 'primary'))
+		.map((item) => item.service);
 }
 
 const BASE64_KEY = /^[A-Za-z0-9+/]{43}=$/;
@@ -85,7 +99,8 @@ export function newKeyBody(draft: NewKeyDraft): Record<string, string> {
 }
 
 export function replacedText(service: ServiceName, done: Replaced): string {
-	const sealed = done.resealed === 1 ? '1 value was sealed again' : `${done.resealed} values were sealed again`;
+	const sealed =
+		done.resealed === 1 ? '1 value was sealed again' : `${done.resealed} values were sealed again`;
 	const failed = done.failed ? ` ${done.failed} could not be read, so the old key is kept for now.` : '';
 	const retired = done.retired ? ' The old key was destroyed.' : '';
 	return `${SERVICES[service].name}: key ${done.id} is in use. ${sealed}.${failed}${retired}`;

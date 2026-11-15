@@ -3,12 +3,12 @@
  * Run from ui/: node --experimental-strip-types scripts/prove-portal-delivery.ts
  */
 import {
+	deliveryStreamUrl,
 	FAILED_START,
 	INVALID_TARGET,
-	START_TRACE,
-	deliveryStreamUrl,
 	parseDeliveryFrame,
 	phaseLabel,
+	START_TRACE,
 	stageTone,
 	validTarget
 } from '../src/lib/portal/delivery.ts';

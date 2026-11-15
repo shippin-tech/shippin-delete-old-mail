@@ -4,11 +4,11 @@
  */
 import { readFileSync } from 'node:fs';
 import {
-	UNCONFIGURED,
+	type DiscoveryDocument,
 	discoveryFailed,
 	nextAfterDiscover,
 	registrationBody,
-	type DiscoveryDocument
+	UNCONFIGURED
 } from '../src/lib/adapter/discover-call.ts';
 
 const local: DiscoveryDocument = {
@@ -59,7 +59,10 @@ if (localUrl.searchParams.get('redirect_uri') !== 'http://127.0.0.1:5175/oauth/c
 if (localUrl.searchParams.get('code_challenge_method') !== 'S256') throw new Error('pkce');
 
 const external = nextAfterDiscover({
-	document: { authorization_endpoint: 'https://idp.example/authorize', token_endpoint: 'https://idp.example/token' },
+	document: {
+		authorization_endpoint: 'https://idp.example/authorize',
+		token_endpoint: 'https://idp.example/token'
+	},
 	username: 'admin@example.org',
 	metaClientId: null,
 	origin: 'http://127.0.0.1:5175',
@@ -92,12 +95,16 @@ if (url.origin !== 'https://idp.example') throw new Error('authorization host');
 if (url.searchParams.get('response_type') !== 'code') throw new Error('response type');
 if (url.searchParams.get('code_challenge_method') !== 'S256') throw new Error('pkce');
 if (url.searchParams.get('login_hint') !== 'admin@example.org') throw new Error('login hint');
-if (url.searchParams.get('client_id') !== 'http://127.0.0.1:5175/oauth-client.json') throw new Error('client id');
+if (url.searchParams.get('client_id') !== 'http://127.0.0.1:5175/oauth-client.json')
+	throw new Error('client id');
 if (url.searchParams.get('scope') !== 'openid') throw new Error('scope');
 if (remote.store['shippin-oauth-code_verifier'] !== 'verifier-value') throw new Error('verifier store');
 if (url.searchParams.get('resource') !== 'https://mail.example') throw new Error('resource');
 
-if (discoveryFailed('admin@example.org', 404, 'Not Found') !== 'Discovery failed for "admin@example.org": 404 Not Found') {
+if (
+	discoveryFailed('admin@example.org', 404, 'Not Found') !==
+	'Discovery failed for "admin@example.org": 404 Not Found'
+) {
 	throw new Error('failure sentence');
 }
 

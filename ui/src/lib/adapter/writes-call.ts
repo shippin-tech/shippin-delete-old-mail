@@ -10,7 +10,8 @@ export function registrySet(objectName: string, accountId: string, change: Regis
 }
 
 export function setResult(payload: Record<string, unknown>, id: string): 'saved' | 'rejected' | 'missing' {
-	if (listed(payload.destroyed, id) || mapped(payload.updated, id) || mapped(payload.created, id)) return 'saved';
+	if (listed(payload.destroyed, id) || mapped(payload.updated, id) || mapped(payload.created, id))
+		return 'saved';
 	if (mapped(payload.notDestroyed, id) || mapped(payload.notUpdated, id) || mapped(payload.notCreated, id)) {
 		return 'rejected';
 	}

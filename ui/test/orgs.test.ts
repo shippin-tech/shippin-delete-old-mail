@@ -1,6 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { draftFromOrg, emptyOrgDraft, emptyOrgPersonDraft, limitProblem, orgAddresses, orgPayload, orgPersonPayload, orgPersonProblem, orgProblem, peopleUse, storageUse, type Organisation } from '../src/lib/shippin/org/orgs-call';
 import { homeFor, navFor } from '../src/lib/adapter/home';
+import {
+	draftFromOrg,
+	emptyOrgDraft,
+	emptyOrgPersonDraft,
+	limitProblem,
+	type Organisation,
+	orgAddresses,
+	orgPayload,
+	orgPersonPayload,
+	orgPersonProblem,
+	orgProblem,
+	peopleUse,
+	storageUse
+} from '../src/lib/shippin/org/orgs-call';
 
 const GB = 1024 ** 3;
 
@@ -17,10 +30,25 @@ describe('organisation helpers', () => {
 	});
 
 	it('round-trips an organisation through its form', () => {
-		const org: Organisation = { id: 'o', name: 'Hill Farm', domains: ['d1'], admins: ['a@b.co', 'c@d.co'], maxPeople: 9, maxStorage: 3 * GB, createdAt: 1, people: 2, storageHeld: GB };
+		const org: Organisation = {
+			id: 'o',
+			name: 'Hill Farm',
+			domains: ['d1'],
+			admins: ['a@b.co', 'c@d.co'],
+			maxPeople: 9,
+			maxStorage: 3 * GB,
+			createdAt: 1,
+			people: 2,
+			storageHeld: GB
+		};
 		const draft = draftFromOrg(org);
 		expect(draft).toMatchObject({ admins: 'a@b.co, c@d.co', maxPeople: '9', maxStorageGb: '3' });
-		expect(orgPayload(draft)).toMatchObject({ id: 'o', admins: ['a@b.co', 'c@d.co'], maxPeople: 9, maxStorageGb: 3 });
+		expect(orgPayload(draft)).toMatchObject({
+			id: 'o',
+			admins: ['a@b.co', 'c@d.co'],
+			maxPeople: 9,
+			maxStorageGb: 3
+		});
 		expect(orgAddresses('a@b.co;c@d.co\ne@f.co')).toHaveLength(3);
 	});
 
@@ -41,8 +69,15 @@ describe('organisation helpers', () => {
 	});
 
 	it('leaves out storage nobody set', () => {
-		expect(orgPersonPayload({ ...emptyOrgPersonDraft('d1'), name: ' ada ', password: 'x' })).toEqual({ name: 'ada', domainId: 'd1', fullName: '', password: 'x' });
-		expect(orgPersonPayload({ ...emptyOrgPersonDraft('d1'), name: 'a', password: 'x', limitGb: '2' }).limitGb).toBe(2);
+		expect(orgPersonPayload({ ...emptyOrgPersonDraft('d1'), name: ' ada ', password: 'x' })).toEqual({
+			name: 'ada',
+			domainId: 'd1',
+			fullName: '',
+			password: 'x'
+		});
+		expect(
+			orgPersonPayload({ ...emptyOrgPersonDraft('d1'), name: 'a', password: 'x', limitGb: '2' }).limitGb
+		).toBe(2);
 	});
 
 	it('sends organisation administrators to their organisation', () => {

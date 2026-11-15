@@ -1,19 +1,9 @@
 {
-  "id": "calendar-rsvp",
-  "a2ui": "CalendarRsvp",
-  "variants": [
-    "invitation",
-    "update",
-    "cancel",
-    "recorded",
-    "accepted",
-    "tentative",
-    "declined"
-  ],
-  "engine": "crates/jmap/src/calendar",
-  "routes": [
-    "/rsvp"
-  ],
-  "emits": [],
-  "kernel": "ui/src/lib/ai-runtime/mail/kernel/instruction.md"
+	"id": "calendar-rsvp",
+	"a2ui": "CalendarRsvp",
+	"variants": ["invitation", "update", "cancel", "recorded", "accepted", "tentative", "declined"],
+	"engine": "crates/jmap/src/calendar",
+	"routes": ["/rsvp"],
+	"emits": [],
+	"kernel": "ui/src/lib/ai-runtime/mail/kernel/instruction.md"
 }

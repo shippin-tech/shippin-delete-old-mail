@@ -67,11 +67,7 @@ export function traceSummary(events: readonly TraceEvent[]): {
 	};
 }
 
-export function tracingStreamUrl(
-	token: string,
-	keywords: string,
-	filters: readonly TraceFilter[]
-): string {
+export function tracingStreamUrl(token: string, keywords: string, filters: readonly TraceFilter[]): string {
 	if (!token) return '';
 	const params = new URLSearchParams();
 	params.set('token', token);
@@ -84,14 +80,20 @@ export function tracingStreamUrl(
 	return `/api/trace/live?${params.toString()}`;
 }
 
-function valueOf(value: unknown): TraceValue {
+function traceValueOf(value: unknown): TraceValue {
 	if (!value || typeof value !== 'object') return { type: 'Null', text: '' };
 	const record = value as { '@type'?: unknown; value?: unknown; event?: unknown };
 	const type = typeof record['@type'] === 'string' ? record['@type'] : 'Null';
 	if (type === 'String' || type === 'IpAddr' || type === 'UTCDateTime') {
 		return { type, text: typeof record.value === 'string' ? record.value : '' };
 	}
-	if (type === 'UnsignedInt' || type === 'Integer' || type === 'Float' || type === 'Boolean' || type === 'Duration') {
+	if (
+		type === 'UnsignedInt' ||
+		type === 'Integer' ||
+		type === 'Float' ||
+		type === 'Boolean' ||
+		type === 'Duration'
+	) {
 		return { type, text: record.value == null ? '' : String(record.value) };
 	}
 	if (type === 'Event') return { type, text: typeof record.event === 'string' ? record.event : '' };
@@ -116,7 +118,7 @@ export function parseTracePayload(body: string): TraceEvent[] {
 					.filter((entry) => entry && typeof entry === 'object')
 					.map((entry) => {
 						const pair = entry as { key?: unknown; value?: unknown };
-						return { key: String(pair.key ?? ''), value: valueOf(pair.value) };
+						return { key: String(pair.key ?? ''), value: traceValueOf(pair.value) };
 					})
 			: []
 	}));

@@ -1,14 +1,16 @@
-import { expect, test } from '@playwright/test';
-import AxeBuilder from '@axe-core/playwright';
 import { readFileSync } from 'node:fs';
 import { connect } from 'node:net';
 import { resolve } from 'node:path';
+import AxeBuilder from '@axe-core/playwright';
+import { expect, test } from '@playwright/test';
 
 // Recovering deleted things in a real browser against the local stack: a message
 // destroyed for good comes back, and so does a removed account with its mail.
 const run = Math.random().toString(16).slice(2, 8);
 const base = process.env.LIVE_URL ?? 'http://127.0.0.1:28080';
-const admin = JSON.parse(readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')) as {
+const admin = JSON.parse(
+	readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')
+) as {
 	username: string;
 	secret: string;
 };
@@ -38,13 +40,17 @@ async function mailAccount(user: string): Promise<{ status: number; accountId: s
 	return { status: res.status, accountId: session.primaryAccounts['urn:ietf:params:jmap:mail'] };
 }
 
-async function mail(user: string, accountId: string, calls: unknown[]) {
+async function mail(user: string, _accountId: string, calls: unknown[]) {
 	const res = await fetch(`${base}/jmap`, {
 		method: 'POST',
 		headers: { Authorization: basic(user), 'Content-Type': 'application/json' },
-		body: JSON.stringify({ using: ['urn:ietf:params:jmap:core', 'urn:ietf:params:jmap:mail'], methodCalls: calls })
+		body: JSON.stringify({
+			using: ['urn:ietf:params:jmap:core', 'urn:ietf:params:jmap:mail'],
+			methodCalls: calls
+		})
 	});
-	return ((await res.json()) as { methodResponses: [string, Record<string, unknown>, string][] }).methodResponses;
+	return ((await res.json()) as { methodResponses: [string, Record<string, unknown>, string][] })
+		.methodResponses;
 }
 
 async function findMessages(user: string, accountId: string): Promise<string[]> {
@@ -83,7 +89,14 @@ async function adminFindAccount(name: string): Promise<string> {
 function deliver(to: string, title: string): Promise<void> {
 	return new Promise((done, fail) => {
 		const socket = connect(21025, '127.0.0.1');
-		const steps = ['EHLO keeper.test', 'MAIL FROM:<someone@keeper.test>', `RCPT TO:<${to}>`, 'DATA', `From: someone@keeper.test\r\nTo: ${to}\r\nSubject: ${title}\r\n\r\nPlease keep this.\r\n.`, 'QUIT'];
+		const steps = [
+			'EHLO keeper.test',
+			'MAIL FROM:<someone@keeper.test>',
+			`RCPT TO:<${to}>`,
+			'DATA',
+			`From: someone@keeper.test\r\nTo: ${to}\r\nSubject: ${title}\r\n\r\nPlease keep this.\r\n.`,
+			'QUIT'
+		];
 		let replies = 0;
 		let buffer = '';
 		socket.on('error', fail);
@@ -117,12 +130,16 @@ test('a destroyed message and a removed account are brought back', async ({ page
 
 	// Only administrators reach this.
 	expect((await fetch(`${base}/api/recover/accounts`)).status).toBe(401);
-	expect((await fetch(`${base}/api/recover/accounts`, { headers: { Authorization: basic(owner) } })).status).toBe(403);
+	expect(
+		(await fetch(`${base}/api/recover/accounts`, { headers: { Authorization: basic(owner) } })).status
+	).toBe(403);
 
 	// A real message arrives, then is destroyed for good.
 	await deliver(person, subject);
 	const { accountId } = await mailAccount(person);
-	await expect.poll(async () => (await findMessages(person, accountId)).length, { timeout: 60_000, intervals: [1_000] }).toBe(1);
+	await expect
+		.poll(async () => (await findMessages(person, accountId)).length, { timeout: 60_000, intervals: [1_000] })
+		.toBe(1);
 	const [emailId] = await findMessages(person, accountId);
 	const destroyed = await mail(person, accountId, [['Email/set', { accountId, destroy: [emailId] }, 'd']]);
 	expect(destroyed[0][1].destroyed).toEqual([emailId]);
@@ -134,18 +151,26 @@ test('a destroyed message and a removed account are brought back', async ({ page
 	await page.getByLabel('Password').fill(admin.secret);
 	await page.getByRole('button', { name: 'Sign in' }).click();
 	await page.waitForURL(/\/shippin\/admin/, { timeout: 30_000 });
-	await page.getByRole('navigation', { name: 'Admin' }).getByRole('link', { name: 'Recover deleted' }).click();
-	await expect(page.getByRole('heading', { name: 'Recover deleted', level: 1 })).toBeVisible({ timeout: 30_000 });
+	await page
+		.getByRole('navigation', { name: 'Admin' })
+		.getByRole('link', { name: 'Recover deleted' })
+		.click();
+	await expect(page.getByRole('heading', { name: 'Recover deleted', level: 1 })).toBeVisible({
+		timeout: 30_000
+	});
 	await expect(page.getByText(/kept for 30 days/)).toBeVisible({ timeout: 30_000 });
 
-	const serious = (await new AxeBuilder({ page }).include('main').withTags(['wcag2a', 'wcag2aa']).analyze()).violations.filter(
-		(v) => v.impact === 'serious' || v.impact === 'critical'
-	);
+	const serious = (
+		await new AxeBuilder({ page }).include('main').withTags(['wcag2a', 'wcag2aa']).analyze()
+	).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
 	expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
 
 	// The message comes back.
 	await page.getByLabel('Person').selectOption({ label: person });
-	const kept = page.getByRole('list', { name: 'Deleted messages' }).getByRole('listitem').filter({ hasText: subject });
+	const kept = page
+		.getByRole('list', { name: 'Deleted messages' })
+		.getByRole('listitem')
+		.filter({ hasText: subject });
 	await expect(kept).toBeVisible({ timeout: 30_000 });
 	await expect(kept.getByText(/From someone@keeper\.test/)).toBeVisible();
 	await kept.getByRole('button', { name: `Restore ${subject}` }).click();
@@ -160,7 +185,10 @@ test('a destroyed message and a removed account are brought back', async ({ page
 
 	// And comes back, with its mail and password.
 	await page.reload();
-	const held = page.getByRole('list', { name: 'Deleted accounts' }).getByRole('listitem').filter({ hasText: person });
+	const held = page
+		.getByRole('list', { name: 'Deleted accounts' })
+		.getByRole('listitem')
+		.filter({ hasText: person });
 	await expect(held).toBeVisible({ timeout: 30_000 });
 	await expect(held.getByText(/Kept for 30 more days/)).toBeVisible();
 	await held.getByRole('button', { name: `Restore ${person}` }).click();
@@ -175,7 +203,9 @@ test('a destroyed message and a removed account are brought back', async ({ page
 	await expect
 		.poll(
 			async () => {
-				const found = await mail(person, accountId, [['Email/query', { accountId, filter: { subject: later } }, 'q']]);
+				const found = await mail(person, accountId, [
+					['Email/query', { accountId, filter: { subject: later } }, 'q']
+				]);
 				return ((found[0][1].ids as string[] | undefined) ?? []).length;
 			},
 			{ timeout: 60_000, intervals: [1_000] }
@@ -187,7 +217,10 @@ test('a destroyed message and a removed account are brought back', async ({ page
 	const otherRecord = await adminFindAccount('other');
 	await adminDestroy(otherRecord);
 	expect((await panel('POST', 'mailboxes', { name: 'other', password })).status).toBe(200);
-	const conflict = await fetch(`${base}/api/recover/accounts/${otherRecord}/restore`, { method: 'POST', headers: { Authorization: adminAuth } });
+	const conflict = await fetch(`${base}/api/recover/accounts/${otherRecord}/restore`, {
+		method: 'POST',
+		headers: { Authorization: adminAuth }
+	});
 	expect(conflict.status).toBe(409);
 	expect(((await conflict.json()) as { message: string }).message).toBe('Someone else has that address now.');
 });

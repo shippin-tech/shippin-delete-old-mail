@@ -28,9 +28,19 @@ export function restoreHeldAccount(id: string): Promise<unknown> {
 
 export async function listKeptMessages(account: string, before?: string): Promise<KeptMessage[]> {
 	const query = before === undefined ? '' : `?before=${encodeURIComponent(before)}`;
-	return (await call<{ messages: KeptMessage[] }>('GET', `messages/${encodeURIComponent(account)}${query}`, 'Deleted messages could not be loaded.')).messages;
+	return (
+		await call<{ messages: KeptMessage[] }>(
+			'GET',
+			`messages/${encodeURIComponent(account)}${query}`,
+			'Deleted messages could not be loaded.'
+		)
+	).messages;
 }
 
 export function restoreKeptMessage(account: string, id: string): Promise<unknown> {
-	return call('POST', `messages/${encodeURIComponent(account)}/${encodeURIComponent(id)}/restore`, 'The message could not be restored.');
+	return call(
+		'POST',
+		`messages/${encodeURIComponent(account)}/${encodeURIComponent(id)}/restore`,
+		'The message could not be restored.'
+	);
 }

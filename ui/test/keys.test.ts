@@ -16,7 +16,9 @@ describe('what people are told about their keys', () => {
 
 	it('says plainly that the field is the right place, or where a made key goes', () => {
 		for (const id of variants) {
-			expect(KEY_GUIDES[id].title).toMatch(/This is the right place for it\.|was made for you\. Paste it into/);
+			expect(KEY_GUIDES[id].title).toMatch(
+				/This is the right place for it\.|was made for you\. Paste it into/
+			);
 		}
 		expect(WHY_HERE).toMatch(/never share a key/);
 		expect(WHY_HERE).toMatch(/Each one is tested\./);

@@ -1,5 +1,5 @@
-import { authorization } from './session';
 import type { Progress } from '../mcpl/lessons';
+import { authorization } from './session';
 
 /** MCPL lesson progress kept on the server (`GET /api/learn/progress`), per signed-in person. */
 export async function fetchLessonProgress(): Promise<Record<string, Progress> | null> {

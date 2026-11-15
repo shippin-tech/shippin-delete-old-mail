@@ -1,11 +1,13 @@
-import { expect, test } from '@playwright/test';
-import AxeBuilder from '@axe-core/playwright';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import AxeBuilder from '@axe-core/playwright';
+import { expect, test } from '@playwright/test';
 
 // The admin panel at its new home: our own menu, schema screens under All settings,
 // and the old addresses still landing in the right place.
-const admin = JSON.parse(readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')) as {
+const admin = JSON.parse(
+	readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')
+) as {
 	username: string;
 	secret: string;
 };
@@ -26,9 +28,12 @@ test('the admin panel has its own menu and old addresses still work', async ({ p
 	for (const group of ['Overview', 'People', 'Mail', 'Security', 'AI', 'All settings']) {
 		await expect(menu.getByRole('heading', { name: group, exact: true })).toBeVisible();
 	}
-	const serious = (await new AxeBuilder({ page }).include('nav[aria-label="Admin"]').withTags(['wcag2a', 'wcag2aa']).analyze()).violations.filter(
-		(v) => v.impact === 'serious' || v.impact === 'critical'
-	);
+	const serious = (
+		await new AxeBuilder({ page })
+			.include('nav[aria-label="Admin"]')
+			.withTags(['wcag2a', 'wcag2aa'])
+			.analyze()
+	).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
 	expect(serious.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
 
 	// Every link in our own menu opens a page in the panel, marked as current.
@@ -63,7 +68,9 @@ test('the admin panel has its own menu and old addresses still work', async ({ p
 	await page.waitForURL(/\/shippin\/admin$/, { timeout: 30_000 });
 	await page.goto('/portal/people');
 	await page.waitForURL(/\/shippin\/admin\/people$/, { timeout: 30_000 });
-	await expect(page.getByRole('heading', { name: 'People and teams', level: 1 })).toBeVisible({ timeout: 30_000 });
+	await expect(page.getByRole('heading', { name: 'People and teams', level: 1 })).toBeVisible({
+		timeout: 30_000
+	});
 	await page.goto('/portal/x:Domain?q=abc');
 	await page.waitForURL(/\/shippin\/admin\/x:Domain\?q=abc$/, { timeout: 30_000 });
 });

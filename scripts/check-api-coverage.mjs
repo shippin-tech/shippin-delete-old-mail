@@ -24,7 +24,8 @@ segments.delete('');
 
 const specs = [
 	['compat', 'api/compat/v1/openapi.yml'],
-	['shippin', 'api/shippin/v1/openapi.yml']
+	['shippin', 'api/shippin/v1/openapi.yml'],
+	['v1', 'api/v1/openapi.yml']
 ];
 const documented = new Map();
 for (const [name, rel] of specs) {

@@ -28,11 +28,15 @@ export function platformLedger(): PlatformLedgerEntry[] {
 }
 
 export function ledgerGroups(entries: readonly PlatformLedgerEntry[]): string[] {
-	return [...new Set(entries.map((entry) => entry.sourceGroup).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+	return [...new Set(entries.map((entry) => entry.sourceGroup).filter(Boolean))].sort((a, b) =>
+		a.localeCompare(b)
+	);
 }
 
 export function ledgerDispositions(entries: readonly PlatformLedgerEntry[]): string[] {
-	return [...new Set(entries.map((entry) => entry.disposition).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+	return [...new Set(entries.map((entry) => entry.disposition).filter(Boolean))].sort((a, b) =>
+		a.localeCompare(b)
+	);
 }
 
 export function dispositionCounts(entries: readonly PlatformLedgerEntry[]): Record<string, number> {
@@ -42,7 +46,10 @@ export function dispositionCounts(entries: readonly PlatformLedgerEntry[]): Reco
 }
 
 function parseCsv(input: string): Record<string, string>[] {
-	const lines = input.replace(/^\uFEFF/, '').split(/\r?\n/).filter((line) => line.length > 0);
+	const lines = input
+		.replace(/^\uFEFF/, '')
+		.split(/\r?\n/)
+		.filter((line) => line.length > 0);
 	if (!lines.length) return [];
 	const headers = parseCsvLine(lines[0]);
 	return lines.slice(1).map((line) => {
