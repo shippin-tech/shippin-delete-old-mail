@@ -71,7 +71,7 @@ services:
       shippin.tech_SSO_ALLOW_PRIVATE: "1"
       shippin.tech_GOOGLE_CLIENT_ID: local-client
       shippin.tech_GOOGLE_CLIENT_SECRET: local-secret
-      shippin.tech_GOOGLE_REDIRECT_URL: http://127.0.0.1:28080/api/google/callback
+      shippin.tech_GOOGLE_REDIRECT_URL: http://127.0.0.1:28080/api/v1/google/callback
       shippin.tech_GOOGLE_AUTH_URL: http://127.0.0.1:28099/o/oauth2/v2/auth
       shippin.tech_GOOGLE_TOKEN_URL: http://host.docker.internal:28099/token
       shippin.tech_GOOGLE_REVOKE_URL: http://host.docker.internal:28099/revoke

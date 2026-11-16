@@ -125,25 +125,25 @@ async function invitationHtml(title: string): Promise<string> {
 }
 
 test.afterAll(async () => {
-	await fetch(`${base}/api/calendar-templates/invite`, {
+	await fetch(`${base}/api/v1/calendar-templates/invite`, {
 		method: 'DELETE',
 		headers: { Authorization: adminAuth }
 	});
-	await api('POST', '/api/panel/domain/close', owner, { confirm: domain });
+	await api('POST', '/api/v1/panel/domain/close', owner, { confirm: domain });
 });
 
 test('an administrator rewords the invitation and a real guest receives it', async ({ page }) => {
 	test.setTimeout(180_000);
-	const created = await fetch(`${base}/api/panel/signup`, {
+	const created = await fetch(`${base}/api/v1/panel/signup`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ domain, name: 'owner', password })
 	});
 	expect(created.status).toBe(200);
-	expect((await api('POST', '/api/panel/mailboxes', owner, { name: 'guest', password })).status).toBe(200);
+	expect((await api('POST', '/api/v1/panel/mailboxes', owner, { name: 'guest', password })).status).toBe(200);
 
-	expect((await fetch(`${base}/api/calendar-templates`)).status).toBe(401);
-	expect((await api('GET', '/api/calendar-templates', owner)).status).toBe(403);
+	expect((await fetch(`${base}/api/v1/calendar-templates`)).status).toBe(401);
+	expect((await api('GET', '/api/v1/calendar-templates', owner)).status).toBe(403);
 
 	await page.goto('/login');
 	await page.getByLabel('Account name').fill(admin.username);

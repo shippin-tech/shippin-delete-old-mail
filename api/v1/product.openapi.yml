@@ -1,11 +1,10 @@
 openapi: 3.0.3
 info:
   title: shippin.tech Product API
-  description: 'Our own HTTP API, added on top of the compatible management API. It covers first-run setup,
+  description: 'Our own HTTP API under `/api/v1`. It covers first-run setup,
     the free plan, organisations, SSO, SCIM, recovery, alerts, masked addresses, keys, AI settings, the
-    assistant, lessons, the Google Drive link, MCP, statistics and traces. The compatible routes (`/api/auth`,
-    `/api/discover`, `/api/account`, `/api/schema`, `/api/token/*`, `/api/live/*`) are in `api/compat/v1/openapi.yml`
-    and are not repeated here.
+    assistant, lessons, the Google Drive link, MCP, statistics and traces. The sign-in, discovery, schema and telemetry routes (`/api/v1/auth`,
+    `/api/v1/discover`, `/api/v1/account`, `/api/v1/schema`, `/api/v1/token/*`, `/api/v1/live/*`) are in `api/v1/engine.openapi.yml`.
 
 
     Pre-release. Each operation names who may call it in `x-auth`, read from the handler, and the automated
@@ -61,7 +60,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProductDocument'
-  /api/product:
+  /api/v1/product:
     get:
       operationId: productIndexAlias
       summary: Same as GET /api
@@ -76,7 +75,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProductDocument'
-  /api/setup:
+  /api/v1/setup:
     get:
       operationId: setupStatus
       summary: Is first-run setup still pending?
@@ -97,7 +96,7 @@ paths:
                 required:
                 - pending
       x-proof: ui/e2e-live/first-run.spec.ts
-  /api/setup/admin:
+  /api/v1/setup/admin:
     post:
       operationId: setupAdmin
       summary: Turn the printed setup key into the first administrator
@@ -152,7 +151,7 @@ paths:
       - adminRejected
       - notSetup
       - done
-  /api/resources:
+  /api/v1/resources:
     get:
       operationId: resources
       summary: Server gauges and what each organisation uses
@@ -171,7 +170,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/resources.spec.ts
-  /api/stats:
+  /api/v1/stats:
     get:
       operationId: stats
       summary: Dashboard statistics from the server's own sampler
@@ -228,7 +227,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/dashboard.spec.ts
-  /api/trace/token:
+  /api/v1/trace/token:
     get:
       operationId: traceToken
       summary: A 60-second token for the live trace stream
@@ -247,20 +246,20 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/tracing.spec.ts
-  /api/trace/live:
+  /api/v1/trace/live:
     get:
       operationId: traceLive
       summary: Stream the server's events (server-sent events)
       tags:
       - Tracing
-      x-auth: The token from `/api/trace/token`, passed as `?token=` (no Authorization header is read).
+      x-auth: The token from `/api/v1/trace/token`, passed as `?token=` (no Authorization header is read).
       security:
       - liveToken: []
       parameters:
       - name: token
         in: query
         required: false
-        description: Token from /api/trace/token.
+        description: Token from /api/v1/trace/token.
         schema:
           type: string
       - name: level
@@ -302,7 +301,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
       x-proof: ui/e2e-live/tracing.spec.ts
-  /api/trace/history:
+  /api/v1/trace/history:
     get:
       operationId: traceHistory
       summary: Search stored traces
@@ -362,7 +361,7 @@ paths:
       x-proof: ui/e2e-live/tracing.spec.ts
       x-unverified-fields: The shape of each trace object is built by list_traces and was not read in
         full.
-  /api/trace/history/{id}:
+  /api/v1/trace/history/{id}:
     get:
       operationId: traceHistoryOne
       summary: The events of one stored trace
@@ -402,7 +401,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/tracing.spec.ts
-  /api/assistant:
+  /api/v1/assistant:
     get:
       operationId: assistantStatus
       summary: Is the assistant turned on?
@@ -497,7 +496,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/assistant.spec.ts
-  /api/ai/settings:
+  /api/v1/ai/settings:
     get:
       operationId: aiSettingsGet
       summary: Read the AI service settings (the key is never returned)
@@ -599,7 +598,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/assistant.spec.ts
-  /api/ai/test:
+  /api/v1/ai/test:
     post:
       operationId: aiTest
       summary: Check that the saved AI service answers
@@ -634,7 +633,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/assistant.spec.ts
-  /api/keys:
+  /api/v1/keys:
     get:
       operationId: keysList
       summary: Each service's keys, without their bytes
@@ -678,7 +677,7 @@ paths:
       x-proof: ui/e2e-live/keys.spec.ts
       x-unverified-fields: The shape of each key description comes from keys::describe and was not read
         in full.
-  /api/keys/author:
+  /api/v1/keys/author:
     post:
       operationId: keysAuthor
       summary: Make the keys a new server still lacks
@@ -709,7 +708,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/keys.spec.ts
-  /api/keys/{service}/replace:
+  /api/v1/keys/{service}/replace:
     post:
       operationId: keysReplace
       summary: Replace one service's key
@@ -723,7 +722,7 @@ paths:
       - name: service
         in: path
         required: true
-        description: A service name as listed by GET /api/keys.
+        description: A service name as listed by GET /api/v1/keys.
         schema:
           type: string
       requestBody:
@@ -798,7 +797,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/keys.spec.ts
-  /api/mcp:
+  /api/v1/mcp:
     post:
       operationId: mcp
       summary: MCP server (JSON-RPC over Streamable HTTP)
@@ -847,7 +846,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/mcp.spec.ts
-  /api/mcp/viewport/token:
+  /api/v1/mcp/viewport/token:
     post:
       operationId: mcpViewportToken
       summary: A 60-second token for the screen to open its stream
@@ -872,13 +871,13 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/mcp.spec.ts
-  /api/mcp/viewport/stream:
+  /api/v1/mcp/viewport/stream:
     get:
       operationId: mcpViewportStream
       summary: The calls waiting for the operator's screen (server-sent events)
       tags:
       - MCP
-      x-auth: The single-use token from /api/mcp/viewport/token, as `?token=`.
+      x-auth: The single-use token from /api/v1/mcp/viewport/token, as `?token=`.
       security:
       - liveToken: []
       parameters:
@@ -903,7 +902,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
       x-proof: ui/e2e-live/mcp.spec.ts
-  /api/mcp/viewport/result:
+  /api/v1/mcp/viewport/result:
     post:
       operationId: mcpViewportResult
       summary: The screen reports the result of a call
@@ -945,7 +944,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/mcp.spec.ts
-  /api/scim/settings/{domain}:
+  /api/v1/scim/settings/{domain}:
     get:
       operationId: scimSettingsGet
       summary: Does the domain have a provisioning token?
@@ -1055,7 +1054,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/scim.spec.ts
-  /api/scim/v2/ServiceProviderConfig:
+  /api/v1/scim/v2/ServiceProviderConfig:
     get:
       operationId: scimServiceProviderConfig
       summary: SCIM service provider configuration
@@ -1105,7 +1104,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ScimError'
       x-proof: ui/e2e-live/scim.spec.ts
-  /api/scim/v2/ResourceTypes:
+  /api/v1/scim/v2/ResourceTypes:
     get:
       operationId: scimResourceTypes
       summary: SCIM resource types
@@ -1155,7 +1154,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ScimError'
       x-proof: ui/e2e-live/scim.spec.ts
-  /api/scim/v2/Schemas:
+  /api/v1/scim/v2/Schemas:
     get:
       operationId: scimSchemas
       summary: SCIM schemas
@@ -1205,7 +1204,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ScimError'
       x-proof: ui/e2e-live/scim.spec.ts
-  /api/scim/v2/Users:
+  /api/v1/scim/v2/Users:
     get:
       operationId: scimUsersList
       summary: List people
@@ -1318,7 +1317,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ScimError'
       x-proof: ui/e2e-live/scim.spec.ts
-  /api/scim/v2/Users/{id}:
+  /api/v1/scim/v2/Users/{id}:
     get:
       operationId: scimUserGet
       summary: Read a person
@@ -1553,7 +1552,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ScimError'
       x-proof: ui/e2e-live/scim.spec.ts
-  /api/scim/v2/Groups:
+  /api/v1/scim/v2/Groups:
     get:
       operationId: scimGroupsList
       summary: List teams
@@ -1664,7 +1663,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ScimError'
       x-proof: ui/e2e-live/scim.spec.ts
-  /api/scim/v2/Groups/{id}:
+  /api/v1/scim/v2/Groups/{id}:
     get:
       operationId: scimGroupGet
       summary: Read a team
@@ -1899,7 +1898,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ScimError'
       x-proof: ui/e2e-live/scim.spec.ts
-  /api/sso/{domain}:
+  /api/v1/sso/{domain}:
     get:
       operationId: ssoOffered
       summary: Does the domain offer sign-in through its own provider?
@@ -1925,7 +1924,7 @@ paths:
                   enabled:
                     type: boolean
       x-proof: ui/e2e-live/sso.spec.ts
-  /api/sso/begin:
+  /api/v1/sso/begin:
     post:
       operationId: ssoBegin
       summary: Start a sign-in through the domain's provider
@@ -1988,7 +1987,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
       x-proof: ui/e2e-live/sso.spec.ts
-  /api/sso/callback:
+  /api/v1/sso/callback:
     get:
       operationId: ssoCallback
       summary: Where the provider sends the browser back
@@ -2015,7 +2014,7 @@ paths:
       x-proof: ui/e2e-live/sso.spec.ts
       x-unverified: true
       x-unverified-fields: The exact redirect target and error page were not read in full.
-  /api/sso/{domain}/settings:
+  /api/v1/sso/{domain}/settings:
     get:
       operationId: ssoSettingsGet
       summary: Read the domain's provider settings (no secret)
@@ -2154,7 +2153,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/sso.spec.ts
-  /api/calendar-templates:
+  /api/v1/calendar-templates:
     get:
       operationId: calendarTemplatesList
       summary: List the calendar emails and their wording
@@ -2186,7 +2185,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/calendar-templates.spec.ts
-  /api/calendar-templates/{kind}:
+  /api/v1/calendar-templates/{kind}:
     post:
       operationId: calendarTemplatesSave
       summary: Save new wording for one calendar email
@@ -2264,7 +2263,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/calendar-templates.spec.ts
-  /api/brand/{domain}:
+  /api/v1/brand/{domain}:
     get:
       operationId: brandGet
       summary: A domain's logo
@@ -2388,7 +2387,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/brand.spec.ts
-  /api/orgs:
+  /api/v1/orgs:
     get:
       operationId: orgsList
       summary: List organisations and every domain on the server
@@ -2472,7 +2471,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/org.spec.ts
-  /api/orgs/{id}:
+  /api/v1/orgs/{id}:
     delete:
       operationId: orgsDelete
       summary: Remove an organisation (its domains and people stay)
@@ -2501,7 +2500,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/org.spec.ts
-  /api/org:
+  /api/v1/org:
     get:
       operationId: orgOverview
       summary: 'The organisation''s overview: people, teams, domains, storage'
@@ -2525,7 +2524,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/org.spec.ts
-  /api/org/people:
+  /api/v1/org/people:
     post:
       operationId: orgPeopleAdd
       summary: Add a person
@@ -2584,7 +2583,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/org.spec.ts
-  /api/org/people/{id}:
+  /api/v1/org/people/{id}:
     post:
       operationId: orgPeopleChange
       summary: Change a person (password, name, storage limit)
@@ -2688,7 +2687,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/org.spec.ts
-  /api/org/people/{id}/aliases:
+  /api/v1/org/people/{id}/aliases:
     post:
       operationId: orgAliasAdd
       summary: Add an alias to a person
@@ -2747,7 +2746,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/org.spec.ts
-  /api/org/people/{id}/aliases/{alias}:
+  /api/v1/org/people/{id}/aliases/{alias}:
     delete:
       operationId: orgAliasRemove
       summary: Remove an alias
@@ -2795,7 +2794,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/org.spec.ts
-  /api/org/teams:
+  /api/v1/org/teams:
     post:
       operationId: orgTeamAdd
       summary: Create a team with its own address
@@ -2847,7 +2846,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/org.spec.ts
-  /api/org/teams/{id}/members:
+  /api/v1/org/teams/{id}/members:
     post:
       operationId: orgTeamMember
       summary: Add or remove a team member
@@ -2902,7 +2901,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/org.spec.ts
-  /api/org/teams/{id}:
+  /api/v1/org/teams/{id}:
     delete:
       operationId: orgTeamRemove
       summary: Remove a team
@@ -2944,7 +2943,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/org.spec.ts
-  /api/org/domains/{id}/dns:
+  /api/v1/org/domains/{id}/dns:
     get:
       operationId: orgDomainDns
       summary: Live check of the DNS records a domain needs
@@ -2987,7 +2986,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/org.spec.ts
-  /api/masked:
+  /api/v1/masked:
     get:
       operationId: maskedList
       summary: List my masked addresses
@@ -3044,7 +3043,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/masked.spec.ts
-  /api/masked/{local}:
+  /api/v1/masked/{local}:
     post:
       operationId: maskedChange
       summary: Switch an address on or off, or rename it
@@ -3109,7 +3108,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/masked.spec.ts
-  /api/recover/accounts:
+  /api/v1/recover/accounts:
     get:
       operationId: recoverAccounts
       summary: Deleted accounts that can still be restored
@@ -3148,7 +3147,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/recover.spec.ts
-  /api/recover/accounts/{id}/restore:
+  /api/v1/recover/accounts/{id}/restore:
     post:
       operationId: recoverAccountRestore
       summary: Restore a deleted account
@@ -3185,7 +3184,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/recover.spec.ts
-  /api/recover/messages/{account}:
+  /api/v1/recover/messages/{account}:
     get:
       operationId: recoverMessages
       summary: Deleted messages of an account that are still kept
@@ -3226,7 +3225,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/recover.spec.ts
       x-unverified-fields: The shape of each kept message comes from list_kept and was not read in full.
-  /api/recover/messages/{account}/{id}/restore:
+  /api/v1/recover/messages/{account}/{id}/restore:
     post:
       operationId: recoverMessageRestore
       summary: Restore a deleted message
@@ -3269,7 +3268,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/recover.spec.ts
-  /api/alerts:
+  /api/v1/alerts:
     get:
       operationId: alertsList
       summary: List alert rules and the metrics they can watch
@@ -3334,7 +3333,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/alerts.spec.ts
-  /api/alerts/check:
+  /api/v1/alerts/check:
     post:
       operationId: alertsCheck
       summary: Check every rule now
@@ -3360,7 +3359,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/alerts.spec.ts
       x-unverified-fields: The shape of each result comes from check_alerts and was not read in full.
-  /api/alerts/{id}:
+  /api/v1/alerts/{id}:
     delete:
       operationId: alertsDelete
       summary: Remove an alert rule
@@ -3389,7 +3388,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/alerts.spec.ts
-  /api/google:
+  /api/v1/google:
     get:
       operationId: googleStatus
       summary: Is the Google Drive link available and connected?
@@ -3414,7 +3413,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/google.spec.ts
-  /api/google/connect:
+  /api/v1/google/connect:
     post:
       operationId: googleConnect
       summary: The Google sign-in address
@@ -3452,7 +3451,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/google.spec.ts
-  /api/google/callback:
+  /api/v1/google/callback:
     get:
       operationId: googleCallback
       summary: Where Google sends the browser back
@@ -3467,7 +3466,7 @@ paths:
       x-unverified: true
       x-unverified-fields: Listed in the handler's header comment, but no match arm for it was found in
         google.rs; it may be served elsewhere.
-  /api/google/disconnect:
+  /api/v1/google/disconnect:
     post:
       operationId: googleDisconnect
       summary: Forget the link and revoke it at Google
@@ -3505,7 +3504,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/google.spec.ts
-  /api/google/files:
+  /api/v1/google/files:
     get:
       operationId: googleFiles
       summary: List Drive files
@@ -3573,7 +3572,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/google.spec.ts
-  /api/google/info/{id}:
+  /api/v1/google/info/{id}:
     get:
       operationId: googleInfo
       summary: One Drive file's details
@@ -3615,7 +3614,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/google.spec.ts
-  /api/google/content/{id}:
+  /api/v1/google/content/{id}:
     get:
       operationId: googleContent
       summary: A file's bytes (Google Docs are exported)
@@ -3670,7 +3669,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/google.spec.ts
-  /api/google/copy:
+  /api/v1/google/copy:
     post:
       operationId: googleCopy
       summary: Put a copy of one of the person's files in Google Drive
@@ -3736,7 +3735,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/google.spec.ts
-  /api/learn/progress:
+  /api/v1/learn/progress:
     get:
       operationId: learnProgress
       summary: Which lesson steps I have finished
@@ -3758,7 +3757,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/learn.spec.ts
-  /api/learn/progress/{lesson}:
+  /api/v1/learn/progress/{lesson}:
     post:
       operationId: learnRecord
       summary: Record finished steps
@@ -3825,7 +3824,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: ui/e2e-live/learn.spec.ts
-  /api/panel/plan:
+  /api/v1/panel/plan:
     get:
       operationId: panelPlan
       summary: The plan's limits and how to prove a domain
@@ -3861,7 +3860,7 @@ paths:
                   verifyLabel:
                     type: string
       x-proof: deploy/local/verify_panel.py
-  /api/panel/signup/code:
+  /api/v1/panel/signup/code:
     post:
       operationId: panelSignupCode
       summary: The TXT record that proves a domain is yours
@@ -3928,7 +3927,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
       x-proof: deploy/local/verify_panel.py
-  /api/panel/signup:
+  /api/v1/panel/signup:
     post:
       operationId: panelSignup
       summary: Create a domain and its owner mailbox
@@ -3999,7 +3998,7 @@ paths:
       - signupClosed
       - domainTaken
       x-unverified-fields: A DNS-proof failure's status code and error name were not read.
-  /api/panel/domain:
+  /api/v1/panel/domain:
     get:
       operationId: panelDomain
       summary: 'My domain: plan, usage, catch-all, DNS zone'
@@ -4057,7 +4056,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: deploy/local/verify_panel.py
-  /api/panel/dns:
+  /api/v1/panel/dns:
     get:
       operationId: panelDns
       summary: Live check of the DNS records my domain needs
@@ -4094,7 +4093,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: deploy/local/verify_panel.py
-  /api/panel/domain/close:
+  /api/v1/panel/domain/close:
     post:
       operationId: panelClose
       summary: Delete every mailbox and the domain
@@ -4144,7 +4143,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
       x-proof: deploy/local/verify_panel.py
       x-destructive: true
-  /api/panel/domain/catchall:
+  /api/v1/panel/domain/catchall:
     post:
       operationId: panelCatchAll
       summary: Send mail for unknown addresses to one mailbox, or stop it
@@ -4190,7 +4189,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: deploy/local/verify_panel.py
-  /api/panel/mailboxes:
+  /api/v1/panel/mailboxes:
     get:
       operationId: panelMailboxes
       summary: My domain's mailboxes
@@ -4299,7 +4298,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: deploy/local/verify_panel.py
-  /api/panel/mailboxes/{id}:
+  /api/v1/panel/mailboxes/{id}:
     delete:
       operationId: panelMailboxDelete
       summary: Delete a mailbox
@@ -4342,7 +4341,7 @@ paths:
           $ref: '#/components/responses/Unauthorized'
       x-proof: deploy/local/verify_panel.py
       x-destructive: true
-  /api/panel/mailboxes/{id}/password:
+  /api/v1/panel/mailboxes/{id}/password:
     post:
       operationId: panelMailboxPassword
       summary: Change a mailbox's password
@@ -4397,7 +4396,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: deploy/local/verify_panel.py
-  /api/panel/mailboxes/{id}/aliases:
+  /api/v1/panel/mailboxes/{id}/aliases:
     post:
       operationId: panelAliasAdd
       summary: Add an alias to a mailbox
@@ -4456,7 +4455,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
       x-proof: deploy/local/verify_panel.py
-  /api/panel/mailboxes/{id}/aliases/{alias}:
+  /api/v1/panel/mailboxes/{id}/aliases/{alias}:
     delete:
       operationId: panelAliasRemove
       summary: Remove an alias
@@ -4524,7 +4523,7 @@ components:
     scimToken:
       type: http
       scheme: bearer
-      description: A per-domain SCIM token made at `POST /api/scim/settings/{domain}`. It reaches nothing
+      description: A per-domain SCIM token made at `POST /api/v1/scim/settings/{domain}`. It reaches nothing
         outside that domain.
   responses:
     Problem:
@@ -4887,6 +4886,6 @@ components:
           type: object
           additionalProperties:
             type: string
-x-compat-note: 'Served by the compatible management API, documented in api/compat/v1/openapi.yml: /api/auth,
-  /api/discover/{email}, /api/account, /api/schema, /api/schema/{hash}, /api/token/{delivery,tracing,metrics},
-  /api/live/{delivery,tracing,metrics}.'
+x-engine-note: 'Served by the engine, documented in api/v1/engine.openapi.yml: /api/v1/auth,
+  /api/v1/discover/{email}, /api/v1/account, /api/v1/schema, /api/v1/schema/{hash}, /api/v1/token/{delivery,tracing,metrics},
+  /api/v1/live/{delivery,tracing,metrics}.'

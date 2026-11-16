@@ -1,4 +1,4 @@
-//! `GET /api/stats`: the portal dashboard's data.
+//! `GET /api/v1/stats`: the portal dashboard's data.
 //!
 //! `period=24h|7d|30d|90d`, or `from` and `to` in seconds since 1970 for any
 //! range, plus an optional `node` id. Our own endpoint over `common::stats`; it

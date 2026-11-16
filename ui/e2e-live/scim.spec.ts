@@ -27,7 +27,7 @@ function basic(user: string, secret = password) {
 }
 
 async function signup(domain: string) {
-	const res = await fetch(`${base}/api/panel/signup`, {
+	const res = await fetch(`${base}/api/v1/panel/signup`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ domain, name: 'owner', password })
@@ -36,7 +36,7 @@ async function signup(domain: string) {
 }
 
 function scim(token: string, method: string, path: string, body?: unknown) {
-	return fetch(`${base}/api/scim/v2${path}`, {
+	return fetch(`${base}/api/v1/scim/v2${path}`, {
 		method,
 		headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/scim+json' },
 		body: body === undefined ? undefined : JSON.stringify(body)
@@ -57,7 +57,7 @@ test.afterAll(async () => {
 		[hillBoss, hill],
 		[valeBoss, vale]
 	]) {
-		await fetch(`${base}/api/panel/domain/close`, {
+		await fetch(`${base}/api/v1/panel/domain/close`, {
 			method: 'POST',
 			headers: { Authorization: basic(user), 'Content-Type': 'application/json' },
 			body: JSON.stringify({ confirm: domain })
@@ -92,14 +92,14 @@ test('an identity provider manages one domain and reaches nothing else', async (
 
 	// Only the domain's manager can make one, and the secret never comes back.
 	const settings = (user: string, method: string) =>
-		fetch(`${base}/api/scim/settings/${hill}`, { method, headers: { Authorization: basic(user) } });
+		fetch(`${base}/api/v1/scim/settings/${hill}`, { method, headers: { Authorization: basic(user) } });
 	expect((await settings(valeBoss, 'POST')).status).toBe(403);
 	const read = await (await settings(hillBoss, 'GET')).text();
 	expect(read).not.toContain(token);
 	expect(JSON.parse(read).hasToken).toBe(true);
 	const valeToken = (
 		(await (
-			await fetch(`${base}/api/scim/settings/${vale}`, {
+			await fetch(`${base}/api/v1/scim/settings/${vale}`, {
 				method: 'POST',
 				headers: { Authorization: basic(valeBoss) }
 			})
@@ -107,7 +107,7 @@ test('an identity provider manages one domain and reaches nothing else', async (
 	).token;
 
 	// Without a good token there is nothing.
-	expect((await fetch(`${base}/api/scim/v2/Users`)).status).toBe(401);
+	expect((await fetch(`${base}/api/v1/scim/v2/Users`)).status).toBe(401);
 	expect((await scim('scim.1.wrong', 'GET', '/Users')).status).toBe(401);
 	expect((await scim(`scim.1.${token.split('.')[2]}`, 'GET', '/Users')).status).toBe(401);
 
@@ -252,7 +252,7 @@ test('an identity provider manages one domain and reaches nothing else', async (
 
 	// A server administrator on the domain is out of reach.
 	const domains = (await (
-		await fetch(`${base}/api/orgs`, { headers: { Authorization: adminAuth } })
+		await fetch(`${base}/api/v1/orgs`, { headers: { Authorization: adminAuth } })
 	).json()) as { domains: { id: string; name: string }[] };
 	const domainId = domains.domains.find((item) => item.name === hill)!.id;
 	const made = await fetch(`${base}/jmap`, {

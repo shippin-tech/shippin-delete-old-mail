@@ -16,7 +16,7 @@ const auth = {
 const lesson = 'set-up-your-domain';
 
 async function post(body: unknown, id = lesson) {
-	return fetch(`${base}/api/learn/progress/${id}`, {
+	return fetch(`${base}/api/v1/learn/progress/${id}`, {
 		method: 'POST',
 		headers: { ...auth, 'Content-Type': 'application/json' },
 		body: JSON.stringify(body)
@@ -24,9 +24,9 @@ async function post(body: unknown, id = lesson) {
 }
 
 test('lesson progress is kept per person, merged, and follows them to a new browser', async ({ page }) => {
-	expect((await fetch(`${base}/api/learn/progress`)).status).toBe(401);
+	expect((await fetch(`${base}/api/v1/learn/progress`)).status).toBe(401);
 	expect(
-		(await fetch(`${base}/api/learn/progress/${lesson}`, { method: 'DELETE', headers: auth })).status
+		(await fetch(`${base}/api/v1/learn/progress/${lesson}`, { method: 'DELETE', headers: auth })).status
 	).toBe(200);
 
 	expect(await (await post({ done: ['publish-dns'], dismissed: false })).json()).toEqual({
@@ -42,7 +42,7 @@ test('lesson progress is kept per person, merged, and follows them to a new brow
 	expect((await post({ done: [] }, 'Bad Id')).status).toBe(400);
 	expect((await post('nonsense')).status).toBe(400);
 
-	const all = (await (await fetch(`${base}/api/learn/progress`, { headers: auth })).json()) as {
+	const all = (await (await fetch(`${base}/api/v1/learn/progress`, { headers: auth })).json()) as {
 		lessons: Record<string, { done: string[] }>;
 	};
 	expect(all.lessons[lesson].done).toEqual(['publish-dns', 'add-mailbox']);
@@ -60,9 +60,9 @@ test('lesson progress is kept per person, merged, and follows them to a new brow
 
 	// Starting over clears it.
 	expect(
-		(await fetch(`${base}/api/learn/progress/${lesson}`, { method: 'DELETE', headers: auth })).status
+		(await fetch(`${base}/api/v1/learn/progress/${lesson}`, { method: 'DELETE', headers: auth })).status
 	).toBe(200);
-	const after = (await (await fetch(`${base}/api/learn/progress`, { headers: auth })).json()) as {
+	const after = (await (await fetch(`${base}/api/v1/learn/progress`, { headers: auth })).json()) as {
 		lessons: Record<string, unknown>;
 	};
 	expect(after.lessons[lesson]).toBeUndefined();

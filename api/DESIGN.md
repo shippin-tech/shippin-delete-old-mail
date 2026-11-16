@@ -28,7 +28,7 @@ and for tools.
 | Management API, JMAP registry calls and a compiled WASM UI bundle (`assets/webui`) are three ways to the same setting | The UI is unreviewable in git; a setting can behave differently by path | One path to configuration (the registry facade below). No compiled bundles in git |
 | A second, upstream-shaped management API kept for compatibility (`api/compat`) | Two vocabularies and two error shapes in the same server | Removed in alpha. Our own API only |
 | Errors differ per route (text bodies, ad hoc JSON) | Every client writes its own error handling; the chat cannot explain a failure | One error shape everywhere (RFC 9457 problem details plus a `fields` map for form errors) |
-| Live data needs a token minted by one route and spent on another (`/api/token/*`, `/api/live/*`) | Extra round trips, short-lived tokens in URLs | One event stream per signed-in session (`GET /api/v1/events`, SSE) |
+| Live data needs a token minted by one route and spent on another (`/api/v1/token/*`, `/api/v1/live/*`) | Extra round trips, short-lived tokens in URLs | One event stream per signed-in session (`GET /api/v1/events`, SSE) |
 | Permission names are enum values spread over the code | The UI and chat cannot ask "may I?" before showing a button | The route table carries the permission; `GET /api/v1/me` returns what the caller may do, and the UI hides what it may not use |
 | Large settings pages are written by hand per screen | Each upstream change breaks a screen | Screens come from the schema; hand-written screens only for flows (setup, mail, calendar) |
 
@@ -71,7 +71,7 @@ as the person who will use it (see that file).
 | Step | Work | Done when |
 | --- | --- | --- |
 | A1 | **Route table.** Replace the string match in `crates/http/src/api/mod.rs` with a table; generate `api/v1/openapi.yml` from it; one error shape | `check-api-coverage` compares table and spec; existing proofs still pass |
-| A2 | **Move to `/api/v1`, delete `api/compat`.** Update `ui/src/lib/adapter/*`, e2e and `verify*.py` in the same change. No redirects | Check is green and the three roles sign in |
+| A2 | **Move to `/api/v1`, delete `api/compat`.** Update `ui/src/lib/adapter/*`, e2e and `verify*.py` in the same change. No redirects | **Done 2026-11-16** except `token/*` and `live/*` (renamed to `/api/v1/token`, `/api/v1/live`; replaced in A4). Bare `/api/*` returns 404. Proven on the local stack: `verify_v1` 7, `verify_registry` 36, `verify_account` 25, `verify_panel` 51, `verify_compat` 15. `ui/e2e-live` is rewritten but not yet run |
 | A3 | **Registry facade.** `/api/v1/registry/*` (REST over native JMAP, run as the caller); the Svelte admin and the actions use it instead of calling JMAP `x:` methods | **Server side and typed client done 2026-11-15** (`crates/http/src/api/registry_rest.rs`, `ui/src/lib/contract/registry.ts`, contracts generated from the schema; `deploy/local/verify_registry.py`, `ui/test-live/`). **Not done:** no screen calls it yet, so the admin still uses JMAP directly |
 | A4 | **Events.** Replace `token/*` and `live/*` with `/events` | Delivery test and tracing screens work with no token route |
 | A5 | **Fence the paid code** into its own crate (`RELEASE.md` C1) | Default build contains no SEL path; CI builds with and without it |

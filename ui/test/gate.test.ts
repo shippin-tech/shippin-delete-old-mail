@@ -61,7 +61,7 @@ describe('the request gate', () => {
 		let calls = 0;
 		const inner = (async () => (++calls === 1 ? refused() : new Response('ok'))) as typeof fetch;
 		const gate = createGate(inner, ORIGIN, { pause: noPause });
-		const res = await gate.fetch('/api/google', { method: 'POST', body: '{"a":1}' });
+		const res = await gate.fetch('/api/v1/google', { method: 'POST', body: '{"a":1}' });
 		expect(await res.text()).toBe('ok');
 		expect(calls).toBe(2);
 	});

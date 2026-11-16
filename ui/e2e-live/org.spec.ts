@@ -43,7 +43,7 @@ async function adminCall(method: string, path: string, body?: unknown) {
 }
 
 async function signup(domain: string) {
-	const res = await fetch(`${base}/api/panel/signup`, {
+	const res = await fetch(`${base}/api/v1/panel/signup`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ domain, name: 'owner', password })
@@ -72,11 +72,11 @@ test.afterEach(async ({ browser }) => {
 });
 
 test.afterAll(async () => {
-	const listed = (await (await adminCall('GET', '/api/orgs')).json()) as { orgs: Summary[] };
+	const listed = (await (await adminCall('GET', '/api/v1/orgs')).json()) as { orgs: Summary[] };
 	for (const org of listed.orgs.filter((item) => item.name === hillName || item.name === valeName))
-		await adminCall('DELETE', `/api/orgs/${org.id}`);
-	await as(hillBoss, 'POST', '/api/panel/domain/close', { confirm: hill });
-	await as(valeBoss, 'POST', '/api/panel/domain/close', { confirm: vale });
+		await adminCall('DELETE', `/api/v1/orgs/${org.id}`);
+	await as(hillBoss, 'POST', '/api/v1/panel/domain/close', { confirm: hill });
+	await as(valeBoss, 'POST', '/api/v1/panel/domain/close', { confirm: vale });
 });
 
 test('two organisations on one server stay apart and their limits hold', async ({ browser }) => {
@@ -85,9 +85,9 @@ test('two organisations on one server stay apart and their limits hold', async (
 	await signup(vale);
 
 	// Only the server's administrators reach the list; nobody runs an organisation yet.
-	expect((await fetch(`${base}/api/orgs`)).status).toBe(401);
-	expect((await as(hillBoss, 'GET', '/api/orgs')).status).toBe(403);
-	expect((await as(hillBoss, 'GET', '/api/org')).status).toBe(403);
+	expect((await fetch(`${base}/api/v1/orgs`)).status).toBe(401);
+	expect((await as(hillBoss, 'GET', '/api/v1/orgs')).status).toBe(403);
+	expect((await as(hillBoss, 'GET', '/api/v1/org')).status).toBe(403);
 
 	const adminContext = await browser.newContext();
 	const page = await adminContext.newPage();
@@ -121,13 +121,13 @@ test('two organisations on one server stay apart and their limits hold', async (
 	await expect(listed.getByText('1 of 3 people')).toBeVisible({ timeout: 30_000 });
 
 	// The second through the API, and clashes are refused.
-	const orgs = (await (await adminCall('GET', '/api/orgs')).json()) as {
+	const orgs = (await (await adminCall('GET', '/api/v1/orgs')).json()) as {
 		orgs: Summary[];
 		domains: { id: string; name: string }[];
 	};
 	const hillDomain = orgs.domains.find((domain) => domain.name === hill)!.id;
 	const valeDomain = orgs.domains.find((domain) => domain.name === vale)!.id;
-	const clash = await adminCall('POST', '/api/orgs', {
+	const clash = await adminCall('POST', '/api/v1/orgs', {
 		name: 'Grabber',
 		domains: [hillDomain, valeDomain],
 		admins: [valeBoss],
@@ -136,7 +136,7 @@ test('two organisations on one server stay apart and their limits hold', async (
 	});
 	expect(clash.status).toBe(400);
 	expect(((await clash.json()) as { message: string }).message).toMatch(/another organisation/);
-	const outsider = await adminCall('POST', '/api/orgs', {
+	const outsider = await adminCall('POST', '/api/v1/orgs', {
 		name: 'Outsider',
 		domains: [valeDomain],
 		admins: [hillBoss],
@@ -146,7 +146,7 @@ test('two organisations on one server stay apart and their limits hold', async (
 	expect(outsider.status).toBe(400);
 	expect(
 		(
-			await adminCall('POST', '/api/orgs', {
+			await adminCall('POST', '/api/v1/orgs', {
 				name: valeName,
 				domains: [valeDomain],
 				admins: [valeBoss],
@@ -250,7 +250,7 @@ test('two organisations on one server stay apart and their limits hold', async (
 		.poll(
 			async () =>
 				(
-					(await (await as(hillBoss, 'GET', '/api/org')).json()) as Mine & {
+					(await (await as(hillBoss, 'GET', '/api/v1/org')).json()) as Mine & {
 						people: { email: string; teamIds: string[] }[];
 					}
 				).people.find((item) => item.email === `ada@${hill}`)?.teamIds.length,
@@ -275,19 +275,19 @@ test('two organisations on one server stay apart and their limits hold', async (
 	await expect(hillPage.getByRole('heading', { name: 'People', level: 1 })).toBeVisible({ timeout: 30_000 });
 
 	// Each sees only their own, and cannot reach across.
-	const hillMine = (await (await as(hillBoss, 'GET', '/api/org')).json()) as Mine;
-	const valeMine = (await (await as(valeBoss, 'GET', '/api/org')).json()) as Mine;
+	const hillMine = (await (await as(hillBoss, 'GET', '/api/v1/org')).json()) as Mine;
+	const valeMine = (await (await as(valeBoss, 'GET', '/api/v1/org')).json()) as Mine;
 	expect(hillMine.people.map((person) => person.email).sort()).toEqual([`ada@${hill}`, hillBoss].sort());
 	expect(valeMine.people.map((person) => person.email)).toEqual([valeBoss]);
 	expect(valeMine.domains.map((domain) => domain.name)).toEqual([vale]);
 	const adaId = hillMine.people.find((person) => person.email === `ada@${hill}`)!.id;
 	expect(
-		(await as(valeBoss, 'POST', `/api/org/people/${adaId}`, { password: `Stolen ${run} password` })).status
+		(await as(valeBoss, 'POST', `/api/v1/org/people/${adaId}`, { password: `Stolen ${run} password` })).status
 	).toBe(404);
-	expect((await as(valeBoss, 'DELETE', `/api/org/people/${adaId}`)).status).toBe(404);
+	expect((await as(valeBoss, 'DELETE', `/api/v1/org/people/${adaId}`)).status).toBe(404);
 	expect(
 		(
-			await as(valeBoss, 'POST', '/api/org/people', {
+			await as(valeBoss, 'POST', '/api/v1/org/people', {
 				name: 'spy',
 				domainId: hillDomain,
 				password: `Spy secret ${run} word`
@@ -298,17 +298,18 @@ test('two organisations on one server stay apart and their limits hold', async (
 		.poll(async () => (await fetch(`${base}/jmap/session`, { headers: { Authorization: adaAuth } })).status)
 		.toBe(200);
 
-	const valeDns = await as(valeBoss, 'GET', `/api/org/domains/${hillDomain}/dns`);
+	const valeDns = await as(valeBoss, 'GET', `/api/v1/org/domains/${hillDomain}/dns`);
 	expect(valeDns.status).toBe(404);
-	const teamId = ((await (await as(hillBoss, 'GET', '/api/org')).json()) as { teams: { id: string }[] })
+	const teamId = ((await (await as(hillBoss, 'GET', '/api/v1/org')).json()) as { teams: { id: string }[] })
 		.teams[0].id;
-	expect((await as(valeBoss, 'DELETE', `/api/org/teams/${teamId}`)).status).toBe(404);
+	expect((await as(valeBoss, 'DELETE', `/api/v1/org/teams/${teamId}`)).status).toBe(404);
 	expect(
-		(await as(valeBoss, 'POST', `/api/org/teams/${teamId}/members`, { person: adaId, member: false })).status
+		(await as(valeBoss, 'POST', `/api/v1/org/teams/${teamId}/members`, { person: adaId, member: false }))
+			.status
 	).toBe(404);
-	expect((await as(valeBoss, 'POST', `/api/org/people/${adaId}/aliases`, { alias: 'stolen' })).status).toBe(
-		404
-	);
+	expect(
+		(await as(valeBoss, 'POST', `/api/v1/org/people/${adaId}/aliases`, { alias: 'stolen' })).status
+	).toBe(404);
 
 	// A server administrator with an address on the domain is out of the organisation's reach.
 	const made = await adminCall('POST', '/jmap', {
@@ -337,12 +338,13 @@ test('two organisations on one server stay apart and their limits hold', async (
 	const rootId = madeReply.methodResponses[0][1].created?.a?.id;
 	expect(rootId).toBeTruthy();
 	expect(
-		(await as(hillBoss, 'POST', `/api/org/people/${rootId}`, { password: `Taken over ${run} word` })).status
+		(await as(hillBoss, 'POST', `/api/v1/org/people/${rootId}`, { password: `Taken over ${run} word` }))
+			.status
 	).toBe(404);
-	expect((await as(hillBoss, 'DELETE', `/api/org/people/${rootId}`)).status).toBe(404);
-	expect((await as(hillBoss, 'POST', `/api/org/people/${rootId}/aliases`, { alias: 'sneaky' })).status).toBe(
-		404
-	);
+	expect((await as(hillBoss, 'DELETE', `/api/v1/org/people/${rootId}`)).status).toBe(404);
+	expect(
+		(await as(hillBoss, 'POST', `/api/v1/org/people/${rootId}/aliases`, { alias: 'sneaky' })).status
+	).toBe(404);
 	expect(
 		(await fetch(`${base}/jmap/session`, { headers: { Authorization: basic(`root@${hill}`) } })).status
 	).toBe(200);
@@ -352,10 +354,10 @@ test('two organisations on one server stay apart and their limits hold', async (
 	});
 
 	// An ordinary person runs nothing, and the people limit holds.
-	expect((await fetch(`${base}/api/org`, { headers: { Authorization: adaAuth } })).status).toBe(403);
+	expect((await fetch(`${base}/api/v1/org`, { headers: { Authorization: adaAuth } })).status).toBe(403);
 	expect(
 		(
-			await as(hillBoss, 'POST', '/api/org/people', {
+			await as(hillBoss, 'POST', '/api/v1/org/people', {
 				name: 'bob',
 				domainId: hillDomain,
 				password: `Bob secret ${run} word`,
@@ -363,7 +365,7 @@ test('two organisations on one server stay apart and their limits hold', async (
 			})
 		).status
 	).toBe(200);
-	const full = await as(hillBoss, 'POST', '/api/org/people', {
+	const full = await as(hillBoss, 'POST', '/api/v1/org/people', {
 		name: 'cy',
 		domainId: hillDomain,
 		password: `Cy secret ${run} word`,
@@ -374,7 +376,7 @@ test('two organisations on one server stay apart and their limits hold', async (
 
 	// The administrator cannot be removed; anyone else can.
 	const bossId = hillMine.people.find((person) => person.email === hillBoss)!.id;
-	expect((await as(hillBoss, 'DELETE', `/api/org/people/${bossId}`)).status).toBe(409);
+	expect((await as(hillBoss, 'DELETE', `/api/v1/org/people/${bossId}`)).status).toBe(409);
 	await hillPage.reload();
 	const adaAgain = hillPage
 		.getByRole('list', { name: 'People' })

@@ -215,7 +215,7 @@ function metricList(metrics: string[] | undefined): string[] {
 }
 
 // Every dashboard tab, card and chart the schema defines, rendered by
-// ui/src/lib/shippin/dashboard from our own /api/stats.
+// ui/src/lib/shippin/dashboard from our own /api/v1/stats.
 const dashboards = (schema.dashboards ?? []).flatMap((board) =>
 	board.id && board.label
 		? [

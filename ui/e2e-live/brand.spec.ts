@@ -22,7 +22,7 @@ function basic(user: string) {
 }
 
 async function signup(domain: string) {
-	const res = await fetch(`${base}/api/panel/signup`, {
+	const res = await fetch(`${base}/api/v1/panel/signup`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ domain, name: 'owner', password })
@@ -43,7 +43,7 @@ test.afterAll(async () => {
 		[hillBoss, hill],
 		[valeBoss, vale]
 	]) {
-		await fetch(`${base}/api/panel/domain/close`, {
+		await fetch(`${base}/api/v1/panel/domain/close`, {
 			method: 'POST',
 			headers: { Authorization: basic(user), 'Content-Type': 'application/json' },
 			body: JSON.stringify({ confirm: domain })
@@ -55,7 +55,7 @@ test('each domain shows its own logo and only its manager can change it', async 
 	test.setTimeout(180_000);
 	await signup(hill);
 	await signup(vale);
-	expect((await send(`/api/brand/${hill}`, 'GET', null)).status).toBe(404);
+	expect((await send(`/api/v1/brand/${hill}`, 'GET', null)).status).toBe(404);
 
 	// The owner uploads one in the browser.
 	await page.goto(`/login?login_hint=${encodeURIComponent(hillBoss)}`);
@@ -77,7 +77,7 @@ test('each domain shows its own logo and only its manager can change it', async 
 	});
 
 	// Anyone can fetch it, safely typed.
-	const fetched = await send(`/api/brand/${hill}`, 'GET', null);
+	const fetched = await send(`/api/v1/brand/${hill}`, 'GET', null);
 	expect(fetched.status).toBe(200);
 	expect(fetched.headers.get('content-type')).toBe('image/png');
 	expect(fetched.headers.get('x-content-type-options')).toBe('nosniff');
@@ -90,11 +90,11 @@ test('each domain shows its own logo and only its manager can change it', async 
 	});
 
 	// Nobody else can change it, and scripts cannot get in as logos.
-	expect((await send(`/api/brand/${hill}`, 'POST', null, png)).status).toBe(401);
-	expect((await send(`/api/brand/${hill}`, 'POST', valeBoss, png)).status).toBe(403);
-	expect((await send(`/api/brand/${hill}`, 'DELETE', valeBoss)).status).toBe(403);
+	expect((await send(`/api/v1/brand/${hill}`, 'POST', null, png)).status).toBe(401);
+	expect((await send(`/api/v1/brand/${hill}`, 'POST', valeBoss, png)).status).toBe(403);
+	expect((await send(`/api/v1/brand/${hill}`, 'DELETE', valeBoss)).status).toBe(403);
 	const svg = await send(
-		`/api/brand/${vale}`,
+		`/api/v1/brand/${vale}`,
 		'POST',
 		valeBoss,
 		'<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'
@@ -102,9 +102,9 @@ test('each domain shows its own logo and only its manager can change it', async 
 	expect(svg.status).toBe(400);
 	expect(((await svg.json()) as { message: string }).message).toMatch(/PNG/);
 	expect(
-		(await send(`/api/brand/${vale}`, 'POST', valeBoss, Buffer.concat([png, Buffer.alloc(95_000)]))).status
+		(await send(`/api/v1/brand/${vale}`, 'POST', valeBoss, Buffer.concat([png, Buffer.alloc(95_000)]))).status
 	).toBe(400);
-	expect((await send(`/api/brand/${vale}`, 'GET', null)).status).toBe(404);
+	expect((await send(`/api/v1/brand/${vale}`, 'GET', null)).status).toBe(404);
 
 	// A signed-out visitor sees each domain's own sign-in.
 	const visitor = await (await browser.newContext()).newPage();
@@ -125,5 +125,5 @@ test('each domain shows its own logo and only its manager can change it', async 
 	await page.goto('/manage');
 	await page.getByRole('button', { name: `Remove logo for ${hill}` }).click();
 	await expect(page.getByText(`No logo for ${hill}`)).toBeVisible({ timeout: 30_000 });
-	expect((await send(`/api/brand/${hill}`, 'GET', null)).status).toBe(404);
+	expect((await send(`/api/v1/brand/${hill}`, 'GET', null)).status).toBe(404);
 });

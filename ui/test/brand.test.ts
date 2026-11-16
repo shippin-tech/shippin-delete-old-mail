@@ -11,8 +11,8 @@ describe('domain logos', () => {
 	});
 
 	it('builds the address of a logo', () => {
-		expect(logoUrl('hill.test')).toBe('/api/brand/hill.test');
-		expect(logoUrl('hill.test', 3)).toBe('/api/brand/hill.test?v=3');
+		expect(logoUrl('hill.test')).toBe('/api/v1/brand/hill.test');
+		expect(logoUrl('hill.test', 3)).toBe('/api/v1/brand/hill.test?v=3');
 	});
 
 	it('refuses the wrong kind of file before uploading', () => {

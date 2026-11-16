@@ -1,4 +1,4 @@
-//! `/api/calendar-templates`: reword the calendar emails (`common::calendar_templates`).
+//! `/api/v1/calendar-templates`: reword the calendar emails (`common::calendar_templates`).
 //!
 //! `GET` lists them, `POST /<kind>` saves one and `DELETE /<kind>` goes back to the
 //! built-in one. For the server's administrators.

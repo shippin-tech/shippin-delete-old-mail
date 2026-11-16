@@ -828,7 +828,7 @@
             var apiUrl = (function () {
                 var path = url.pathname.replace(/\/+$/, '');
                 var at = path.lastIndexOf('/calendar/rsvp');
-                return (at >= 0 ? path.slice(0, at) : '') + '/api/calendar/rsvp';
+                return (at >= 0 ? path.slice(0, at) : '') + '/api/v1/calendar/rsvp';
             })();
 
             function post(body) {

@@ -24,7 +24,7 @@ async function failure(res: Response, fallback: string): Promise<Error> {
 }
 
 export async function googleStatus(): Promise<GoogleStatus> {
-	const res = await fetch('/api/google', {
+	const res = await fetch('/api/v1/google', {
 		credentials: 'same-origin',
 		cache: 'no-store',
 		headers: headers()
@@ -35,7 +35,7 @@ export async function googleStatus(): Promise<GoogleStatus> {
 
 /** Sends the browser to Google; it comes back to /files?view=google. */
 export async function connectGoogle(): Promise<void> {
-	const res = await fetch('/api/google/connect', {
+	const res = await fetch('/api/v1/google/connect', {
 		method: 'POST',
 		credentials: 'same-origin',
 		headers: headers()
@@ -47,7 +47,7 @@ export async function connectGoogle(): Promise<void> {
 }
 
 export async function disconnectGoogle(): Promise<void> {
-	const res = await fetch('/api/google/disconnect', {
+	const res = await fetch('/api/v1/google/disconnect', {
 		method: 'POST',
 		credentials: 'same-origin',
 		headers: headers()
@@ -66,7 +66,7 @@ export async function listGoogle(options: {
 	if (options.search?.trim()) params.set('search', options.search.trim());
 	if (options.shared) params.set('shared', '1');
 	if (options.page) params.set('pageToken', options.page);
-	const res = await fetch(`/api/google/files?${params.toString()}`, {
+	const res = await fetch(`/api/v1/google/files?${params.toString()}`, {
 		credentials: 'same-origin',
 		cache: 'no-store',
 		headers: headers()
@@ -81,7 +81,7 @@ export async function listGoogle(options: {
 
 async function fetchContent(file: GoogleFile, format?: string): Promise<File> {
 	const query = format ? `?export=${encodeURIComponent(format)}` : '';
-	const res = await fetch(`/api/google/content/${encodeURIComponent(file.id)}${query}`, {
+	const res = await fetch(`/api/v1/google/content/${encodeURIComponent(file.id)}${query}`, {
 		credentials: 'same-origin',
 		headers: headers()
 	});
@@ -113,7 +113,7 @@ export async function importFromGoogle(file: GoogleFile, format?: string): Promi
 
 /** Puts a copy of one of the person's Drive files in their Google Drive. */
 export async function copyToGoogle(node: DriveNode): Promise<void> {
-	const res = await fetch('/api/google/copy', {
+	const res = await fetch('/api/v1/google/copy', {
 		method: 'POST',
 		credentials: 'same-origin',
 		headers: { ...headers(), 'Content-Type': 'application/json' },

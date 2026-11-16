@@ -12,7 +12,7 @@ export * from './keys-admin-call';
 async function call<T>(path: string, method: string, body?: unknown): Promise<T> {
 	const auth = authorization();
 	if (!auth) throw new Error('Sign in again to continue.');
-	const res = await fetch(`/api/keys${path}`, {
+	const res = await fetch(`/api/v1/keys${path}`, {
 		method,
 		credentials: 'same-origin',
 		cache: 'no-store',

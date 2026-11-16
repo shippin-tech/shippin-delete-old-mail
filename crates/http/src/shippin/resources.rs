@@ -1,4 +1,4 @@
-//! `GET /api/resources`: the server, and how much each organisation is using.
+//! `GET /api/v1/resources`: the server, and how much each organisation is using.
 //! For the server's administrators.
 
 use crate::{

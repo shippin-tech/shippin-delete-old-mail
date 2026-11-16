@@ -63,7 +63,7 @@ async fn rsvp_request(client: &DummyWebDavClient, body: &Value) -> Value {
     let response = client
         .request_with_headers(
             "POST",
-            "/api/calendar/rsvp",
+            "/api/v1/calendar/rsvp",
             [("content-type", "application/json")],
             body.to_string(),
         )
@@ -509,7 +509,7 @@ pub async fn test(test: &TestServer) {
         .body
         .unwrap();
     assert!(
-        page.contains("/api/calendar/rsvp"),
+        page.contains("/api/v1/calendar/rsvp"),
         "failed for page: {page}"
     );
 

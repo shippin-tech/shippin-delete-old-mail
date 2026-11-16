@@ -3,7 +3,8 @@
 //   node scripts/check-api-coverage.mjs
 //
 // Routes are read from the match arms of crates/http/src/api/mod.rs (the /api dispatcher).
-// Specs: api/compat/v1 (the upstream-compatible management API) and api/shippin/v1 (ours).
+// Specs: api/v1/engine.openapi.yml (sign-in, discovery, schema, telemetry), api/v1/product.openapi.yml
+// (our areas) and api/v1/openapi.yml (me, registry). Every route is under /api/v1.
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,10 +22,11 @@ for (const line of body.split('\n')) {
 	for (const s of m[1].matchAll(/"([a-z0-9_.-]*)"/g)) segments.add(s[1]);
 }
 segments.delete('');
+segments.delete('v1'); // the prefix itself; its areas (me, registry) are documented in api/v1/openapi.yml
 
 const specs = [
-	['compat', 'api/compat/v1/openapi.yml'],
-	['shippin', 'api/shippin/v1/openapi.yml'],
+	['engine', 'api/v1/engine.openapi.yml'],
+	['product', 'api/v1/product.openapi.yml'],
 	['v1', 'api/v1/openapi.yml']
 ];
 const documented = new Map();
@@ -38,11 +40,11 @@ for (const [name, rel] of specs) {
 	for (const line of readFileSync(path, 'utf8').split('\n')) {
 		const m = /^ {2}(\/[^:\s]*):/.exec(line);
 		if (!m) continue;
-		const seg = m[1].split('/')[2] ?? '';
+		const seg = m[1].split('/')[3] ?? '';
 		if (!documented.has(seg)) documented.set(seg, name);
 	}
 }
-// `/api` itself and `/api/product` are the same document.
+// `/api` itself and `/api/v1/product` are the same document.
 if (documented.has('')) documented.set('product', documented.get(''));
 
 const missing = [...segments].filter((s) => !documented.has(s)).sort();

@@ -21,18 +21,18 @@ const probe = `trace-probe@${probeDomain}`;
 test('live tracing streams real events with filters, without any licence', async ({ page }) => {
 	test.setTimeout(120_000);
 
-	expect((await fetch(`${base}/api/trace/token`)).status).toBe(401);
-	const issued = await fetch(`${base}/api/trace/token`, { headers: { Authorization: adminAuth } });
+	expect((await fetch(`${base}/api/v1/trace/token`)).status).toBe(401);
+	const issued = await fetch(`${base}/api/v1/trace/token`, { headers: { Authorization: adminAuth } });
 	expect(issued.status).toBe(200);
 	const token = (await issued.text()).trim();
 	expect(token.length).toBeGreaterThan(20);
-	expect((await fetch(`${base}/api/trace/live`)).status).toBe(401);
-	expect((await fetch(`${base}/api/trace/live?token=${encodeURIComponent(token)}&level=loud`)).status).toBe(
-		400
-	);
+	expect((await fetch(`${base}/api/v1/trace/live`)).status).toBe(401);
+	expect(
+		(await fetch(`${base}/api/v1/trace/live?token=${encodeURIComponent(token)}&level=loud`)).status
+	).toBe(400);
 
 	// The raw stream: it opens with a ready event.
-	const raw = await fetch(`${base}/api/trace/live?token=${encodeURIComponent(token)}`);
+	const raw = await fetch(`${base}/api/v1/trace/live?token=${encodeURIComponent(token)}`);
 	expect(raw.headers.get('content-type')).toContain('text/event-stream');
 	const reader = raw.body!.getReader();
 	const first = new TextDecoder().decode((await reader.read()).value);
@@ -60,7 +60,7 @@ test('live tracing streams real events with filters, without any licence', async
 
 	// A real event: a failed sign-in by the probe account.
 	await expect(async () => {
-		const res = await fetch(`${base}/api/account`, {
+		const res = await fetch(`${base}/api/v1/account`, {
 			headers: { Authorization: 'Basic ' + Buffer.from(`${probe}:wrong`).toString('base64') }
 		});
 		expect(res.status).toBe(401);
@@ -102,7 +102,7 @@ test('finished mail sessions are stored and can be searched and opened', async (
 	await expect
 		.poll(
 			async () => {
-				const res = await fetch(`${base}/api/trace/history?q=${encodeURIComponent(sender)}`, {
+				const res = await fetch(`${base}/api/v1/trace/history?q=${encodeURIComponent(sender)}`, {
 					headers: { Authorization: adminAuth }
 				});
 				return ((await res.json()) as { traces: { from: string[] }[] }).traces.length;
@@ -110,7 +110,7 @@ test('finished mail sessions are stored and can be searched and opened', async (
 			{ timeout: 60_000, intervals: [1_000] }
 		)
 		.toBe(1);
-	expect((await fetch(`${base}/api/trace/history`)).status).toBe(401);
+	expect((await fetch(`${base}/api/v1/trace/history`)).status).toBe(401);
 
 	await page.goto('/login');
 	await page.getByLabel('Account name').fill(admin.username);

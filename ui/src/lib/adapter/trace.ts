@@ -10,7 +10,7 @@ export async function requestLiveTracing(): Promise<{
 	const auth = authorization();
 	if (!auth) return { status: 'signed-out', token: '' };
 	try {
-		const res = await fetch('/api/trace/token', {
+		const res = await fetch('/api/v1/trace/token', {
 			credentials: 'same-origin',
 			cache: 'no-store',
 			headers: { Authorization: auth, Accept: 'text/plain' }
@@ -56,7 +56,7 @@ export function traceListUrl(options: {
 	if (options.kind) params.set('kind', options.kind);
 	if (options.problems) params.set('problems', '1');
 	if (options.before !== undefined) params.set('before', String(options.before));
-	return `/api/trace/history?${params.toString()}`;
+	return `/api/v1/trace/history?${params.toString()}`;
 }
 
 export async function listStoredTraces(options: {
@@ -83,7 +83,7 @@ export async function listStoredTraces(options: {
 export async function loadStoredTrace(id: string): Promise<string> {
 	const auth = authorization();
 	if (!auth) throw new Error('sign-in required');
-	const res = await fetch(`/api/trace/history/${encodeURIComponent(id)}`, {
+	const res = await fetch(`/api/v1/trace/history/${encodeURIComponent(id)}`, {
 		credentials: 'same-origin',
 		cache: 'no-store',
 		headers: { Authorization: auth }

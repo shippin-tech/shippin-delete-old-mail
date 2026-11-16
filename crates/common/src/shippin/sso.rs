@@ -393,7 +393,7 @@ fn challenge_of(verifier: &str) -> String {
 
 pub fn callback_url(server: &Server) -> String {
     format!(
-        "{}/api/sso/callback",
+        "{}/api/v1/sso/callback",
         server.core.network.http.url_https.trim_end_matches('/')
     )
 }
@@ -585,7 +585,7 @@ mod tests {
         let url = authorize_url(
             "https://id.test/auth",
             "client",
-            "https://mail.test/api/sso/callback",
+            "https://mail.test/api/v1/sso/callback",
             "st",
             "ch",
             "a@b.co",
@@ -594,6 +594,6 @@ mod tests {
         assert!(url.contains("state=st"));
         assert!(url.contains("code_challenge=ch"));
         assert!(url.contains("code_challenge_method=S256"));
-        assert!(url.contains("redirect_uri=https%3A%2F%2Fmail.test%2Fapi%2Fsso%2Fcallback"));
+        assert!(url.contains("redirect_uri=https%3A%2F%2Fmail.test%2Fapi%2Fv1%2Fsso%2Fcallback"));
     }
 }

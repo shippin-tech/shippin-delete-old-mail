@@ -95,7 +95,7 @@ def imap_login(user, password):
 
 def web_signin(user, password, code=None):
     """The browser's sign-in: discovery, public client, code with PKCE, token exchange."""
-    status, doc = call('GET', '/api/discover/' + urllib.parse.quote(user))
+    status, doc = call('GET', '/api/v1/discover/' + urllib.parse.quote(user))
     assert status == 200, (status, doc)
     redirect = BASE + '/oauth/callback'
     status, client = call('POST', '/auth/register', {'redirect_uris': [redirect], 'token_endpoint_auth_method': 'none',
@@ -108,7 +108,7 @@ def web_signin(user, password, code=None):
             'redirectUri': redirect, 'state': 's' + RUN, 'codeChallenge': challenge, 'codeChallengeMethod': 'S256'}
     if code:
         body['mfaToken'] = code
-    status, answer = call('POST', '/api/auth', body)
+    status, answer = call('POST', '/api/v1/auth', body)
     if answer.get('type') != 'authenticated':
         return answer.get('type') or f'http{status}', None
     form = urllib.parse.urlencode({'grant_type': 'authorization_code', 'code': answer['client_code'], 'code_verifier': verifier,
@@ -143,16 +143,16 @@ def remove_domain(name):
 
 
 try:
-    status, body = call('POST', '/api/panel/signup', {'domain': DOMAIN, 'name': 'owner', 'password': FIRST})
+    status, body = call('POST', '/api/v1/panel/signup', {'domain': DOMAIN, 'name': 'owner', 'password': FIRST})
     assert status == 200, (status, body)
     OWNER = basic(f'owner@{DOMAIN}', FIRST)
-    status, body = call('POST', '/api/panel/mailboxes', {'name': 'jane', 'password': FIRST}, OWNER)
+    status, body = call('POST', '/api/v1/panel/mailboxes', {'name': 'jane', 'password': FIRST}, OWNER)
     assert status == 200, (status, body)
     USER = f'jane@{DOMAIN}'
     JANE = basic(USER, FIRST)
 
     # A plain mailbox has the permissions the account page needs
-    status, perms = call('GET', '/api/account', auth=JANE)
+    status, perms = call('GET', '/api/v1/account', auth=JANE)
     needed = {'sysAccountPasswordGet', 'sysAccountPasswordUpdate', 'sysAppPasswordCreate', 'sysAppPasswordGet',
               'sysAppPasswordQuery', 'sysAppPasswordDestroy'}
     expect('mailbox may manage its own password and app passwords', needed <= set(perms.get('permissions', [])),

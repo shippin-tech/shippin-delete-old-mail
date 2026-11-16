@@ -53,7 +53,7 @@ commit or put one in a URL.
 
 ## Driving the admin panel through MCP
 
-An agent can operate this product's admin panel through MCP at `https://<mail host>/api/mcp`,
+An agent can operate this product's admin panel through MCP at `https://<mail host>/api/v1/mcp`,
 signed in as an administrator (password, app password or API key). Every tool is carried out on
 that administrator's open admin panel: they watch it happen and allow anything that writes, and
 with no admin panel open nothing happens. Start with `screen.read`. The tools are the actions

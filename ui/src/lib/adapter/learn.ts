@@ -1,12 +1,12 @@
 import type { Progress } from '../mcpl/lessons';
 import { authorization } from './session';
 
-/** MCPL lesson progress kept on the server (`GET /api/learn/progress`), per signed-in person. */
+/** MCPL lesson progress kept on the server (`GET /api/v1/learn/progress`), per signed-in person. */
 export async function fetchLessonProgress(): Promise<Record<string, Progress> | null> {
 	const auth = authorization();
 	if (!auth) return null;
 	try {
-		const res = await fetch('/api/learn/progress', {
+		const res = await fetch('/api/v1/learn/progress', {
 			credentials: 'same-origin',
 			cache: 'no-store',
 			headers: { Authorization: auth, Accept: 'application/json' }
@@ -24,7 +24,7 @@ export async function pushLessonProgress(lesson: string, progress: Progress): Pr
 	const auth = authorization();
 	if (!auth) return null;
 	try {
-		const res = await fetch(`/api/learn/progress/${encodeURIComponent(lesson)}`, {
+		const res = await fetch(`/api/v1/learn/progress/${encodeURIComponent(lesson)}`, {
 			method: 'POST',
 			credentials: 'same-origin',
 			headers: { Authorization: auth, 'Content-Type': 'application/json', Accept: 'application/json' },

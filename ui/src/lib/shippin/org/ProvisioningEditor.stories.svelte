@@ -2,7 +2,7 @@
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import ProvisioningEditor from './ProvisioningEditor.svelte';
 
-	const endpoint = 'https://mail.example.org/api/scim/v2';
+	const endpoint = 'https://mail.example.org/api/v1/scim/v2';
 
 	const { Story } = defineMeta({
 		title: 'Org/ProvisioningEditor',

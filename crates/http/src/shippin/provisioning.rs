@@ -1,7 +1,7 @@
-//! `/api/scim`: an identity provider manages one domain's people and teams (RFC 7644).
+//! `/api/v1/scim`: an identity provider manages one domain's people and teams (RFC 7644).
 //!
-//! `/api/scim/v2/...` takes the domain's bearer token and reaches nothing outside that
-//! domain. `/api/scim/settings/<domain>` is for whoever manages the domain: `GET` says
+//! `/api/v1/scim/v2/...` takes the domain's bearer token and reaches nothing outside that
+//! domain. `/api/v1/scim/settings/<domain>` is for whoever manages the domain: `GET` says
 //! whether a token exists, `POST` makes a new one and shows it once, `DELETE` revokes it.
 //! The server's administrators are never changed from here.
 
@@ -181,7 +181,7 @@ impl Scope<'_> {
             "emails": [{ "value": email, "primary": true, "type": "work" }],
             "meta": {
                 "resourceType": "User",
-                "location": format!("/api/scim/v2/Users/{id}"),
+                "location": format!("/api/v1/scim/v2/Users/{id}"),
             },
         });
         if let Some(display) = &user.description {
@@ -214,7 +214,7 @@ impl Scope<'_> {
             "members": members,
             "meta": {
                 "resourceType": "Group",
-                "location": format!("/api/scim/v2/Groups/{id}"),
+                "location": format!("/api/v1/scim/v2/Groups/{id}"),
             },
         });
         if let Some(external) = scim_state::external_id(self.server, id.document_id()).await? {
@@ -662,7 +662,7 @@ impl ProvisioningApi for Server {
                 );
             }
             let base = format!(
-                "{}/api/scim/v2",
+                "{}/api/v1/scim/v2",
                 self.core.network.http.url_https.trim_end_matches('/')
             );
             return match req.method() {

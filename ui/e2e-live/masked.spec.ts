@@ -67,19 +67,19 @@ async function arrived(user: string, title: string): Promise<number> {
 }
 
 test.afterAll(async () => {
-	await api('POST', '/api/panel/domain/close', owner, { confirm: domain });
+	await api('POST', '/api/v1/panel/domain/close', owner, { confirm: domain });
 });
 
 test('mail to a masked address arrives and stops when it is switched off', async ({ page }) => {
 	test.setTimeout(180_000);
-	const created = await fetch(`${base}/api/panel/signup`, {
+	const created = await fetch(`${base}/api/v1/panel/signup`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ domain, name: 'owner', password })
 	});
 	expect(created.status).toBe(200);
-	expect((await api('POST', '/api/panel/mailboxes', owner, { name: 'other', password })).status).toBe(200);
-	expect((await fetch(`${base}/api/masked`)).status).toBe(401);
+	expect((await api('POST', '/api/v1/panel/mailboxes', owner, { name: 'other', password })).status).toBe(200);
+	expect((await fetch(`${base}/api/v1/masked`)).status).toBe(401);
 
 	await page.goto(`/login?login_hint=${encodeURIComponent(owner)}`);
 	await page.getByLabel('Account name').fill(owner);
@@ -119,9 +119,9 @@ test('mail to a masked address arrives and stops when it is switched off', async
 
 	// Nobody else can reach this address.
 	const local = address.split('@')[0];
-	expect((await api('POST', `/api/masked/${local}`, other, { enabled: false })).status).toBe(404);
-	expect((await api('DELETE', `/api/masked/${local}`, other)).status).toBe(404);
-	const theirs = (await (await api('GET', '/api/masked', other)).json()) as {
+	expect((await api('POST', `/api/v1/masked/${local}`, other, { enabled: false })).status).toBe(404);
+	expect((await api('DELETE', `/api/v1/masked/${local}`, other)).status).toBe(404);
+	const theirs = (await (await api('GET', '/api/v1/masked', other)).json()) as {
 		addresses: unknown[];
 		limit: number;
 	};
@@ -151,7 +151,7 @@ test('mail to a masked address arrives and stops when it is switched off', async
 	// The limit holds.
 	let made = 0;
 	for (; made <= theirs.limit; made += 1) {
-		const res = await api('POST', '/api/masked', other, { label: `Number ${made}` });
+		const res = await api('POST', '/api/v1/masked', other, { label: `Number ${made}` });
 		if (res.status !== 200) {
 			expect(res.status).toBe(400);
 			expect(((await res.json()) as { message: string }).message).toMatch(/limit/);

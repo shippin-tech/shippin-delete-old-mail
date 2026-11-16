@@ -1,7 +1,7 @@
 import type { DnsCheck, DomainView, Mailbox, PanelPlan, VerifyRecord } from '$lib/panel/model';
 import { authorization, clearSession } from './session';
 
-const BASE = '/api/panel';
+const BASE = '/api/v1/panel';
 
 export class PanelError extends Error {
 	constructor(

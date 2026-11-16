@@ -1,7 +1,7 @@
-//! `/api/masked`: a person's own masked addresses (`common::masks`).
+//! `/api/v1/masked`: a person's own masked addresses (`common::masks`).
 //!
-//! `GET` lists them, `POST` makes one, `POST /api/masked/<local part>` changes one,
-//! `DELETE /api/masked/<local part>` removes one. Only ever the signed-in account's own.
+//! `GET` lists them, `POST` makes one, `POST /api/v1/masked/<local part>` changes one,
+//! `DELETE /api/v1/masked/<local part>` removes one. Only ever the signed-in account's own.
 
 use crate::auth::authenticate::Authenticator;
 use common::{Server, masks};

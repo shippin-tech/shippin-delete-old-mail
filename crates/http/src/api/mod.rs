@@ -77,7 +77,16 @@ impl ManagementApi for Server {
         } else {
             None
         };
-        let path = req.uri().path().split('/').skip(2).collect::<Vec<_>>();
+        // One prefix, one chokepoint: every management route is `/api/v1/<area>/...`. Anything under
+        // bare `/api/` is not served (no legacy, no compatibility). `me` and `registry` are answered by
+        // `handle_v1_request`; every other area is dispatched by the arms below, as before.
+        let all = req.uri().path().split('/').skip(2).collect::<Vec<_>>();
+        let path = match all.as_slice() {
+            ["v1"] => vec![""],
+            ["v1", "me" | "registry", ..] => all,
+            ["v1", rest @ ..] => rest.to_vec(),
+            _ => return Err(trc::ResourceEvent::NotFound.into_err()),
+        };
 
         match path.first().copied().unwrap_or_default() {
             "auth" if is_post => {
@@ -221,7 +230,7 @@ impl ManagementApi for Server {
                         .with_immutable_cache()
                         .with_header(CONTENT_ENCODING, "gzip"))
                 } else {
-                    Ok(HttpResponse::redirect(format!("/api/schema/{SCHEMA_HASH}")))
+                    Ok(HttpResponse::redirect(format!("/api/v1/schema/{SCHEMA_HASH}")))
                 }
             }
             "token" => {
@@ -374,7 +383,7 @@ impl ManagementApi for Server {
         let params = UrlParams::new(req.uri().query());
         if let Some(token) = params.get("token") {
             let path = req.uri().path();
-            let grant = if path.starts_with("/api/live/delivery") {
+            let grant = if path.starts_with("/api/v1/live/delivery") {
                 Some((GrantType::LiveDelivery, Permission::LiveDeliveryTest))
             } else {
                 // SPDX-SnippetBegin
@@ -383,9 +392,9 @@ impl ManagementApi for Server {
                 #[cfg(feature = "enterprise")]
                 {
                     if self.core.is_enterprise_edition() {
-                        if path.starts_with("/api/live/tracing") {
+                        if path.starts_with("/api/v1/live/tracing") {
                             Some((GrantType::LiveTracing, Permission::LiveTracing))
-                        } else if path.starts_with("/api/live/metrics") {
+                        } else if path.starts_with("/api/v1/live/metrics") {
                             Some((GrantType::LiveMetrics, Permission::LiveMetrics))
                         } else {
                             None

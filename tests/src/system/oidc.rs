@@ -346,7 +346,7 @@ pub async fn test(test: &mut TestServer) {
     // Authenticate with the correct password, PKCE (S256), scope and a valid resource indicator
     let response = http
         .post::<LoginResponse>(
-            "/api/auth",
+            "/api/v1/auth",
             &LoginRequest::AuthCode {
                 account_name: "user@example.org".to_string(),
                 account_secret: "this is a very strong password".to_string(),
@@ -724,7 +724,7 @@ pub async fn test(test: &mut TestServer) {
     tokio::time::sleep(Duration::from_secs(1)).await;
     assert_eq!(
         http.post::<LoginResponse>(
-            "/api/auth",
+            "/api/v1/auth",
             &LoginRequest::AuthDevice {
                 account_name: "user@example.org".to_string(),
                 account_secret: "this is a very strong password".to_string(),
@@ -752,7 +752,7 @@ pub async fn test(test: &mut TestServer) {
     );
     assert_eq!(
         http.post::<LoginResponse>(
-            "/api/auth",
+            "/api/v1/auth",
             &LoginRequest::AuthDevice {
                 account_name: "user@example.org".to_string(),
                 account_secret: "this is a very strong password".to_string(),
@@ -963,7 +963,7 @@ async fn post_form_basic<T: DeserializeOwned>(
 
 async fn obtain_auth_code(http: &HttpRequest, client_id: &str, redirect_uri: &str) -> String {
     http.post::<LoginResponse>(
-        "/api/auth",
+        "/api/v1/auth",
         &LoginRequest::AuthCode {
             account_name: "user@example.org".to_string(),
             account_secret: "this is a very strong password".to_string(),
@@ -1001,7 +1001,7 @@ async fn post_json_raw(url: &str, body: &impl Serialize) -> (u16, serde_json::Va
 }
 
 async fn post_login_raw(body: &impl Serialize) -> (u16, serde_json::Value) {
-    post_json_raw("https://127.0.0.1:8899/api/auth", body).await
+    post_json_raw("https://127.0.0.1:8899/api/v1/auth", body).await
 }
 
 async fn post<T: DeserializeOwned>(url: &str, params: &AHashMap<String, String>) -> T {

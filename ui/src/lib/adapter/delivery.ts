@@ -29,7 +29,7 @@ export function startDelivery(
 			const auth = authorization();
 			if (!auth) throw new Error('Sign in to start a delivery trace.');
 			timer = setTimeout(() => fail('Trace timed out after 120 seconds.'), 120000);
-			const response = await fetch('/api/token/delivery', {
+			const response = await fetch('/api/v1/token/delivery', {
 				headers: { Authorization: auth },
 				cache: 'no-store',
 				signal: controller.signal

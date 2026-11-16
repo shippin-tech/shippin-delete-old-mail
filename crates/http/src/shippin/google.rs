@@ -1,12 +1,12 @@
-//! `/api/google/*`: the person's link to Google Drive.
+//! `/api/v1/google/*`: the person's link to Google Drive.
 //!
-//! - `GET /api/google` says whether the link is available and connected.
-//! - `POST /api/google/connect` returns the Google sign-in address.
-//! - `GET /api/google/callback` is where Google sends the browser back.
-//! - `POST /api/google/disconnect` forgets the link and revokes it at Google.
-//! - `GET /api/google/files?folder=&search=&shared=&pageToken=` lists files.
-//! - `GET /api/google/content/<id>?export=` returns a file's bytes.
-//! - `POST /api/google/copy` puts a copy of one of the person's Drive files in Google.
+//! - `GET /api/v1/google` says whether the link is available and connected.
+//! - `POST /api/v1/google/connect` returns the Google sign-in address.
+//! - `GET /api/v1/google/callback` is where Google sends the browser back.
+//! - `POST /api/v1/google/disconnect` forgets the link and revokes it at Google.
+//! - `GET /api/v1/google/files?folder=&search=&shared=&pageToken=` lists files.
+//! - `GET /api/v1/google/content/<id>?export=` returns a file's bytes.
+//! - `POST /api/v1/google/copy` puts a copy of one of the person's Drive files in Google.
 //!
 //! The work is in `common::google`. Tokens and the client secret never leave the server.
 

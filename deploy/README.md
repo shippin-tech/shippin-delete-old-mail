@@ -104,13 +104,13 @@ Each person can link their own Google Drive at `/files?view=google`. It is off u
 
 1. In the [Google Cloud console](https://console.cloud.google.com/), create a project and enable the **Google Drive API**.
 2. Under **OAuth consent screen**, choose **Internal** if everyone is on your own Google Workspace; Google does not need to review that. Anyone outside your Workspace needs an **External** app, and Google requires a verification before strangers can connect.
-3. Under **Credentials**, create an **OAuth client ID** of type **Web application**. Its authorized redirect URI is `https://<your mail host>/api/google/callback`.
+3. Under **Credentials**, create an **OAuth client ID** of type **Web application**. Its authorized redirect URI is `https://<your mail host>/api/v1/google/callback`.
 4. Add these to `server.env` in the instance directory, then run `bash update.sh <image digest>`:
 
 ```
 GOOGLE_CLIENT_ID=<client id>
 GOOGLE_CLIENT_SECRET=<client secret>
-GOOGLE_REDIRECT_URL=https://<your mail host>/api/google/callback
+GOOGLE_REDIRECT_URL=https://<your mail host>/api/v1/google/callback
 ```
 
 The client secret and each person's tokens stay on the server, and tokens are stored encrypted.
@@ -131,13 +131,13 @@ on people and shared storage. An organisation's administrators work at `/org` an
 only its people.
 
 A domain's manager can set its **logo** and an OpenID Connect **sign-in provider**. Register
-`https://<mail host>/api/sso/callback` with the provider. People need an account here first,
+`https://<mail host>/api/v1/sso/callback` with the provider. People need an account here first,
 and the server's administrators always sign in with a password. Provider addresses must be
 https and must not resolve to a private network.
 
 A domain's manager can also make a **SCIM token** so an identity provider such as Okta or
 Microsoft Entra can manage that domain's people and teams. Point the provider at
-`https://<mail host>/api/scim/v2` with the token as a bearer token. It is shown once, works
+`https://<mail host>/api/v1/scim/v2` with the token as a bearer token. It is shown once, works
 for that domain only, and cannot change the server's administrators.
 
 ## Upgrade an existing host

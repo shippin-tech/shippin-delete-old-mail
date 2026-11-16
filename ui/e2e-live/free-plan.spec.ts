@@ -99,7 +99,7 @@ test('a visitor signs up with their own domain', async ({ page }) => {
 	const proof = async () =>
 		(
 			(await (
-				await fetch(`${base}/api/panel/signup/code`, {
+				await fetch(`${base}/api/v1/panel/signup/code`, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({ domain })
@@ -216,7 +216,7 @@ test('the owner sends a message, receives it and replies', async ({ page }) => {
 	const ownerAuth = 'Basic ' + Buffer.from(`${owner}:${password}`).toString('base64');
 	await expect
 		.poll(async () => {
-			const res = await fetch(`${base}/api/learn/progress`, { headers: { Authorization: ownerAuth } });
+			const res = await fetch(`${base}/api/v1/learn/progress`, { headers: { Authorization: ownerAuth } });
 			const body = (await res.json()) as { lessons: Record<string, { done: string[] }> };
 			return [...(body.lessons['set-up-your-domain']?.done ?? [])].sort();
 		})

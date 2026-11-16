@@ -13,7 +13,7 @@ Each row names the check that tried it, run against the local stack:
 
 | Surface | Where served | Spec or standard | Tried by |
 | --- | --- | --- | --- |
-| Management API: sign-in, discovery, account, schema, delivery/tracing/metrics tokens and live streams | `/api/auth`, `/api/discover`, `/api/account`, `/api/schema`, `/api/token`, `/api/live` | [`compat/v1/openapi.yml`](compat/v1/openapi.yml) | `ui/e2e-live/` (sign-in, tracing, dashboard) |
+| Management API: sign-in, discovery, account, schema, delivery/tracing/metrics tokens and live streams | `/api/v1/auth`, `/api/v1/discover`, `/api/v1/account`, `/api/v1/schema`, `/api/v1/token`, `/api/v1/live` | [`v1/engine.openapi.yml`](v1/engine.openapi.yml) | `ui/e2e-live/` (sign-in, tracing, dashboard) |
 | JMAP session and discovery; mail, calendars, contacts, files, and the registry (all configuration) | `/jmap/session`, `/jmap`, `/.well-known/jmap` | RFC 8620, 8621 and the JMAP calendar, contact and file drafts | `verify_compat.py` (discovery, session with and without credentials); `verify.py` (mail) |
 | WebDAV, CalDAV, CardDAV | `/dav/{pal,cal,card,file}`, `/.well-known/caldav`, `/.well-known/carddav` | RFC 4918, 4791, 6352 | `verify_compat.py` (well-known redirects, PROPFIND 207). No calendar or contact round trip through a DAV client yet |
 | IMAP over TLS | 993 | RFC 9051 | `verify_compat.py`, `verify.py` |
@@ -33,8 +33,8 @@ listener is added. This is by design today; whether to add those ports is an own
 
 | Surface | Where served | Spec |
 | --- | --- | --- |
-| Free plan, panel, organisations, SSO, SCIM, recovery, alerts, masked addresses, keys, AI settings, the assistant, lessons, Google link, MCP, stats and traces | `/api/*` | [`shippin/v1/openapi.yml`](shippin/v1/openapi.yml) |
-| Agent tools (MCP) | `/api/mcp` | `resources/product/actions.json` |
+| Free plan, panel, organisations, SSO, SCIM, recovery, alerts, masked addresses, keys, AI settings, the assistant, lessons, Google link, MCP, stats and traces | `/api/v1/*` | [`v1/product.openapi.yml`](v1/product.openapi.yml) |
+| Agent tools (MCP) | `/api/v1/mcp` | `resources/product/actions.json` |
 
 `platform/api/openapi/` is a different API: the Go control plane that places and updates mail
 hosts. It is not served by the mail server.

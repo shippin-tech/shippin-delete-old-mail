@@ -1,4 +1,4 @@
-//! `/api/brand/<domain>`: a domain's logo (`common::brand`).
+//! `/api/v1/brand/<domain>`: a domain's logo (`common::brand`).
 //!
 //! `GET` is public, because the sign-in page shows it. `POST` (the image as the body)
 //! and `DELETE` are for whoever manages that domain: the server's administrators, the

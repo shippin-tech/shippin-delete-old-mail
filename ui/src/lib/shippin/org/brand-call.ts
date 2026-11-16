@@ -10,7 +10,7 @@ export function emailDomain(address: string): string {
 }
 
 export function logoUrl(domain: string, version = 0): string {
-	const base = `/api/brand/${encodeURIComponent(domain)}`;
+	const base = `/api/v1/brand/${encodeURIComponent(domain)}`;
 	return version ? `${base}?v=${version}` : base;
 }
 

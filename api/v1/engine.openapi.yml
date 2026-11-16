@@ -2,14 +2,13 @@ openapi: 3.0.3
 info:
   title: shippin.tech Management API
   description: |
-    REST Management API for shippin.tech server. These endpoints are helpers
+    Engine routes of the shippin.tech management API (`/api/v1`). These endpoints are helpers
     that complement the JMAP API — most of the server's configuration and data
     is managed via JMAP (see `POST /jmap/`). The endpoints documented here cover
     interactive login, account introspection, configuration schema retrieval and
     live (Server-Sent Events) telemetry streams.
   version: "1.0"
   license:
-    name: AGPL-3.0-only
 servers:
   - url: https://{host}
     description: shippin.tech server
@@ -21,7 +20,7 @@ security:
   - bearerAuth: []
   - basicAuth: []
 paths:
-  /api/auth:
+  /api/v1/auth:
     post:
       operationId: login
       summary: Authenticate a user and obtain an authorization code
@@ -79,7 +78,7 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
-  /api/discover/{email}:
+  /api/v1/discover/{email}:
     get:
       operationId: discoverOidc
       summary: Discover the OpenID Connect provider for an email address
@@ -113,7 +112,7 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
-  /api/account:
+  /api/v1/account:
     get:
       operationId: getAccount
       summary: Return the authenticated account's permissions, edition and locale
@@ -128,12 +127,12 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/schema:
+  /api/v1/schema:
     get:
       operationId: getSchemaRedirect
       summary: Redirect to the versioned configuration schema URL
       description: |
-        Redirects (302) to `/api/schema/{hash}` where `{hash}` is the SHA-256
+        Redirects (302) to `/api/v1/schema/{hash}` where `{hash}` is the SHA-256
         of the current configuration schema. Use this when you do not yet know
         the hash; once you have cached a schema at a given hash the immutable
         cache will never require re-download.
@@ -145,11 +144,11 @@ paths:
             Location:
               schema:
                 type: string
-                example: /api/schema/a1b2c3d4e5f6...
+                example: /api/v1/schema/a1b2c3d4e5f6...
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/schema/{hash}:
+  /api/v1/schema/{hash}:
     get:
       operationId: getSchema
       summary: Return the configuration schema at a specific hash
@@ -190,13 +189,13 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/token/delivery:
+  /api/v1/token/delivery:
     get:
       operationId: issueDeliveryToken
       summary: Issue a short-lived token for live delivery diagnostics
       description: |
         Returns a plain-text bearer token, valid for 60 seconds, that authorises
-        connecting to `/api/live/delivery/{target}` as a query parameter
+        connecting to `/api/v1/live/delivery/{target}` as a query parameter
         (`?token=...`). Useful for EventSource clients that cannot send
         `Authorization` headers. Requires `LiveDeliveryTest` permission.
       tags: [Live Telemetry]
@@ -213,13 +212,13 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
-  /api/token/tracing:
+  /api/v1/token/tracing:
     get:
       operationId: issueTracingToken
       summary: Issue a short-lived token for live tracing (Enterprise)
       description: |
         Returns a plain-text bearer token, valid for 60 seconds, that authorises
-        connecting to `/api/live/tracing` as a query parameter. Requires the
+        connecting to `/api/v1/live/tracing` as a query parameter. Requires the
         `LiveTracing` permission. Available only in the Enterprise edition.
       tags: [Live Telemetry]
       responses:
@@ -236,13 +235,13 @@ paths:
         '404':
           description: Enterprise feature not available in this edition
 
-  /api/token/metrics:
+  /api/v1/token/metrics:
     get:
       operationId: issueMetricsToken
       summary: Issue a short-lived token for live metrics (Enterprise)
       description: |
         Returns a plain-text bearer token, valid for 60 seconds, that authorises
-        connecting to `/api/live/metrics` as a query parameter. Requires the
+        connecting to `/api/v1/live/metrics` as a query parameter. Requires the
         `LiveMetrics` permission. Available only in the Enterprise edition.
       tags: [Live Telemetry]
       responses:
@@ -259,7 +258,7 @@ paths:
         '404':
           description: Enterprise feature not available in this edition
 
-  /api/live/delivery/{target}:
+  /api/v1/live/delivery/{target}:
     get:
       operationId: liveDelivery
       summary: Stream outbound-delivery diagnostics as Server-Sent Events
@@ -271,7 +270,7 @@ paths:
         single-element array (`data: [{...}]`). The stream ends with a final
         `completed` event. Requires `LiveDeliveryTest` permission; may also be
         authenticated via the `?token=` query parameter obtained from
-        `/api/token/delivery`.
+        `/api/v1/token/delivery`.
       tags: [Live Telemetry]
       security:
         - bearerAuth: []
@@ -308,14 +307,14 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
-  /api/live/tracing:
+  /api/v1/live/tracing:
     get:
       operationId: liveTracing
       summary: Stream live tracing events (Enterprise)
       description: |
         Opens a `text/event-stream` connection streaming server trace events in
         real time. Requires `LiveTracing` permission; may be authenticated via
-        the `?token=` query parameter from `/api/token/tracing`. Enterprise only.
+        the `?token=` query parameter from `/api/v1/token/tracing`. Enterprise only.
       tags: [Live Telemetry]
       security:
         - bearerAuth: []
@@ -335,14 +334,14 @@ paths:
         '404':
           description: Enterprise feature not available in this edition
 
-  /api/live/metrics:
+  /api/v1/live/metrics:
     get:
       operationId: liveMetrics
       summary: Stream live metrics events (Enterprise)
       description: |
         Opens a `text/event-stream` connection streaming server metrics in real
         time. Requires `LiveMetrics` permission; may be authenticated via the
-        `?token=` query parameter from `/api/token/metrics`. Enterprise only.
+        `?token=` query parameter from `/api/v1/token/metrics`. Enterprise only.
       tags: [Live Telemetry]
       security:
         - bearerAuth: []
@@ -378,7 +377,7 @@ components:
       in: query
       name: token
       description: |
-        Short-lived token (60s lifetime) issued by `/api/token/{kind}` and used
+        Short-lived token (60s lifetime) issued by `/api/v1/token/{kind}` and used
         to authorise Server-Sent Events streams where an `Authorization` header
         cannot be set (e.g. browser `EventSource`).
 

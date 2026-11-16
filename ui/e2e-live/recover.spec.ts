@@ -26,7 +26,7 @@ function basic(user: string) {
 }
 
 async function panel(method: string, path: string, body?: unknown) {
-	return fetch(`${base}/api/panel/${path}`, {
+	return fetch(`${base}/api/v1/panel/${path}`, {
 		method,
 		headers: { Authorization: basic(owner), 'Content-Type': 'application/json' },
 		body: body === undefined ? undefined : JSON.stringify(body)
@@ -120,7 +120,7 @@ test.afterAll(async () => {
 
 test('a destroyed message and a removed account are brought back', async ({ page }) => {
 	test.setTimeout(240_000);
-	const created = await fetch(`${base}/api/panel/signup`, {
+	const created = await fetch(`${base}/api/v1/panel/signup`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ domain, name: 'owner', password })
@@ -129,9 +129,9 @@ test('a destroyed message and a removed account are brought back', async ({ page
 	expect((await panel('POST', 'mailboxes', { name: 'keep', password })).status).toBe(200);
 
 	// Only administrators reach this.
-	expect((await fetch(`${base}/api/recover/accounts`)).status).toBe(401);
+	expect((await fetch(`${base}/api/v1/recover/accounts`)).status).toBe(401);
 	expect(
-		(await fetch(`${base}/api/recover/accounts`, { headers: { Authorization: basic(owner) } })).status
+		(await fetch(`${base}/api/v1/recover/accounts`, { headers: { Authorization: basic(owner) } })).status
 	).toBe(403);
 
 	// A real message arrives, then is destroyed for good.
@@ -217,7 +217,7 @@ test('a destroyed message and a removed account are brought back', async ({ page
 	const otherRecord = await adminFindAccount('other');
 	await adminDestroy(otherRecord);
 	expect((await panel('POST', 'mailboxes', { name: 'other', password })).status).toBe(200);
-	const conflict = await fetch(`${base}/api/recover/accounts/${otherRecord}/restore`, {
+	const conflict = await fetch(`${base}/api/v1/recover/accounts/${otherRecord}/restore`, {
 		method: 'POST',
 		headers: { Authorization: adminAuth }
 	});

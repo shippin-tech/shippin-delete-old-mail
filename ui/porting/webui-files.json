@@ -96,7 +96,7 @@
     },
     {
       "source": "assets/webui/assets/client-DZEVMWQz.js",
-      "sha256": "a70b45f797ddf680d8e57fb25bf2a2ea3d57d0605f3d5109f9966404a2d78ee6",
+      "sha256": "1ef38f2bec99086779200392eb2a01acc19e9a9511a22b2d4d94fcf66b41b069",
       "owners": [
         "ui/src/lib/adapter/jmap.ts",
         "ui/src/lib/adapter/portal.ts",
@@ -125,7 +125,7 @@
     },
     {
       "source": "assets/webui/assets/DashboardView-C1roqzWz.js",
-      "sha256": "b4b9b3995c22e71b39fe94495544b62bb28bcffa85f3876098a362aeda730892",
+      "sha256": "f2d40dc19ea14057e366cc5b9b5851da07faf577f0b5c557ec9ab56e03d09364",
       "owners": [
         "ui/src/lib/shippin/dashboard/Dashboard.svelte",
         "ui/src/lib/shippin/dashboard/DashboardPanel.svelte",
@@ -133,14 +133,14 @@
         "crates/common/src/shippin/stats.rs"
       ],
       "status": "implemented-representative-proof",
-      "remaining": "None for parity: rebuilt as our own code on /api/stats with all six tabs, presets and custom range, node selector, refresh, bars or lines, and All metrics; proven live 2026-11-10.",
+      "remaining": "None for parity: rebuilt as our own code on /api/v1/stats with all six tabs, presets and custom range, node selector, refresh, bars or lines, and All metrics; proven live 2026-11-10.",
       "work_packages": [
         "P4"
       ]
     },
     {
       "source": "assets/webui/assets/DeliveryTracePage-CZs7z0nn.js",
-      "sha256": "9d05bcba4b5269c067c1ae1bfe0c6513228b94ef15742f8e0373b17ec5ae2fc3",
+      "sha256": "15644e0c5be10fbf1ffd13ca2093b0b2d077b20492aab5743b508dfa0a9298ab",
       "owners": [
         "ui/src/lib/shippin/admin/Delivery.svelte",
         "ui/src/lib/shippin/admin/DeliveryRunner.svelte",
@@ -192,7 +192,7 @@
     },
     {
       "source": "assets/webui/assets/index-7cDRjdpB.js",
-      "sha256": "5722d39ca99b81b24703b0fa42f7c6c899b0cbe51932add3e99b02fd95afa393",
+      "sha256": "f0473ee726d3b873ec64c3acfb69d45d76274be1c77c25b06a9b193b95a87a87",
       "owners": [
         "ui/src/app.html",
         "ui/src/routes/+layout.svelte",
@@ -445,7 +445,7 @@
     },
     {
       "source": "assets/webui/assets/LiveTracingPage-BbeVPf9D.js",
-      "sha256": "f5e07d4ff48b58e1c5cf454f68774856544b9d7e22dc50df1645f69ce2eaccce",
+      "sha256": "d519dcd28cf42e7d588d2573027075a8dc104a7e13badeae89dc0abe2b80c857",
       "owners": [
         "ui/src/lib/shippin/admin/LiveTracing.svelte",
         "ui/src/lib/shippin/admin/LiveTracingPanel.svelte"

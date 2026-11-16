@@ -85,7 +85,7 @@ test.afterAll(async () => {
 		[hillBoss, hill],
 		[valeBoss, vale]
 	]) {
-		await fetch(`${base}/api/panel/domain/close`, {
+		await fetch(`${base}/api/v1/panel/domain/close`, {
 			method: 'POST',
 			headers: { Authorization: basic(user), 'Content-Type': 'application/json' },
 			body: JSON.stringify({ confirm: domain })
@@ -98,7 +98,7 @@ function basic(user: string) {
 }
 
 async function signup(domain: string) {
-	const res = await fetch(`${base}/api/panel/signup`, {
+	const res = await fetch(`${base}/api/v1/panel/signup`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ domain, name: 'owner', password })
@@ -121,10 +121,10 @@ test('people sign in through their domain provider and nobody else can', async (
 	test.setTimeout(240_000);
 	await signup(hill);
 	await signup(vale);
-	expect((await (await fetch(`${base}/api/sso/${hill}`)).json()) as unknown).toEqual({ enabled: false });
+	expect((await (await fetch(`${base}/api/v1/sso/${hill}`)).json()) as unknown).toEqual({ enabled: false });
 
 	// Only someone who manages the domain sets it up.
-	const settings = `/api/sso/${hill}/settings`;
+	const settings = `/api/v1/sso/${hill}/settings`;
 	const form = JSON.stringify({ issuer, clientId: 'shippin', clientSecret, enabled: true });
 	const json = { 'Content-Type': 'application/json' };
 	expect((await fetch(`${base}${settings}`, { method: 'POST', headers: json, body: form })).status).toBe(401);
@@ -147,7 +147,7 @@ test('people sign in through their domain provider and nobody else can', async (
 	await page.waitForURL(/\/manage/, { timeout: 30_000 });
 	await page.getByRole('button', { name: `Set up sign-in for ${hill}` }).click();
 	const editor = page.getByRole('form', { name: `Sign-in for ${hill}` });
-	await expect(editor.getByText('/api/sso/callback')).toBeVisible({ timeout: 30_000 });
+	await expect(editor.getByText('/api/v1/sso/callback')).toBeVisible({ timeout: 30_000 });
 	await editor.getByRole('button', { name: 'Save sign-in' }).click();
 	await expect(editor.getByRole('alert')).toContainText('provider address');
 	await editor.getByLabel('Provider address').fill(issuer);
@@ -178,7 +178,7 @@ test('people sign in through their domain provider and nobody else can', async (
 	expect(seen.verified).toBe(true);
 
 	// A used sign-in cannot be replayed.
-	const replay = await fetch(`${base}/api/sso/callback?code=${seen.code}&state=${seen.state}`, {
+	const replay = await fetch(`${base}/api/v1/sso/callback?code=${seen.code}&state=${seen.state}`, {
 		redirect: 'manual'
 	});
 	expect(replay.status).toBe(302);
@@ -203,7 +203,7 @@ test('people sign in through their domain provider and nobody else can', async (
 
 	// A server administrator on the domain can never come in this way.
 	const domains = (await (
-		await fetch(`${base}/api/orgs`, { headers: { Authorization: adminAuth } })
+		await fetch(`${base}/api/v1/orgs`, { headers: { Authorization: adminAuth } })
 	).json()) as { domains: { id: string; name: string }[] };
 	const domainId = domains.domains.find((item) => item.name === hill)!.id;
 	const made = await fetch(`${base}/jmap`, {
@@ -260,7 +260,7 @@ test('people sign in through their domain provider and nobody else can', async (
 			})
 		).status
 	).toBe(200);
-	expect((await (await fetch(`${base}/api/sso/${hill}`)).json()) as unknown).toEqual({ enabled: false });
+	expect((await (await fetch(`${base}/api/v1/sso/${hill}`)).json()) as unknown).toEqual({ enabled: false });
 	const page4 = await (await browser.newContext()).newPage();
 	await toPasswordStep(page4, hillBoss);
 	await expect(button(page4)).toHaveCount(0);

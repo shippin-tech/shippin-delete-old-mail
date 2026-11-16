@@ -42,7 +42,7 @@ function meta(name: string): string | null {
 }
 
 export async function requestDiscover(username: string): Promise<DiscoverNext> {
-	const res = await fetch(`/api/discover/${encodeURIComponent(username)}`, {
+	const res = await fetch(`/api/v1/discover/${encodeURIComponent(username)}`, {
 		cache: 'no-store',
 		headers: { Accept: 'application/json' }
 	});

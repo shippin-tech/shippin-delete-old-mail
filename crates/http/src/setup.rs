@@ -1,6 +1,6 @@
 //! First-run setup: turn the printed setup key into a real administrator.
 //!
-//! `GET /api/setup` says whether setup is pending. `POST /api/setup/admin`, called
+//! `GET /api/v1/setup` says whether setup is pending. `POST /api/v1/setup/admin`, called
 //! by someone signed in as "admin" with the setup key, creates the administrator's
 //! domain if needed and the administrator account, then retires the key for good.
 

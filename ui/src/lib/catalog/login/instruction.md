@@ -6,5 +6,5 @@ Rust still embeds `resources/html-templates/login.html.min.gz`. Edit this compon
 
 Posts go through `ui/src/routes/(account)/login/+page.svelte`, which calls `ui/src/lib/adapter/auth.ts`. This folder does not fetch.
 
-Endpoint: `POST /api/auth`.
+Endpoint: `POST /api/v1/auth`.
 Kernel: `ui/src/lib/ai-runtime/account/kernel/instruction.md`.

@@ -160,7 +160,7 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
 	await new Promise((resolve) => server.close(resolve));
-	await fetch(`${base}/api/panel/domain/close`, {
+	await fetch(`${base}/api/v1/panel/domain/close`, {
 		method: 'POST',
 		headers: {
 			Authorization: 'Basic ' + Buffer.from(`${owner}:${password}`).toString('base64'),
@@ -174,14 +174,14 @@ test('a person links Google Drive, copies both ways, exports a Google Doc and di
 	page
 }) => {
 	test.setTimeout(180_000);
-	const created = await fetch(`${base}/api/panel/signup`, {
+	const created = await fetch(`${base}/api/v1/panel/signup`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ domain, name: 'owner', password })
 	});
 	expect(created.status).toBe(200);
 	const auth = { Authorization: 'Basic ' + Buffer.from(`${owner}:${password}`).toString('base64') };
-	expect((await fetch(`${base}/api/google`)).status).toBe(401);
+	expect((await fetch(`${base}/api/v1/google`)).status).toBe(401);
 
 	await page.goto(`/login?login_hint=${encodeURIComponent(owner)}`);
 	await page.getByLabel('Account name').fill(owner);
@@ -201,7 +201,7 @@ test('a person links Google Drive, copies both ways, exports a Google Doc and di
 	await expect(lesson.getByText('1 of 3 done')).toBeVisible();
 
 	// The browser is told who is connected and nothing else.
-	const status = await (await fetch(`${base}/api/google`, { headers: auth })).text();
+	const status = await (await fetch(`${base}/api/v1/google`, { headers: auth })).text();
 	expect(status).not.toContain('token');
 	expect(JSON.parse(status)).toEqual({ available: true, connected: true, email: 'someone@angrygaming.test' });
 
@@ -250,6 +250,6 @@ test('a person links Google Drive, copies both ways, exports a Google Doc and di
 	await page.getByRole('button', { name: 'Disconnect' }).click();
 	await expect(page.getByRole('button', { name: 'Connect Google account' })).toBeVisible({ timeout: 30_000 });
 	expect(seen.revoked).toEqual(['refresh-token']);
-	expect((await fetch(`${base}/api/google/files`, { headers: auth })).status).toBe(409);
+	expect((await fetch(`${base}/api/v1/google/files`, { headers: auth })).status).toBe(409);
 	expect(seen.badAuth).toBe(0);
 });

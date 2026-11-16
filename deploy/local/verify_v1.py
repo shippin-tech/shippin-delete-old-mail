@@ -63,7 +63,7 @@ def post(path, body):
     except urllib.error.HTTPError as e: return e.code
 
 try:
-    if post('/api/panel/signup', {'domain': domain, 'name': 'owner', 'password': password}) == 200:
+    if post('/api/v1/panel/signup', {'domain': domain, 'name': 'owner', 'password': password}) == 200:
         s, b = get('/api/v1/me', {'username': f'owner@{domain}', 'secret': password})
         check('domain owner: /me says owner', s == 200 and b.get('role') == 'owner', (s, b.get('role')))
     else:

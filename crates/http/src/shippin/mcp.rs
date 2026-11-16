@@ -1,4 +1,4 @@
-//! `/api/mcp`: an MCP server whose tools are carried out on the operator's own screen.
+//! `/api/v1/mcp`: an MCP server whose tools are carried out on the operator's own screen.
 //!
 //! MCPL's proposed "drive" extension (`mcpl/schema/action.schema.json`). Every tool is an
 //! action a screen declares in its `component.json`; `resources/product/actions.json`,
@@ -13,9 +13,9 @@
 //! capabilities in `_meta`, mirrored in the Streamable HTTP headers), and, for clients
 //! that have not moved yet, the `initialize`-based 2025-11-25, 2025-06-18 and 2025-03-26.
 //!
-//! The viewport side: `POST /api/mcp/viewport/token` (a 60-second token, because a
-//! browser cannot send headers on an event stream), `GET /api/mcp/viewport/stream?token=`
-//! (the calls, as server-sent events) and `POST /api/mcp/viewport/result`.
+//! The viewport side: `POST /api/v1/mcp/viewport/token` (a 60-second token, because a
+//! browser cannot send headers on an event stream), `GET /api/v1/mcp/viewport/stream?token=`
+//! (the calls, as server-sent events) and `POST /api/v1/mcp/viewport/result`.
 
 use crate::{
     auth::authenticate::Authenticator,
@@ -522,7 +522,7 @@ impl McpApi for Server {
                     .filter(|(_, until)| *until > now())
                     .map(|(account, _)| account);
                 let Some(account) = account else {
-                    return problem(StatusCode::UNAUTHORIZED, "noToken", "Get a token from /api/mcp/viewport/token first.");
+                    return problem(StatusCode::UNAUTHORIZED, "noToken", "Get a token from /api/v1/mcp/viewport/token first.");
                 };
                 let (viewport, mut rx) = open_viewport(account);
                 Ok(HttpResponse::new(StatusCode::OK)

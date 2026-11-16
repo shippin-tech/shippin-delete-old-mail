@@ -6,7 +6,7 @@ export * from './masked-call';
 async function call<T>(method: string, path: string, fallback: string, body?: unknown): Promise<T> {
 	const auth = authorization();
 	if (!auth) throw new Error('Sign in again to change your masked addresses.');
-	const res = await fetch(`/api/masked${path}`, {
+	const res = await fetch(`/api/v1/masked${path}`, {
 		method,
 		credentials: 'same-origin',
 		cache: 'no-store',

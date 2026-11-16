@@ -77,7 +77,7 @@ export function tracingStreamUrl(token: string, keywords: string, filters: reado
 		if (!item.key || item.key === 'filter' || item.key === 'token' || !item.value.trim()) continue;
 		params.set(item.key, item.value);
 	}
-	return `/api/trace/live?${params.toString()}`;
+	return `/api/v1/trace/live?${params.toString()}`;
 }
 
 function traceValueOf(value: unknown): TraceValue {

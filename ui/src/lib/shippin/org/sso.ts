@@ -23,7 +23,7 @@ export type SsoRequest = {
 
 export async function ssoOffered(domain: string): Promise<boolean> {
 	try {
-		const res = await fetch(`/api/sso/${encodeURIComponent(domain)}`, { cache: 'no-store' });
+		const res = await fetch(`/api/v1/sso/${encodeURIComponent(domain)}`, { cache: 'no-store' });
 		return res.ok && ((await res.json()) as { enabled: boolean }).enabled;
 	} catch {
 		return false;
@@ -31,7 +31,7 @@ export async function ssoOffered(domain: string): Promise<boolean> {
 }
 
 export async function beginSso(request: SsoRequest): Promise<string> {
-	const res = await fetch('/api/sso/begin', {
+	const res = await fetch('/api/v1/sso/begin', {
 		method: 'POST',
 		cache: 'no-store',
 		headers: { 'Content-Type': 'application/json' },
@@ -50,7 +50,7 @@ export async function beginSso(request: SsoRequest): Promise<string> {
 async function manage<T>(method: string, domain: string, fallback: string, body?: unknown): Promise<T> {
 	const auth = authorization();
 	if (!auth) throw new Error('Sign in again to continue.');
-	const res = await fetch(`/api/sso/${encodeURIComponent(domain)}/settings`, {
+	const res = await fetch(`/api/v1/sso/${encodeURIComponent(domain)}/settings`, {
 		method,
 		credentials: 'same-origin',
 		cache: 'no-store',

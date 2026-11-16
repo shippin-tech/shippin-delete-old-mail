@@ -1,7 +1,7 @@
-//! `/api/alerts`: administrators' alert rules (`services::alerts`).
+//! `/api/v1/alerts`: administrators' alert rules (`services::alerts`).
 //!
 //! `GET` lists rules and the metrics they can watch, `POST` saves a rule,
-//! `DELETE /api/alerts/<id>` removes one, `POST /api/alerts/check` checks them now.
+//! `DELETE /api/v1/alerts/<id>` removes one, `POST /api/v1/alerts/check` checks them now.
 
 use crate::auth::authenticate::Authenticator;
 use common::Server;

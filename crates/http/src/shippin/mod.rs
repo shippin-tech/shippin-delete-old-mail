@@ -64,7 +64,7 @@ mod tests {
             .filter_map(|call| {
                 call["path"]
                     .as_str()?
-                    .strip_prefix("/api/")
+                    .strip_prefix("/api/v1/")
                     .map(str::to_string)
             })
             .collect()
@@ -93,7 +93,7 @@ mod tests {
             let area = path.split(['/', '?']).next().unwrap_or_default();
             assert!(
                 API_AREAS.contains(&area) || ENGINE.contains(&area),
-                "/api/{path} belongs to no known area"
+                "/api/v1/{path} belongs to no known area"
             );
         }
     }

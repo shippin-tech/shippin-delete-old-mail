@@ -39,12 +39,15 @@ type Report = {
 };
 
 async function keysText(auth = adminAuth) {
-	return fetch(`${base}/api/keys`, { headers: { Authorization: auth } });
+	return fetch(`${base}/api/v1/keys`, { headers: { Authorization: auth } });
 }
 
 async function aiTest() {
 	const before = seen.length;
-	const res = await fetch(`${base}/api/ai/test`, { method: 'POST', headers: { Authorization: adminAuth } });
+	const res = await fetch(`${base}/api/v1/ai/test`, {
+		method: 'POST',
+		headers: { Authorization: adminAuth }
+	});
 	expect(res.status).toBe(200);
 	expect(seen.length).toBe(before + 1);
 	return seen.at(-1);
@@ -60,17 +63,17 @@ test.afterEach(async ({ browser }) => {
 
 test.afterAll(async () => {
 	service.close();
-	await fetch(`${base}/api/ai/settings`, { method: 'DELETE', headers: { Authorization: adminAuth } });
+	await fetch(`${base}/api/v1/ai/settings`, { method: 'DELETE', headers: { Authorization: adminAuth } });
 });
 
 test('each service has its own key, shown without its bytes, and replacing one keeps its secrets', async ({
 	page
 }) => {
 	test.setTimeout(180_000);
-	expect((await fetch(`${base}/api/keys`)).status).toBe(401);
+	expect((await fetch(`${base}/api/v1/keys`)).status).toBe(401);
 
 	// A secret for the AI service to keep.
-	const saved = await fetch(`${base}/api/ai/settings`, {
+	const saved = await fetch(`${base}/api/v1/ai/settings`, {
 		method: 'POST',
 		headers: { Authorization: adminAuth, 'Content-Type': 'application/json' },
 		body: JSON.stringify({
@@ -151,7 +154,7 @@ test('each service has its own key, shown without its bytes, and replacing one k
 	expect(report.wrapping).toMatchObject({ madeHere: true, readable: true });
 
 	// A key from a variable that is not there is refused, and nothing changes.
-	const missing = await fetch(`${base}/api/keys/ai/replace`, {
+	const missing = await fetch(`${base}/api/v1/keys/ai/replace`, {
 		method: 'POST',
 		headers: { Authorization: adminAuth, 'Content-Type': 'application/json' },
 		body: JSON.stringify({ from: 'environmentVariable', name: `SHIPPIN_NOT_SET_${run.toUpperCase()}` })
@@ -167,7 +170,7 @@ test('each service has its own key, shown without its bytes, and replacing one k
 	).toHaveLength(1);
 
 	// Keys are for the server's administrators only.
-	const signup = await fetch(`${base}/api/panel/signup`, {
+	const signup = await fetch(`${base}/api/v1/panel/signup`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ domain: `keys-${run}.test`, name: 'owner', password: `Keys check ${run} pw` })
@@ -176,9 +179,10 @@ test('each service has its own key, shown without its bytes, and replacing one k
 	const owner = 'Basic ' + Buffer.from(`owner@keys-${run}.test:Keys check ${run} pw`).toString('base64');
 	expect((await keysText(owner)).status).toBe(403);
 	expect(
-		(await fetch(`${base}/api/keys/ai/replace`, { method: 'POST', headers: { Authorization: owner } })).status
+		(await fetch(`${base}/api/v1/keys/ai/replace`, { method: 'POST', headers: { Authorization: owner } }))
+			.status
 	).toBe(403);
-	await fetch(`${base}/api/panel/domain/close`, {
+	await fetch(`${base}/api/v1/panel/domain/close`, {
 		method: 'POST',
 		headers: { Authorization: owner, 'Content-Type': 'application/json' },
 		body: JSON.stringify({ confirm: `keys-${run}.test` })

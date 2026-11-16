@@ -60,7 +60,7 @@ async function mcp(
 			: { 'Mcp-Method': method, ...(method === 'tools/call' ? { 'Mcp-Name': String(params.name) } : {}) }),
 		...options.headers
 	};
-	const res = await fetch(`${base}/api/mcp`, { method: 'POST', headers, body: JSON.stringify(body) });
+	const res = await fetch(`${base}/api/v1/mcp`, { method: 'POST', headers, body: JSON.stringify(body) });
 	const text = await res.text();
 	if ((res.headers.get('content-type') ?? '').includes('text/event-stream')) {
 		const data =
@@ -91,7 +91,7 @@ test.afterEach(async ({ browser }) => {
 });
 
 test.afterAll(async () => {
-	await fetch(`${base}/api/ai/settings`, { method: 'DELETE', headers: { Authorization: adminAuth } });
+	await fetch(`${base}/api/v1/ai/settings`, { method: 'DELETE', headers: { Authorization: adminAuth } });
 });
 
 test('the protocol: both eras, checked headers, administrators only', async () => {
@@ -146,10 +146,10 @@ test('the protocol: both eras, checked headers, administrators only', async () =
 	expect((await mcp('nothing/here')).status).toBe(404);
 	expect((await mcp('tools/call', { name: 'no.such.tool', arguments: {} })).body.error?.code).toBe(-32602);
 	expect((await mcp('tools/list', {}, { headers: { Origin: 'https://evil.example' } })).status).toBe(403);
-	expect((await fetch(`${base}/api/mcp`, { headers: { Authorization: adminAuth } })).status).toBe(405);
-	expect((await fetch(`${base}/api/mcp`, { method: 'POST', body: '{}' })).status).toBe(401);
+	expect((await fetch(`${base}/api/v1/mcp`, { headers: { Authorization: adminAuth } })).status).toBe(405);
+	expect((await fetch(`${base}/api/v1/mcp`, { method: 'POST', body: '{}' })).status).toBe(401);
 
-	const signup = await fetch(`${base}/api/panel/signup`, {
+	const signup = await fetch(`${base}/api/v1/panel/signup`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ domain: `mcp-${run}.test`, name: 'owner', password: `Mcp check ${run} pw` })
@@ -157,7 +157,7 @@ test('the protocol: both eras, checked headers, administrators only', async () =
 	expect(signup.status).toBe(200);
 	const owner = 'Basic ' + Buffer.from(`owner@mcp-${run}.test:Mcp check ${run} pw`).toString('base64');
 	expect((await mcp('tools/list', {}, { auth: owner })).status).toBe(403);
-	await fetch(`${base}/api/panel/domain/close`, {
+	await fetch(`${base}/api/v1/panel/domain/close`, {
 		method: 'POST',
 		headers: { Authorization: owner, 'Content-Type': 'application/json' },
 		body: JSON.stringify({ confirm: `mcp-${run}.test` })
@@ -204,7 +204,7 @@ test('an agent works on the operatorâ€™s screen, and only with their say-so
 
 	// The same change, allowed: done by the Keys page itself, with its own result and event.
 	const before = (await (
-		await fetch(`${base}/api/keys`, { headers: { Authorization: adminAuth } })
+		await fetch(`${base}/api/v1/keys`, { headers: { Authorization: adminAuth } })
 	).json()) as { services: { service: string; keys: { id: number; state: string }[] }[] };
 	const oldId =
 		before.services.find((item) => item.service === 'google')!.keys.find((key) => key.state === 'primary')
@@ -217,7 +217,7 @@ test('an agent works on the operatorâ€™s screen, and only with their say-so
 	expect(said(yes)).toMatch(/^Google link: key \d+ is in use\./);
 	await expect(page.getByRole('region', { name: 'Keys' }).getByText(said(yes))).toBeVisible();
 	const after = (await (
-		await fetch(`${base}/api/keys`, { headers: { Authorization: adminAuth } })
+		await fetch(`${base}/api/v1/keys`, { headers: { Authorization: adminAuth } })
 	).json()) as typeof before;
 	expect(
 		after.services.find((item) => item.service === 'google')!.keys.find((key) => key.state === 'primary')!.id
@@ -240,7 +240,7 @@ test('an agent works on the operatorâ€™s screen, and only with their say-so
 	const saved = await save;
 	expect(saved.body.result?.isError).toBe(false);
 	const settings = (await (
-		await fetch(`${base}/api/ai/settings`, { headers: { Authorization: adminAuth } })
+		await fetch(`${base}/api/v1/ai/settings`, { headers: { Authorization: adminAuth } })
 	).json()) as { model: string; hasKey: boolean };
 	expect(settings).toMatchObject({ model: `agent-model-${run}`, hasKey: false });
 	await expect(bar).toContainText(`Last: Saved.`);

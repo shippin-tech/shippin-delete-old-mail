@@ -25,7 +25,7 @@ pub trait AccountApiHandler: Sync + Send {
         access_token: &AccessToken,
     ) -> impl Future<Output = trc::Result<HttpResponse>> + Send;
 
-    /// What the caller is and may do. Shared by the old `/api/account` and `/api/v1/me`.
+    /// What the caller is and may do. Shared by the old `/api/v1/account` and `/api/v1/me`.
     fn account_view(
         &self,
         access_token: &AccessToken,

@@ -5,11 +5,11 @@
 //! what each person has finished, so their progress follows them to every
 //! device.
 //!
-//! - `GET /api/learn/progress`: `{ "lessons": { "<lesson>": { "done": [..], "dismissed": bool } } }`
-//! - `POST /api/learn/progress/<lesson>` with `{ "done": [..], "dismissed": bool }`:
+//! - `GET /api/v1/learn/progress`: `{ "lessons": { "<lesson>": { "done": [..], "dismissed": bool } } }`
+//! - `POST /api/v1/learn/progress/<lesson>` with `{ "done": [..], "dismissed": bool }`:
 //!   adds the steps (finished steps are never taken away by another device) and
 //!   sets `dismissed`; answers with the merged progress.
-//! - `DELETE /api/learn/progress/<lesson>`: start the lesson over.
+//! - `DELETE /api/v1/learn/progress/<lesson>`: start the lesson over.
 
 use crate::auth::authenticate::Authenticator;
 use common::Server;

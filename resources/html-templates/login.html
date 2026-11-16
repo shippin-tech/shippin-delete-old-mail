@@ -555,7 +555,7 @@
             function postLogin(body) {
                 var btn = $('submit-btn');
                 btn.disabled = true;
-                fetch('/api/auth', {
+                fetch('/api/v1/auth', {
                     method: 'POST',
                     credentials: 'same-origin',
                     cache: 'no-store',

@@ -56,7 +56,7 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
 	receiver.close();
-	await fetch(`${base}/api/panel/domain/close`, {
+	await fetch(`${base}/api/v1/panel/domain/close`, {
 		method: 'POST',
 		headers: { Authorization: ownerAuth, 'Content-Type': 'application/json' },
 		body: JSON.stringify({ confirm: domain })
@@ -64,7 +64,7 @@ test.afterAll(async () => {
 });
 
 async function alerts(method: string, path = '', body?: unknown, auth = adminAuth) {
-	return fetch(`${base}/api/alerts${path}`, {
+	return fetch(`${base}/api/v1/alerts${path}`, {
 		method,
 		headers: { Authorization: auth, 'Content-Type': 'application/json' },
 		body: body === undefined ? undefined : JSON.stringify(body)
@@ -108,7 +108,7 @@ async function inboxSubjects(): Promise<string[]> {
 
 test('an alert fires to a real webhook and mailbox, then waits out its cooldown', async ({ page }) => {
 	test.setTimeout(180_000);
-	const created = await fetch(`${base}/api/panel/signup`, {
+	const created = await fetch(`${base}/api/v1/panel/signup`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ domain, name: 'owner', password })
@@ -116,7 +116,7 @@ test('an alert fires to a real webhook and mailbox, then waits out its cooldown'
 	expect(created.status).toBe(200);
 
 	// Only administrators reach alerts.
-	expect((await fetch(`${base}/api/alerts`)).status).toBe(401);
+	expect((await fetch(`${base}/api/v1/alerts`)).status).toBe(401);
 	expect((await alerts('GET', '', undefined, ownerAuth)).status).toBe(403);
 
 	await page.goto('/login');

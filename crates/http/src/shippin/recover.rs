@@ -1,4 +1,4 @@
-//! `/api/recover`: bring back deleted accounts and messages (`common::recover`,
+//! `/api/v1/recover`: bring back deleted accounts and messages (`common::recover`,
 //! `email::message::recover`). For the server's administrators.
 //!
 //! `GET accounts`, `POST accounts/<id>/restore`, `GET messages/<account>?before=<id>`,

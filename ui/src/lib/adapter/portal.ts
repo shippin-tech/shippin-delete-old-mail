@@ -139,7 +139,7 @@ export async function loadRegistryPage(
 export async function loadPortalSchema(): Promise<PortalSchema> {
 	const auth = authorization();
 	if (!auth) throw new Error('sign-in required');
-	const response = await fetch('/api/schema', { headers: { Authorization: auth }, cache: 'no-store' });
+	const response = await fetch('/api/v1/schema', { headers: { Authorization: auth }, cache: 'no-store' });
 	if (response.status === 401) {
 		clearSession();
 		throw new Error('sign-in required');

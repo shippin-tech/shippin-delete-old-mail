@@ -32,17 +32,17 @@ check_node() {
     || fail "$when: /var/lib/shippin.tech/config.json is missing, so the server is in setup mode. Run: bash update.sh \"\$(grep ^SHIPPIN_IMAGE= server.env | cut -d= -f2-)\""
   ok "$when: settings file is in the data volume"
   local pending
-  pending=$(curl -s "$base/api/setup" | grep -o '"pending":[a-z]*' | cut -d: -f2)
+  pending=$(curl -s "$base/api/v1/setup" | grep -o '"pending":[a-z]*' | cut -d: -f2)
   case "$pending" in
     false) ok "$when: an administrator exists; no setup key is accepted" ;;
     true)
       [[ -n "$(setup_key)" ]] || fail "$when: setup is pending but no setup key is saved"
       ok "$when: no administrator yet; the setup key is saved in the data volume" ;;
-    *) fail "$when: the server did not answer $base/api/setup" ;;
+    *) fail "$when: the server did not answer $base/api/v1/setup" ;;
   esac
   if [[ "$login" == *:* ]]; then
     local status
-    status=$(curl -s -o /dev/null -w '%{http_code}' -u "$login" "$base/api/account")
+    status=$(curl -s -o /dev/null -w '%{http_code}' -u "$login" "$base/api/v1/account")
     [[ "$status" == 200 ]] || fail "$when: signing in as ${login%%:*} returned HTTP $status"
     ok "$when: ${login%%:*} signs in"
   fi

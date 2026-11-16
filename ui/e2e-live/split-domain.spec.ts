@@ -146,12 +146,12 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
 	await new Promise((resolve) => server.close(resolve));
-	await api('POST', '/api/panel/domain/close', owner, { confirm: domain });
+	await api('POST', '/api/v1/panel/domain/close', owner, { confirm: domain });
 });
 
 test('a shared domain reaches the other system for signed-in senders only, with no loop', async () => {
 	test.setTimeout(120_000);
-	const created = await fetch(`${base}/api/panel/signup`, {
+	const created = await fetch(`${base}/api/v1/panel/signup`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ domain, name: 'owner', password })

@@ -39,7 +39,7 @@ learns from it. Nothing an agent does bypasses the screens.
    action to be bound in code with a literal `onAction('<name>', …)`, nothing undeclared to be
    bound, its route to be one of the component's, and its event to be the component's. It
    writes `resources/product/actions.json`, which the server serves as the tool list.
-2. **The screen carries out the call.** The MCP server (`/api/mcp`) does not act itself. It
+2. **The screen carries out the call.** The MCP server (`/api/v1/mcp`) does not act itself. It
    sends each call to the operator's open admin panel. The agent bar takes them to the page,
    shows what the agent is doing (secret arguments masked), fills the screen in first, asks
    before anything that writes, and then runs the same code the page's own controls use, so
@@ -85,12 +85,12 @@ This is the AI working system the pull-request freeze waits for. An agent changi
 - [x] At least one lesson runs in the product on real events, proven in a browser.
 - [x] `variant.json` is generated from the code.
 - [ ] The owner has compared this variant with at least one other app's and recorded what MCPL proper keeps.
-- [x] Lesson progress is kept on the server per account, not only in one browser (`/api/learn/progress`, proven by `ui/e2e-live/learn.spec.ts` and the free-plan journey).
+- [x] Lesson progress is kept on the server per account, not only in one browser (`/api/v1/learn/progress`, proven by `ui/e2e-live/learn.spec.ts` and the free-plan journey).
 - [ ] The owner removes `.github/workflows/freeze.yml`.
 
 ## Known v0 limits
 
 - Lesson progress is kept on the server per account (`crates/http/src/shippin/learn.rs`); the browser keeps a copy and syncs at sign-in.
 - There is one lesson. Events are not stored on the server.
-- The `metrics`, `tracing` and `delivery` channels predate MCPL and carry data, not user actions. The dashboard reads our own `/api/stats` and live tracing our own `/api/trace/live`.
+- The `metrics`, `tracing` and `delivery` channels predate MCPL and carry data, not user actions. The dashboard reads our own `/api/v1/stats` and live tracing our own `/api/v1/trace/live`.
 - v0 schemas may change. Every change bumps `mcpl` in the variant manifest.

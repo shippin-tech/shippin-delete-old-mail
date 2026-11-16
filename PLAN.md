@@ -91,7 +91,7 @@ what must move without breaking the build.
 
 | Stage | Work | Done when |
 | --- | --- | --- |
-| B6.1 | **API grouped and covered.** `api/compat/` (what other software already speaks) and `api/shippin/` (ours); `api/README.md`; every `/api` route in a spec | `node scripts/check-api-coverage.mjs` passes in Check |
+| B6.1 | **API grouped and covered.** `api/v1/` (engine, product and registry specs); `api/README.md`; every `/api` route in a spec | `node scripts/check-api-coverage.mjs` passes in Check |
 | B6.2 | **Compatibility proof (first pass done 2026-11-15: `deploy/local/verify_compat.py`, 15 checks).** Still open: calendar and contact round trip through a DAV client, a ManageSieve script upload, JMAP push. For each compatible surface (JMAP, IMAP, POP3, SMTP, ManageSieve, CalDAV/CardDAV, OAuth, autoconfig) one automated client check against the local stack, named in `api.json` | Each row of `api/README.md` "Compatible" names its test |
 | B6.3 | **What is public.** Decide for `platform/` (1,662 files: the Go control plane, a different product), `.ai/` (including four stored chat transcripts under `.ai/modules/chats/`), `.cursor/`, `landing/`, `LICENSES/New Text Document.txt`: stay, move to their own repository, or be removed. History already holds them; a decision to remove does not erase it | Owner's decision recorded here |
 | B6.4 | **Top level.** Root has 3 Dockerfiles, `docker-bake.hcl`, 3 security files, `img/`, `brand/`, `assets/`. Group into `docker/`, `docs/` and one assets folder, updating `Dockerfile` COPY paths, workflows and `include_bytes!` paths in the same change, with a full build proving it | Docker image builds from the new layout and Check is green |
@@ -143,7 +143,7 @@ sources the engine offers. The engine's own keys stay where they are.
 | K1 (built; expiry unit-tested, the first-run live test needs a fresh install) | **Install key.** A time limit (`SETUP_KEY_HOURS`, default 24), printed with the key by `install.sh` and `update.sh`. After the administrator is created, setup continues to "Author your keys" | Unit test for expiry; first-run live test on a fresh install: the key works once, an expired key is refused, setup leads on to keys |
 | K2 (done 2026-11-11, image `sha-444721b`) | **Service keys.** `crates/common/src/shippin/keys.rs` (store 55): a key set per service with ids, origin (generated or yours), source (stored, environment variable, file) and state. Sealed values name their service and key: `[version][service][key id][nonce][ciphertext]`, bound to their owner. `ai.rs`, `sso.rs` and `google.rs` call it and no longer touch the OAuth key. The free plan's domain proof gets its own key, `domain-proof` (`crates/http/src/shippin/panel.rs`) | Unit tests: a value opens only with its own service's key; a replaced key still opens old values; a destroyed key opens nothing; nothing in our code reads `oauth_key` (a test greps for it) |
 | K3 (built; `deploy/backup.test.sh` passes) | **Key-wrapping key.** `/var/lib/shippin.tech/key-wrapping.key`, 32 bytes from a CSPRNG at first start unless `KEY_WRAPPING_KEY_FILE` names one. `backup.sh` leaves it out and says to keep a copy apart. Several nodes share one through the same file | Unit test: a database copy without the file opens nothing; `backup.sh` test |
-| K4 (done 2026-11-11, `ui/e2e-live/keys.spec.ts`) | **Authoring and rotation.** `/shippin/admin/keys` and `/api/keys`: each service's keys, origin, created, state; "Generate" or "Set my own" (value, variable or file); replacing re-seals that service's values, then destroys the old key | Live test: author all keys, replace the AI key, the assistant still answers, the old key is destroyed |
+| K4 (done 2026-11-11, `ui/e2e-live/keys.spec.ts`) | **Authoring and rotation.** `/shippin/admin/keys` and `/api/v1/keys`: each service's keys, origin, created, state; "Generate" or "Set my own" (value, variable or file); replacing re-seals that service's values, then destroys the old key | Live test: author all keys, replace the AI key, the assistant still answers, the old key is destroyed |
 | K5 (built: on first read, and a sweep a minute after start) | **Moving off the OAuth key.** On first read, a value sealed the old way is opened once and re-sealed under its service key; a sweep at start does the rest | Live test: settings saved by the previous image keep working after the update |
 | K6 (done 2026-11-11) | **Telling people.** `KEYS.md`, the notices, `/keys`, a lesson "Author your keys" and the assistant's guide describe the three kinds of key | Unit test on the wording; live tests check the notices |
 
@@ -156,8 +156,8 @@ than in the agent's client.
 
 | Stage | Work | Done when |
 | --- | --- | --- |
-| A1 (built) | `/api/mcp` on MCP 2026-07-28 and the initialize-based versions; the agent bar; actions declared per screen and checked; tools for the screen itself, Keys and AI settings | `ui/e2e-live/mcp.spec.ts` on an image |
-| A2 | Every admin screen declares its actions: alerts, people and teams, organisations, recover, calendar emails, delivery check, tracing | Each action proven by a live test through `/api/mcp` |
+| A1 (built) | `/api/v1/mcp` on MCP 2026-07-28 and the initialize-based versions; the agent bar; actions declared per screen and checked; tools for the screen itself, Keys and AI settings | `ui/e2e-live/mcp.spec.ts` on an image |
+| A2 | Every admin screen declares its actions: alerts, people and teams, organisations, recover, calendar emails, delivery check, tracing | Each action proven by a live test through `/api/v1/mcp` |
 | A3 | Sign-in for MCP clients by OAuth (protected resource metadata, RFC 9728, on the engine's own OAuth server) instead of a password or app password | A standard MCP client connects with no password typed into it |
 | A4 | Progress shown to the agent while the operator decides (`notifications/progress` on the call's stream); the lesson for each step offered in the bar | Live test |
 | A5 | Calls reach a screen open on any node (NATS), for more than one node | Two-node test |
@@ -394,7 +394,7 @@ Everything here was checked from outside the host on 2026-11-11.
 
 | What | Found | What it means |
 | --- | --- | --- |
-| Code on the host | `/api/panel/plan` and `/api/setup` return 404, and the free plan is not in `v0.1.3` | The host runs `v0.1.3` or older. Nothing built since has reached it: 67 commits at the time of writing |
+| Code on the host | `/api/v1/panel/plan` and `/api/v1/setup` return 404, and the free plan is not in `v0.1.3` | The host runs `v0.1.3` or older. Nothing built since has reached it: 67 commits at the time of writing |
 | Reverse DNS | 206.109.207.24 points to `24-207-109-206.msn1.felware.net`, and that name has no A record | **Blocker.** Google requires a PTR name that resolves back to the sending IP. Only Felware can change it |
 | Ports | 25, 465, 993 and 443 answer. 587 is refused | Mail apps use 465 until 587 is explained |
 | Certificate | Let's Encrypt, valid to 2027-02-07, on 443, 993 and STARTTLS on 25 | Good. Renewal has not been seen happening yet |

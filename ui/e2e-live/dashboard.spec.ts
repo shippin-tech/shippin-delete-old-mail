@@ -6,7 +6,7 @@ import { dashboards } from '../src/lib/portal/catalog';
 
 // The administrator dashboard on our own statistics, against the local stack:
 // real failed sign-ins are counted by the server, stored by the sampler within
-// a couple of minutes, served by /api/stats and drawn by the Svelte dashboard.
+// a couple of minutes, served by /api/v1/stats and drawn by the Svelte dashboard.
 // Nothing on the page may touch the enterprise metrics endpoints.
 const base = process.env.LIVE_URL ?? 'http://127.0.0.1:28080';
 const admin = JSON.parse(
@@ -28,7 +28,7 @@ type Stats = {
 };
 
 async function stats(period = '24h'): Promise<Stats> {
-	const res = await fetch(`${base}/api/stats?period=${period}`, { headers: { Authorization: adminAuth } });
+	const res = await fetch(`${base}/api/v1/stats?period=${period}`, { headers: { Authorization: adminAuth } });
 	expect(res.status).toBe(200);
 	return (await res.json()) as Stats;
 }
@@ -37,10 +37,10 @@ test('dashboard statistics are ours, stored, served and drawn', async ({ page })
 	test.setTimeout(300_000);
 
 	// The endpoint: admin only, four periods, live figures from the stores.
-	expect((await fetch(`${base}/api/stats`)).status).toBe(401);
-	expect((await fetch(`${base}/api/stats?period=1y`, { headers: { Authorization: adminAuth } })).status).toBe(
-		400
-	);
+	expect((await fetch(`${base}/api/v1/stats`)).status).toBe(401);
+	expect(
+		(await fetch(`${base}/api/v1/stats?period=1y`, { headers: { Authorization: adminAuth } })).status
+	).toBe(400);
 	for (const [period, points, step] of [
 		['24h', 24, 3600],
 		['7d', 28, 21600],
@@ -51,12 +51,12 @@ test('dashboard statistics are ours, stored, served and drawn', async ({ page })
 		expect([answer.period, answer.points, answer.step]).toEqual([period, points, step]);
 	}
 	const now = Math.floor(Date.now() / 1000);
-	const custom = await fetch(`${base}/api/stats?from=${now - 30 * 3600}&to=${now}`, {
+	const custom = await fetch(`${base}/api/v1/stats?from=${now - 30 * 3600}&to=${now}`, {
 		headers: { Authorization: adminAuth }
 	});
 	expect(custom.status).toBe(200);
 	expect(await custom.json()).toMatchObject({ period: 'custom', step: 3600 });
-	const backwards = await fetch(`${base}/api/stats?from=${now}&to=${now - 3600}`, {
+	const backwards = await fetch(`${base}/api/v1/stats?from=${now}&to=${now - 3600}`, {
 		headers: { Authorization: adminAuth }
 	});
 	expect(backwards.status).toBe(400);
@@ -64,7 +64,7 @@ test('dashboard statistics are ours, stored, served and drawn', async ({ page })
 	const before = await stats();
 	expect(before.nodeList.length).toBeGreaterThanOrEqual(1);
 	const one = before.nodeList[0];
-	const single = await fetch(`${base}/api/stats?period=24h&node=${one.id}`, {
+	const single = await fetch(`${base}/api/v1/stats?period=24h&node=${one.id}`, {
 		headers: { Authorization: adminAuth }
 	});
 	expect(((await single.json()) as Stats).node).toBe(one.id);
@@ -75,7 +75,7 @@ test('dashboard statistics are ours, stored, served and drawn', async ({ page })
 
 	// Real events: three failed sign-ins.
 	for (let attempt = 0; attempt < 3; attempt++) {
-		const res = await fetch(`${base}/api/account`, {
+		const res = await fetch(`${base}/api/v1/account`, {
 			headers: {
 				Authorization: 'Basic ' + Buffer.from(`nobody-${attempt}@dashboard.test:wrong`).toString('base64')
 			}

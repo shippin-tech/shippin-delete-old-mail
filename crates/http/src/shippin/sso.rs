@@ -1,9 +1,9 @@
-//! `/api/sso`: signing in through a domain's own identity provider (`common::sso`).
+//! `/api/v1/sso`: signing in through a domain's own identity provider (`common::sso`).
 //!
-//! - `GET /api/sso/<domain>` says whether the domain offers it. Public: the sign-in page asks.
-//! - `POST /api/sso/begin` starts a sign-in and returns the provider's address.
-//! - `GET /api/sso/callback` is where the provider sends the browser back.
-//! - `GET`, `POST` and `DELETE /api/sso/<domain>/settings` are for whoever manages the domain.
+//! - `GET /api/v1/sso/<domain>` says whether the domain offers it. Public: the sign-in page asks.
+//! - `POST /api/v1/sso/begin` starts a sign-in and returns the provider's address.
+//! - `GET /api/v1/sso/callback` is where the provider sends the browser back.
+//! - `GET`, `POST` and `DELETE /api/v1/sso/<domain>/settings` are for whoever manages the domain.
 
 use crate::{
     auth::{

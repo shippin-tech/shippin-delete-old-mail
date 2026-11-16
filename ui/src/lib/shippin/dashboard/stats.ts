@@ -10,7 +10,7 @@ import {
 
 export * from './stats-call';
 
-/** Reads the dashboard data from our own `GET /api/stats`. */
+/** Reads the dashboard data from our own `GET /api/v1/stats`. */
 export async function fetchStats(
 	range: StatsRange,
 	node: number | null = null

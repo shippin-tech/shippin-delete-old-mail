@@ -30,7 +30,7 @@ if (validTarget('not a domain') || validTarget('')) throw new Error('invalid tar
 if (INVALID_TARGET !== 'Enter a valid email address or domain.') throw new Error('invalid copy');
 if (deliveryStreamUrl('', 'example.org') !== '') throw new Error('empty token');
 const url = deliveryStreamUrl('tok', 'John@Example.org');
-if (url !== '/api/live/delivery/John%40Example.org?token=tok') throw new Error('url ' + url);
+if (url !== '/api/v1/live/delivery/John%40Example.org?token=tok') throw new Error('url ' + url);
 if (FAILED_START !== 'Failed to start trace.' || START_TRACE !== 'Start trace') throw new Error('start copy');
 
 if (stages[0]?.domain !== 'example.org') throw new Error('stage details lost');

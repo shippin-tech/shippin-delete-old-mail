@@ -135,7 +135,7 @@ function receive(call: AgentCall): void {
 		agent.lastOk = outcome.ok;
 		agent.call = null;
 		agent.phase = 'idle';
-		await post('/api/mcp/viewport/result', { callId: call.callId, ...outcome }).catch(() => undefined);
+		await post('/api/v1/mcp/viewport/result', { callId: call.callId, ...outcome }).catch(() => undefined);
 	});
 }
 
@@ -148,11 +148,11 @@ export function connectViewport(): () => void {
 	async function open() {
 		if (stopped) return;
 		try {
-			const res = await post('/api/mcp/viewport/token', {});
+			const res = await post('/api/v1/mcp/viewport/token', {});
 			if (!res.ok) throw new Error(String(res.status));
 			const { token } = (await res.json()) as { token: string };
 			if (stopped) return;
-			source = new EventSource(`/api/mcp/viewport/stream?token=${encodeURIComponent(token)}`);
+			source = new EventSource(`/api/v1/mcp/viewport/stream?token=${encodeURIComponent(token)}`);
 			source.addEventListener('ready', () => (agent.connected = true));
 			source.addEventListener('call', (event) => {
 				const call = parseCall((event as MessageEvent<string>).data);

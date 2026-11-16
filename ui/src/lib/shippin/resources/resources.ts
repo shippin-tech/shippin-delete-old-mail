@@ -6,7 +6,7 @@ export * from './resources-call';
 export async function loadResources(): Promise<ResourceReport> {
 	const auth = authorization();
 	if (!auth) throw new Error('Sign in again to continue.');
-	const res = await fetch('/api/resources', {
+	const res = await fetch('/api/v1/resources', {
 		credentials: 'same-origin',
 		cache: 'no-store',
 		headers: { Authorization: auth }

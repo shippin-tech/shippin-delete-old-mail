@@ -60,7 +60,7 @@ const url = tracingStreamUrl('tok', 'example.org', [
 	{ key: 'domain', value: 'example.org' }
 ]);
 if (
-	!url.startsWith('/api/trace/live?') ||
+	!url.startsWith('/api/v1/trace/live?') ||
 	!url.includes('token=tok') ||
 	!url.includes('filter=example.org')
 ) {
@@ -88,7 +88,7 @@ for (const file of [panel, detail, timeline]) {
 	if (
 		file.includes("from '$lib/adapter") ||
 		file.includes('EventSource') ||
-		file.includes('/api/trace/live')
+		file.includes('/api/v1/trace/live')
 	) {
 		throw new Error('catalog fetches');
 	}

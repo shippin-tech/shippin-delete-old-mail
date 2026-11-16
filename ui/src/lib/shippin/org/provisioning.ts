@@ -6,7 +6,7 @@ export type ProvisioningToken = { token: string; endpoint: string };
 async function call<T>(method: string, domain: string, fallback: string): Promise<T> {
 	const auth = authorization();
 	if (!auth) throw new Error('Sign in again to continue.');
-	const res = await fetch(`/api/scim/settings/${encodeURIComponent(domain)}`, {
+	const res = await fetch(`/api/v1/scim/settings/${encodeURIComponent(domain)}`, {
 		method,
 		credentials: 'same-origin',
 		cache: 'no-store',

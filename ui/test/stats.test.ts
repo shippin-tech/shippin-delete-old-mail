@@ -165,8 +165,8 @@ describe('dashboard statistics', () => {
 	});
 
 	it('asks for presets, custom ranges and single nodes', () => {
-		expect(statsUrl({ period: '7d' }, null)).toBe('/api/stats?period=7d');
-		expect(statsUrl({ from: 100.7, to: 200 }, 3)).toBe('/api/stats?from=100&to=200&node=3');
+		expect(statsUrl({ period: '7d' }, null)).toBe('/api/v1/stats?period=7d');
+		expect(statsUrl({ from: 100.7, to: 200 }, 3)).toBe('/api/v1/stats?from=100&to=200&node=3');
 		expect(isCustom({ from: 1, to: 2 })).toBe(true);
 		expect(isCustom({ period: '24h' })).toBe(false);
 		const now = Math.floor(Date.now() / 60_000) * 60;

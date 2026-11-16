@@ -42,7 +42,7 @@ async function accountOf(user: string): Promise<string> {
 }
 
 async function signup(domain: string) {
-	const res = await fetch(`${base}/api/panel/signup`, {
+	const res = await fetch(`${base}/api/v1/panel/signup`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ domain, name: 'owner', password })
@@ -60,8 +60,8 @@ async function signIn(page: Page, user: string) {
 }
 
 test.afterAll(async () => {
-	await api('POST', '/api/panel/domain/close', ownerA, { confirm: domainA });
-	await api('POST', '/api/panel/domain/close', ownerB, { confirm: domainB });
+	await api('POST', '/api/v1/panel/domain/close', ownerA, { confirm: domainA });
+	await api('POST', '/api/v1/panel/domain/close', ownerB, { confirm: domainB });
 });
 
 test('sharing gives exactly the access chosen, follows folders, and stays inside the domain', async ({
@@ -70,7 +70,7 @@ test('sharing gives exactly the access chosen, follows folders, and stays inside
 	test.setTimeout(180_000);
 	await signup(domainA);
 	await signup(domainB);
-	expect((await api('POST', '/api/panel/mailboxes', ownerA, { name: 'sam', password })).status).toBe(200);
+	expect((await api('POST', '/api/v1/panel/mailboxes', ownerA, { name: 'sam', password })).status).toBe(200);
 	const accountA = await accountOf(ownerA);
 	const accountSam = await accountOf(colleague);
 	const accountB = await accountOf(ownerB);

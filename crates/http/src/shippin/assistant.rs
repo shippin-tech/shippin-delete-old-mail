@@ -1,4 +1,4 @@
-//! `/api/assistant` and `/api/ai`: the assistant that explains the product, and the
+//! `/api/v1/assistant` and `/api/v1/ai`: the assistant that explains the product, and the
 //! settings for the AI service behind it.
 //!
 //! It answers from this product's own descriptions and lessons. It has no tools: it can

@@ -124,25 +124,25 @@
       "api": [
         {
           "method": "GET",
-          "path": "/api/masked",
+          "path": "/api/v1/masked",
           "auth": "signed-in",
           "does": "The person's own masked addresses and their limit"
         },
         {
           "method": "POST",
-          "path": "/api/masked",
+          "path": "/api/v1/masked",
           "auth": "signed-in",
           "does": "Make a new address on the person's domain"
         },
         {
           "method": "POST",
-          "path": "/api/masked/<local part>",
+          "path": "/api/v1/masked/<local part>",
           "auth": "signed-in",
           "does": "Switch one on or off, or change its label"
         },
         {
           "method": "DELETE",
-          "path": "/api/masked/<local part>",
+          "path": "/api/v1/masked/<local part>",
           "auth": "signed-in",
           "does": "Remove one"
         }
@@ -158,49 +158,49 @@
       "api": [
         {
           "method": "GET",
-          "path": "/api/google",
+          "path": "/api/v1/google",
           "auth": "signed-in",
           "does": "Whether the link is available and who is connected"
         },
         {
           "method": "POST",
-          "path": "/api/google/connect",
+          "path": "/api/v1/google/connect",
           "auth": "signed-in",
           "does": "The Google sign-in address, with PKCE"
         },
         {
           "method": "GET",
-          "path": "/api/google/callback",
+          "path": "/api/v1/google/callback",
           "auth": "none",
           "does": "Where Google sends the browser back"
         },
         {
           "method": "POST",
-          "path": "/api/google/disconnect",
+          "path": "/api/v1/google/disconnect",
           "auth": "signed-in",
           "does": "Forget the link and revoke it at Google"
         },
         {
           "method": "GET",
-          "path": "/api/google/files",
+          "path": "/api/v1/google/files",
           "auth": "signed-in",
           "does": "List, search and browse the person's Google Drive"
         },
         {
           "method": "GET",
-          "path": "/api/google/info/<id>",
+          "path": "/api/v1/google/info/<id>",
           "auth": "signed-in",
           "does": "One Google file's details"
         },
         {
           "method": "GET",
-          "path": "/api/google/content/<id>",
+          "path": "/api/v1/google/content/<id>",
           "auth": "signed-in",
           "does": "A file's bytes, or a Google Doc exported"
         },
         {
           "method": "POST",
-          "path": "/api/google/copy",
+          "path": "/api/v1/google/copy",
           "auth": "signed-in",
           "does": "Put a copy of a Drive file in Google"
         }
@@ -216,19 +216,19 @@
       "api": [
         {
           "method": "GET",
-          "path": "/api/learn/progress",
+          "path": "/api/v1/learn/progress",
           "auth": "signed-in",
           "does": "What this person has finished in every lesson"
         },
         {
           "method": "POST",
-          "path": "/api/learn/progress/{lesson}",
+          "path": "/api/v1/learn/progress/{lesson}",
           "auth": "signed-in",
           "does": "Add finished steps; finished steps are never taken away"
         },
         {
           "method": "DELETE",
-          "path": "/api/learn/progress/{lesson}",
+          "path": "/api/v1/learn/progress/{lesson}",
           "auth": "signed-in",
           "does": "Start a lesson over"
         }
@@ -245,25 +245,25 @@
       "api": [
         {
           "method": "POST",
-          "path": "/api/panel/signup",
+          "path": "/api/v1/panel/signup",
           "auth": "none",
           "does": "Sign up a domain, proven by a DNS record"
         },
         {
           "method": "GET",
-          "path": "/api/panel/domain",
+          "path": "/api/v1/panel/domain",
           "auth": "domain owner",
           "does": "The owner's domain and its limits"
         },
         {
           "method": "GET",
-          "path": "/api/panel/dns",
+          "path": "/api/v1/panel/dns",
           "auth": "domain owner",
           "does": "DNS records to publish and their live status"
         },
         {
           "method": "GET",
-          "path": "/api/panel/mailboxes",
+          "path": "/api/v1/panel/mailboxes",
           "auth": "domain owner",
           "does": "Mailboxes and aliases on the domain"
         }
@@ -278,7 +278,7 @@
       "api": [
         {
           "method": "GET",
-          "path": "/api/account",
+          "path": "/api/v1/account",
           "auth": "signed-in",
           "does": "Who is signed in and what they may do"
         }
@@ -293,205 +293,205 @@
       "api": [
         {
           "method": "GET",
-          "path": "/api/orgs",
+          "path": "/api/v1/orgs",
           "auth": "administrator",
           "does": "Every organisation and the domains on the server"
         },
         {
           "method": "POST",
-          "path": "/api/orgs",
+          "path": "/api/v1/orgs",
           "auth": "administrator",
           "does": "Save an organisation: domains, administrators, limits"
         },
         {
           "method": "DELETE",
-          "path": "/api/orgs/<id>",
+          "path": "/api/v1/orgs/<id>",
           "auth": "administrator",
           "does": "Remove an organisation; its domains and people stay"
         },
         {
           "method": "GET",
-          "path": "/api/org",
+          "path": "/api/v1/org",
           "auth": "organisation administrator",
           "does": "Your organisation, its limits and its people"
         },
         {
           "method": "POST",
-          "path": "/api/org/people",
+          "path": "/api/v1/org/people",
           "auth": "organisation administrator",
           "does": "Add a person on one of your domains"
         },
         {
           "method": "POST",
-          "path": "/api/org/people/<id>",
+          "path": "/api/v1/org/people/<id>",
           "auth": "organisation administrator",
           "does": "Change a person's name, password or storage"
         },
         {
           "method": "DELETE",
-          "path": "/api/org/people/<id>",
+          "path": "/api/v1/org/people/<id>",
           "auth": "organisation administrator",
           "does": "Remove a person"
         },
         {
           "method": "POST",
-          "path": "/api/org/people/<id>/aliases",
+          "path": "/api/v1/org/people/<id>/aliases",
           "auth": "organisation administrator",
           "does": "Give a person another address"
         },
         {
           "method": "DELETE",
-          "path": "/api/org/people/<id>/aliases/<alias>",
+          "path": "/api/v1/org/people/<id>/aliases/<alias>",
           "auth": "organisation administrator",
           "does": "Remove one of a person's addresses"
         },
         {
           "method": "POST",
-          "path": "/api/org/teams",
+          "path": "/api/v1/org/teams",
           "auth": "organisation administrator",
           "does": "Make a team"
         },
         {
           "method": "POST",
-          "path": "/api/org/teams/<id>/members",
+          "path": "/api/v1/org/teams/<id>/members",
           "auth": "organisation administrator",
           "does": "Put someone on a team or take them off"
         },
         {
           "method": "DELETE",
-          "path": "/api/org/teams/<id>",
+          "path": "/api/v1/org/teams/<id>",
           "auth": "organisation administrator",
           "does": "Remove a team"
         },
         {
           "method": "GET",
-          "path": "/api/org/domains/<id>/dns",
+          "path": "/api/v1/org/domains/<id>/dns",
           "auth": "organisation administrator",
           "does": "Which DNS records are published for one of your domains"
         },
         {
           "method": "GET",
-          "path": "/api/brand/<domain>",
+          "path": "/api/v1/brand/<domain>",
           "auth": "none",
           "does": "A domain's logo"
         },
         {
           "method": "POST",
-          "path": "/api/brand/<domain>",
+          "path": "/api/v1/brand/<domain>",
           "auth": "domain manager",
           "does": "Set a domain's logo: PNG, JPEG or WebP under 90 KB"
         },
         {
           "method": "DELETE",
-          "path": "/api/brand/<domain>",
+          "path": "/api/v1/brand/<domain>",
           "auth": "domain manager",
           "does": "Remove a domain's logo"
         },
         {
           "method": "GET",
-          "path": "/api/sso/<domain>",
+          "path": "/api/v1/sso/<domain>",
           "auth": "none",
           "does": "Whether a domain offers its own sign-in"
         },
         {
           "method": "POST",
-          "path": "/api/sso/begin",
+          "path": "/api/v1/sso/begin",
           "auth": "none",
           "does": "Start a sign-in through the domain's identity provider"
         },
         {
           "method": "GET",
-          "path": "/api/sso/callback",
+          "path": "/api/v1/sso/callback",
           "auth": "none",
           "does": "Where the identity provider sends the browser back"
         },
         {
           "method": "GET",
-          "path": "/api/sso/<domain>/settings",
+          "path": "/api/v1/sso/<domain>/settings",
           "auth": "domain manager",
           "does": "A domain's provider, never its secret"
         },
         {
           "method": "POST",
-          "path": "/api/sso/<domain>/settings",
+          "path": "/api/v1/sso/<domain>/settings",
           "auth": "domain manager",
           "does": "Set a domain's OpenID Connect provider"
         },
         {
           "method": "DELETE",
-          "path": "/api/sso/<domain>/settings",
+          "path": "/api/v1/sso/<domain>/settings",
           "auth": "domain manager",
           "does": "Remove a domain's provider"
         },
         {
           "method": "GET",
-          "path": "/api/scim/settings/<domain>",
+          "path": "/api/v1/scim/settings/<domain>",
           "auth": "domain manager",
           "does": "Whether a domain has a SCIM token, and the endpoint"
         },
         {
           "method": "POST",
-          "path": "/api/scim/settings/<domain>",
+          "path": "/api/v1/scim/settings/<domain>",
           "auth": "domain manager",
           "does": "Make a new SCIM token, shown once"
         },
         {
           "method": "DELETE",
-          "path": "/api/scim/settings/<domain>",
+          "path": "/api/v1/scim/settings/<domain>",
           "auth": "domain manager",
           "does": "Revoke the SCIM token"
         },
         {
           "method": "GET",
-          "path": "/api/scim/v2/Users",
+          "path": "/api/v1/scim/v2/Users",
           "auth": "SCIM token",
           "does": "People on the token's domain; filter with eq"
         },
         {
           "method": "POST",
-          "path": "/api/scim/v2/Users",
+          "path": "/api/v1/scim/v2/Users",
           "auth": "SCIM token",
           "does": "Create a person"
         },
         {
           "method": "PUT",
-          "path": "/api/scim/v2/Users/<id>",
+          "path": "/api/v1/scim/v2/Users/<id>",
           "auth": "SCIM token",
           "does": "Replace a person's details"
         },
         {
           "method": "PATCH",
-          "path": "/api/scim/v2/Users/<id>",
+          "path": "/api/v1/scim/v2/Users/<id>",
           "auth": "SCIM token",
           "does": "Change a person, or switch them off"
         },
         {
           "method": "DELETE",
-          "path": "/api/scim/v2/Users/<id>",
+          "path": "/api/v1/scim/v2/Users/<id>",
           "auth": "SCIM token",
           "does": "Remove a person"
         },
         {
           "method": "GET",
-          "path": "/api/scim/v2/Groups",
+          "path": "/api/v1/scim/v2/Groups",
           "auth": "SCIM token",
           "does": "Teams on the token's domain"
         },
         {
           "method": "POST",
-          "path": "/api/scim/v2/Groups",
+          "path": "/api/v1/scim/v2/Groups",
           "auth": "SCIM token",
           "does": "Create a team"
         },
         {
           "method": "PATCH",
-          "path": "/api/scim/v2/Groups/<id>",
+          "path": "/api/v1/scim/v2/Groups/<id>",
           "auth": "SCIM token",
           "does": "Change a team or its members"
         },
         {
           "method": "DELETE",
-          "path": "/api/scim/v2/Groups/<id>",
+          "path": "/api/v1/scim/v2/Groups/<id>",
           "auth": "SCIM token",
           "does": "Remove a team"
         }
@@ -507,37 +507,37 @@
       "api": [
         {
           "method": "GET",
-          "path": "/api/assistant",
+          "path": "/api/v1/assistant",
           "auth": "signed-in",
           "does": "Whether the assistant is offered on this server"
         },
         {
           "method": "POST",
-          "path": "/api/assistant",
+          "path": "/api/v1/assistant",
           "auth": "signed-in",
           "does": "Ask how something works; it explains and changes nothing"
         },
         {
           "method": "GET",
-          "path": "/api/ai/settings",
+          "path": "/api/v1/ai/settings",
           "auth": "administrator",
           "does": "Which AI service is set, never its key"
         },
         {
           "method": "POST",
-          "path": "/api/ai/settings",
+          "path": "/api/v1/ai/settings",
           "auth": "administrator",
           "does": "Choose the AI service and model"
         },
         {
           "method": "DELETE",
-          "path": "/api/ai/settings",
+          "path": "/api/v1/ai/settings",
           "auth": "administrator",
           "does": "Remove the AI service"
         },
         {
           "method": "POST",
-          "path": "/api/ai/test",
+          "path": "/api/v1/ai/test",
           "auth": "administrator",
           "does": "Check the AI service answers"
         }
@@ -553,121 +553,121 @@
       "api": [
         {
           "method": "GET",
-          "path": "/api/setup",
+          "path": "/api/v1/setup",
           "auth": "none",
           "does": "Whether first-run setup is still pending"
         },
         {
           "method": "POST",
-          "path": "/api/setup/admin",
+          "path": "/api/v1/setup/admin",
           "auth": "setup key",
           "does": "Create the first administrator"
         },
         {
           "method": "GET",
-          "path": "/api/stats",
+          "path": "/api/v1/stats",
           "auth": "administrator",
           "does": "Dashboard statistics: presets or any range, all nodes or one"
         },
         {
           "method": "GET",
-          "path": "/api/trace/token",
+          "path": "/api/v1/trace/token",
           "auth": "administrator",
           "does": "A 60-second token for the live trace stream"
         },
         {
           "method": "GET",
-          "path": "/api/trace/live",
+          "path": "/api/v1/trace/live",
           "auth": "trace token",
           "does": "Live server events, filtered by level, keyword and key"
         },
         {
           "method": "GET",
-          "path": "/api/trace/history",
+          "path": "/api/v1/trace/history",
           "auth": "administrator",
           "does": "Search stored mail traces"
         },
         {
           "method": "GET",
-          "path": "/api/trace/history/<id>",
+          "path": "/api/v1/trace/history/<id>",
           "auth": "administrator",
           "does": "One stored trace's events"
         },
         {
           "method": "GET",
-          "path": "/api/alerts",
+          "path": "/api/v1/alerts",
           "auth": "administrator",
           "does": "Alert rules and the metrics they can watch"
         },
         {
           "method": "POST",
-          "path": "/api/alerts",
+          "path": "/api/v1/alerts",
           "auth": "administrator",
           "does": "Save an alert rule"
         },
         {
           "method": "DELETE",
-          "path": "/api/alerts/<id>",
+          "path": "/api/v1/alerts/<id>",
           "auth": "administrator",
           "does": "Remove an alert rule"
         },
         {
           "method": "POST",
-          "path": "/api/alerts/check",
+          "path": "/api/v1/alerts/check",
           "auth": "administrator",
           "does": "Check every rule now"
         },
         {
           "method": "GET",
-          "path": "/api/recover/accounts",
+          "path": "/api/v1/recover/accounts",
           "auth": "administrator",
           "does": "Deleted accounts still being kept"
         },
         {
           "method": "POST",
-          "path": "/api/recover/accounts/<id>/restore",
+          "path": "/api/v1/recover/accounts/<id>/restore",
           "auth": "administrator",
           "does": "Bring back a deleted account"
         },
         {
           "method": "GET",
-          "path": "/api/recover/messages/<account>",
+          "path": "/api/v1/recover/messages/<account>",
           "auth": "administrator",
           "does": "A person's deleted messages still being kept"
         },
         {
           "method": "POST",
-          "path": "/api/recover/messages/<account>/<id>/restore",
+          "path": "/api/v1/recover/messages/<account>/<id>/restore",
           "auth": "administrator",
           "does": "Put a deleted message back in the Inbox"
         },
         {
           "method": "GET",
-          "path": "/api/calendar-templates",
+          "path": "/api/v1/calendar-templates",
           "auth": "administrator",
           "does": "The invitation and reminder emails"
         },
         {
           "method": "POST",
-          "path": "/api/calendar-templates/<id>",
+          "path": "/api/v1/calendar-templates/<id>",
           "auth": "administrator",
           "does": "Reword one, checked before saving"
         },
         {
           "method": "DELETE",
-          "path": "/api/calendar-templates/<id>",
+          "path": "/api/v1/calendar-templates/<id>",
           "auth": "administrator",
           "does": "Go back to the built-in email"
         },
         {
           "method": "GET",
-          "path": "/api/resources",
+          "path": "/api/v1/resources",
           "auth": "administrator",
           "does": "The server, and how much each organisation is using"
         },
         {
           "method": "GET",
-          "path": "/api/schema",
+          "path": "/api/v1/schema",
           "auth": "signed-in",
           "does": "The settings schema the portal is drawn from"
         },
@@ -679,19 +679,19 @@
         },
         {
           "method": "GET",
-          "path": "/api/keys",
+          "path": "/api/v1/keys",
           "auth": "administrator",
           "does": "Each service's keys and the key-wrapping key's place; never a key's bytes"
         },
         {
           "method": "POST",
-          "path": "/api/keys/author",
+          "path": "/api/v1/keys/author",
           "auth": "administrator",
           "does": "Make a random key for every service that has none yet"
         },
         {
           "method": "POST",
-          "path": "/api/keys/<service>/replace",
+          "path": "/api/v1/keys/<service>/replace",
           "auth": "administrator",
           "does": "Replace a service's key (random, pasted, environment variable or file); its values are sealed again, then the old key is destroyed"
         }
@@ -707,25 +707,25 @@
       "api": [
         {
           "method": "POST",
-          "path": "/api/mcp",
+          "path": "/api/v1/mcp",
           "auth": "administrator",
           "does": "MCP server (2026-07-28, and initialize-based 2025-11-25, 2025-06-18, 2025-03-26). Every tool is carried out on the operator's open admin panel, which asks before anything that writes"
         },
         {
           "method": "POST",
-          "path": "/api/mcp/viewport/token",
+          "path": "/api/v1/mcp/viewport/token",
           "auth": "administrator",
           "does": "A 60-second token for the screen's event stream"
         },
         {
           "method": "GET",
-          "path": "/api/mcp/viewport/stream",
+          "path": "/api/v1/mcp/viewport/stream",
           "auth": "token",
           "does": "The agent's calls, as server-sent events, for the screen to carry out"
         },
         {
           "method": "POST",
-          "path": "/api/mcp/viewport/result",
+          "path": "/api/v1/mcp/viewport/result",
           "auth": "administrator",
           "does": "What the screen and the operator decided, back to the waiting agent"
         }

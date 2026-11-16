@@ -44,7 +44,7 @@ export function validTarget(value: string): boolean {
 export function deliveryStreamUrl(token: string, target: string): string {
 	if (!token || !validTarget(target)) return '';
 	const encoded = encodeURIComponent(target.trim());
-	return `/api/live/delivery/${encoded}?token=${encodeURIComponent(token)}`;
+	return `/api/v1/live/delivery/${encoded}?token=${encodeURIComponent(token)}`;
 }
 
 export function parseDeliveryFrame(frame: string): DeliveryStage[] {

@@ -1,8 +1,8 @@
 //! Live tracing, written for shippin.tech: our own open code, no licence key.
 //!
-//! `GET /api/trace/token` gives an administrator (the `liveTracing` permission)
+//! `GET /api/v1/trace/token` gives an administrator (the `liveTracing` permission)
 //! a 60-second token, because a browser cannot send headers on an event stream.
-//! `GET /api/trace/live?token=…` then streams the server's events as server-sent
+//! `GET /api/v1/trace/live?token=…` then streams the server's events as server-sent
 //! `trace` events. Optional filters: `level` (trace, debug, info, warn, error;
 //! default debug, which leaves out only raw traffic), `filter` (a word to find in the event name or any value) and
 //! any `key=value` pair, where the key is an event key such as `accountName` or
@@ -180,7 +180,7 @@ impl TraceApi for Server {
                     return problem(
                         StatusCode::UNAUTHORIZED,
                         "noToken",
-                        "Get a token from /api/trace/token first.",
+                        "Get a token from /api/v1/trace/token first.",
                     );
                 };
                 self.validate_access_token(GrantType::LiveTracing.into(), token)

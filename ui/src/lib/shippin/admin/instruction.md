@@ -1,6 +1,6 @@
 # portal
 
-The ShippinTECH portal migration. Navigation and list columns come from `resources/schema/schema.json.gz` through `ui/scripts/emit-portal.ts`. Editable record fields, defaults and variants come from the active server's `/api/schema` response.
+The ShippinTECH portal migration. Navigation and list columns come from `resources/schema/schema.json.gz` through `ui/scripts/emit-portal.ts`. Editable record fields, defaults and variants come from the active server's `/api/v1/schema` response.
 
 The bootstrap wizard is the same component. It uses bits-ui for the checkboxes and the variant selects. The portal layout shows it only when `x:Bootstrap/get` returns a record. A server that is already configured stays on the portal. `/setup` renders the same wizard without posting `x:Bootstrap/set`.
 
@@ -22,4 +22,4 @@ offered only when the schema defines it, and requires confirmation. A confirmed
 reload or a stored certificate within its validity dates is not proof of endpoint
 trust or successful issuance. Nested fields show the server's property guidance.
 
-Delivery owns `lib/shippin/admin/Delivery.svelte`, `adapter/delivery.ts`, and `DeliveryRunner.svelte`. The adapter requests `/api/token/delivery`, consumes `/api/live/delivery/<target>` events, preserves stage details, closes at completion, and stops on cancellation, navigation, failure or the 120-second timeout. Trace completion is not a claim of successful delivery.
+Delivery owns `lib/shippin/admin/Delivery.svelte`, `adapter/delivery.ts`, and `DeliveryRunner.svelte`. The adapter requests `/api/v1/token/delivery`, consumes `/api/v1/live/delivery/<target>` events, preserves stage details, closes at completion, and stops on cancellation, navigation, failure or the 120-second timeout. Trace completion is not a claim of successful delivery.

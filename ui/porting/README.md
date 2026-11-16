@@ -24,7 +24,7 @@ Current working ownership:
 | Typed registry CRUD | `shippin/admin/RegistryEditor.svelte`, `SchemaField.svelte`, `ReferenceField.svelte` | `shippin/admin/[...view]/+page.svelte`, `adapter/portal.ts` |
 | Server actions and returned results | `shippin/admin/ActionPanel.svelte` | Same route, `adapter/actions.ts`, `adapter/action-call.ts` |
 | Outbound delivery tracing | `shippin/admin/DeliveryRunner.svelte` | `shippin/admin/Delivery.svelte`, `adapter/delivery.ts` |
-| Shared schema contracts | `portal/schema.ts` | Active server `/api/schema`; generated navigation remains `portal/catalog.ts` |
+| Shared schema contracts | `portal/schema.ts` | Active server `/api/v1/schema`; generated navigation remains `portal/catalog.ts` |
 
 Paths in this table are relative to `ui/src/lib` for library files and `ui/src/routes` for routes. Catalog components receive transport callbacks; adapters own engine requests.
 

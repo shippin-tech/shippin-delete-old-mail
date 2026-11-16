@@ -9,7 +9,7 @@ const owner = `owner@${domain}`;
 const base = process.env.LIVE_URL ?? 'http://127.0.0.1:28080';
 
 test.afterAll(async () => {
-	await fetch(`${base}/api/panel/domain/close`, {
+	await fetch(`${base}/api/v1/panel/domain/close`, {
 		method: 'POST',
 		headers: {
 			Authorization: 'Basic ' + Buffer.from(`${owner}:${password}`).toString('base64'),
@@ -21,7 +21,7 @@ test.afterAll(async () => {
 
 test('a person keeps their contacts: add, find, change, write to, remove', async ({ page }) => {
 	test.setTimeout(120_000);
-	const created = await fetch(`${base}/api/panel/signup`, {
+	const created = await fetch(`${base}/api/v1/panel/signup`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ domain, name: 'owner', password })

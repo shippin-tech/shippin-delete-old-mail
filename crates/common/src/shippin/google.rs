@@ -670,7 +670,7 @@ mod tests {
         ("shippin.tech_GOOGLE_CLIENT_SECRET", "secret"),
         (
             "shippin.tech_GOOGLE_REDIRECT_URL",
-            "https://mail.test/api/google/callback",
+            "https://mail.test/api/v1/google/callback",
         ),
     ];
 
@@ -697,7 +697,7 @@ mod tests {
         ] {
             assert!(url.contains(part), "{part} in {url}");
         }
-        assert!(url.contains("redirect_uri=https%3A%2F%2Fmail.test%2Fapi%2Fgoogle%2Fcallback"));
+        assert!(url.contains("redirect_uri=https%3A%2F%2Fmail.test%2Fapi%2Fv1%2Fgoogle%2Fcallback"));
     }
 
     #[test]

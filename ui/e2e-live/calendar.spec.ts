@@ -32,7 +32,7 @@ async function signIn(page: Page, user: string) {
 }
 
 test.afterAll(async () => {
-	await api('POST', '/api/panel/domain/close', owner, { confirm: domain });
+	await api('POST', '/api/v1/panel/domain/close', owner, { confirm: domain });
 });
 
 function isoDay(offset: number): string {
@@ -43,13 +43,13 @@ function isoDay(offset: number): string {
 
 test('events, repeats, calendars and an invitation answered by a real guest', async ({ browser }) => {
 	test.setTimeout(180_000);
-	const created = await fetch(`${base}/api/panel/signup`, {
+	const created = await fetch(`${base}/api/v1/panel/signup`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ domain, name: 'owner', password })
 	});
 	expect(created.status).toBe(200);
-	expect((await api('POST', '/api/panel/mailboxes', owner, { name: 'guest', password })).status).toBe(200);
+	expect((await api('POST', '/api/v1/panel/mailboxes', owner, { name: 'guest', password })).status).toBe(200);
 
 	const ownerContext = await browser.newContext();
 	const guestContext = await browser.newContext();

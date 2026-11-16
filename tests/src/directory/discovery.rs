@@ -54,7 +54,7 @@ pub async fn test() {
 
 async fn authorization_endpoint(http: &HttpRequest, account_name: &str) -> String {
     http.get::<serde_json::Value>(&format!(
-        "/api/discover/{}",
+        "/api/v1/discover/{}",
         account_name.replace('%', "%25")
     ))
     .await

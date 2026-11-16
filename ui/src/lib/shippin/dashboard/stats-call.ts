@@ -1,6 +1,6 @@
 /**
  * Pure helpers for the portal dashboard. The data comes from our own
- * `GET /api/stats` (crates/common/src/shippin/stats.rs); the tabs, cards and charts
+ * `GET /api/v1/stats` (crates/common/src/shippin/stats.rs); the tabs, cards and charts
  * come from the schema's dashboard definition (catalog.ts `dashboards`).
  */
 
@@ -96,7 +96,7 @@ export function statsUrl(range: StatsRange, node: number | null): string {
 		params.set('period', range.period);
 	}
 	if (node !== null) params.set('node', String(node));
-	return `/api/stats?${params.toString()}`;
+	return `/api/v1/stats?${params.toString()}`;
 }
 
 /** Seconds since 1970 to a `datetime-local` input value, in the viewer's time zone. */

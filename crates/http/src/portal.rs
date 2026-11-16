@@ -174,7 +174,7 @@ mod portal_file {
 
         assert!(resolve_portal(&root, "/_app/missing.js").is_none());
         assert!(resolve_portal(&root, "/portal/../Cargo.toml").is_none());
-        assert!(resolve_portal(&root, "/api/discover/a").is_none());
+        assert!(resolve_portal(&root, "/api/v1/discover/a").is_none());
         assert!(resolve_portal(&root, "/jmap").is_none());
         // The built-in web app now owns /admin and /account.
         assert!(resolve_portal(&root, "/admin").is_some());

@@ -84,8 +84,8 @@ test.afterEach(async ({ browser }) => {
 
 test.afterAll(async () => {
 	service.close();
-	await fetch(`${base}/api/ai/settings`, { method: 'DELETE', headers: { Authorization: adminAuth } });
-	await fetch(`${base}/api/panel/domain/close`, {
+	await fetch(`${base}/api/v1/ai/settings`, { method: 'DELETE', headers: { Authorization: adminAuth } });
+	await fetch(`${base}/api/v1/panel/domain/close`, {
 		method: 'POST',
 		headers: { Authorization: basic(), 'Content-Type': 'application/json' },
 		body: JSON.stringify({ confirm: domain })
@@ -97,7 +97,7 @@ function basic() {
 }
 
 async function settings(body: unknown) {
-	return fetch(`${base}/api/ai/settings`, {
+	return fetch(`${base}/api/v1/ai/settings`, {
 		method: 'POST',
 		headers: { Authorization: adminAuth, 'Content-Type': 'application/json' },
 		body: JSON.stringify(body)
@@ -109,20 +109,24 @@ test('the assistant is off until set, answers from the guide, and keeps its key'
 	browser
 }) => {
 	test.setTimeout(180_000);
-	await fetch(`${base}/api/ai/settings`, { method: 'DELETE', headers: { Authorization: adminAuth } });
-	const created = await fetch(`${base}/api/panel/signup`, {
+	await fetch(`${base}/api/v1/ai/settings`, { method: 'DELETE', headers: { Authorization: adminAuth } });
+	const created = await fetch(`${base}/api/v1/panel/signup`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ domain, name: 'owner', password })
 	});
 	expect(created.status).toBe(200);
 
-	expect((await fetch(`${base}/api/assistant`)).status).toBe(401);
-	expect((await fetch(`${base}/api/ai/settings`, { headers: { Authorization: basic() } })).status).toBe(403);
+	expect((await fetch(`${base}/api/v1/assistant`)).status).toBe(401);
+	expect((await fetch(`${base}/api/v1/ai/settings`, { headers: { Authorization: basic() } })).status).toBe(
+		403
+	);
 	expect(
-		(await (await fetch(`${base}/api/assistant`, { headers: { Authorization: basic() } })).json()) as unknown
+		(await (
+			await fetch(`${base}/api/v1/assistant`, { headers: { Authorization: basic() } })
+		).json()) as unknown
 	).toEqual({ enabled: false });
-	const off = await fetch(`${base}/api/assistant`, {
+	const off = await fetch(`${base}/api/v1/assistant`, {
 		method: 'POST',
 		headers: { Authorization: basic(), 'Content-Type': 'application/json' },
 		body: JSON.stringify({ messages: [{ role: 'user', content: 'Hello' }] })
@@ -182,7 +186,7 @@ test('the assistant is off until set, answers from the guide, and keeps its key'
 
 	// The key never comes back.
 	const read = await (
-		await fetch(`${base}/api/ai/settings`, { headers: { Authorization: adminAuth } })
+		await fetch(`${base}/api/v1/ai/settings`, { headers: { Authorization: adminAuth } })
 	).text();
 	expect(read).not.toContain(key);
 	expect(JSON.parse(read)).toMatchObject({
@@ -245,7 +249,7 @@ test('the assistant is off until set, answers from the guide, and keeps its key'
 		).status
 	).toBe(200);
 	const ask = () =>
-		fetch(`${base}/api/assistant`, {
+		fetch(`${base}/api/v1/assistant`, {
 			method: 'POST',
 			headers: { Authorization: basic(), 'Content-Type': 'application/json' },
 			body: JSON.stringify({ messages: [{ role: 'user', content: 'Where is my calendar?' }], page: '/mail' })
@@ -272,7 +276,7 @@ test('the assistant is off until set, answers from the guide, and keeps its key'
 			.status
 	).toBe(200);
 	expect(
-		(await (await fetch(`${base}/api/ai/settings`, { headers: { Authorization: adminAuth } })).json()) as {
+		(await (await fetch(`${base}/api/v1/ai/settings`, { headers: { Authorization: adminAuth } })).json()) as {
 			hasKey: boolean;
 		}
 	).toMatchObject({ hasKey: true });

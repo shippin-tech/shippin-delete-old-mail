@@ -3,7 +3,7 @@
 //! This is our own open code and needs no licence key. Once a minute each node
 //! turns the counters, timings and gauges that `trc::Collector` already keeps in
 //! memory into hourly and daily totals in the data store. `query` reads them back
-//! for `GET /api/stats`, and the portal dashboard draws them.
+//! for `GET /api/v1/stats`, and the portal dashboard draws them.
 //!
 //! History keys live in the data store's in-memory counter space:
 //! `[KV_STATS, grain, bucket u32, metric u16, field u8, node u16]`. `grain` is

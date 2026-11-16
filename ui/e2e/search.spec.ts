@@ -39,7 +39,7 @@ test('portal dashboard and search render from the catalog', async ({ page }) => 
 test('delivery runner checks the target and opens no stream when the server refuses', async ({ page }) => {
 	const streams: string[] = [];
 	page.on('request', (request) => {
-		if (request.url().includes('/api/live/delivery')) streams.push(request.url());
+		if (request.url().includes('/api/v1/live/delivery')) streams.push(request.url());
 	});
 	await signedIn(page);
 	await page.goto('/shippin/admin/CustomComponent/LiveDelivery');

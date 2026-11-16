@@ -6,7 +6,7 @@ export * from './recover-call';
 async function call<T>(method: string, path: string, fallback: string): Promise<T> {
 	const auth = authorization();
 	if (!auth) throw new Error('Sign in again to recover deleted items.');
-	const res = await fetch(`/api/recover/${path}`, {
+	const res = await fetch(`/api/v1/recover/${path}`, {
 		method,
 		credentials: 'same-origin',
 		cache: 'no-store',

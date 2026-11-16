@@ -39,7 +39,9 @@ function basic(user: string) {
 }
 
 const report = async (): Promise<Report> =>
-	(await (await fetch(`${base}/api/resources`, { headers: { Authorization: adminAuth } })).json()) as Report;
+	(await (
+		await fetch(`${base}/api/v1/resources`, { headers: { Authorization: adminAuth } })
+	).json()) as Report;
 const ours = async () => (await report()).orgs.find((org) => org.name === orgName);
 
 function deliver(to: string, title: string): Promise<void> {
@@ -74,8 +76,8 @@ function deliver(to: string, title: string): Promise<void> {
 test.afterAll(async () => {
 	const org = await ours();
 	if (org)
-		await fetch(`${base}/api/orgs/${org.id}`, { method: 'DELETE', headers: { Authorization: adminAuth } });
-	await fetch(`${base}/api/panel/domain/close`, {
+		await fetch(`${base}/api/v1/orgs/${org.id}`, { method: 'DELETE', headers: { Authorization: adminAuth } });
+	await fetch(`${base}/api/v1/panel/domain/close`, {
 		method: 'POST',
 		headers: { Authorization: basic(owner), 'Content-Type': 'application/json' },
 		body: JSON.stringify({ confirm: hill })
@@ -84,23 +86,23 @@ test.afterAll(async () => {
 
 test('real stored mail shows as that organisation using real storage', async ({ page }) => {
 	test.setTimeout(180_000);
-	const created = await fetch(`${base}/api/panel/signup`, {
+	const created = await fetch(`${base}/api/v1/panel/signup`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ domain: hill, name: 'owner', password })
 	});
 	expect(created.status).toBe(200);
 
-	expect((await fetch(`${base}/api/resources`)).status).toBe(401);
-	expect((await fetch(`${base}/api/resources`, { headers: { Authorization: basic(owner) } })).status).toBe(
+	expect((await fetch(`${base}/api/v1/resources`)).status).toBe(401);
+	expect((await fetch(`${base}/api/v1/resources`, { headers: { Authorization: basic(owner) } })).status).toBe(
 		403
 	);
 
 	const domains = (await (
-		await fetch(`${base}/api/orgs`, { headers: { Authorization: adminAuth } })
+		await fetch(`${base}/api/v1/orgs`, { headers: { Authorization: adminAuth } })
 	).json()) as { domains: { id: string; name: string }[] };
 	const domainId = domains.domains.find((item) => item.name === hill)!.id;
-	const saved = await fetch(`${base}/api/orgs`, {
+	const saved = await fetch(`${base}/api/v1/orgs`, {
 		method: 'POST',
 		headers: { Authorization: adminAuth, 'Content-Type': 'application/json' },
 		body: JSON.stringify({
@@ -114,7 +116,7 @@ test('real stored mail shows as that organisation using real storage', async ({ 
 	expect(saved.status).toBe(200);
 
 	// An organisation administrator still cannot see the whole server.
-	expect((await fetch(`${base}/api/resources`, { headers: { Authorization: basic(owner) } })).status).toBe(
+	expect((await fetch(`${base}/api/v1/resources`, { headers: { Authorization: basic(owner) } })).status).toBe(
 		403
 	);
 

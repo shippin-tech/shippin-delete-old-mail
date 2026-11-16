@@ -92,7 +92,8 @@ test('an administrator adds people, makes a team, sets limits and removes them',
 	await expect(row).toContainText(team);
 	await expect(row).toContainText('2 GB');
 	expect(
-		(await fetch(`${base}/api/account`, { headers: { Authorization: basic(email, firstPassword) } })).status
+		(await fetch(`${base}/api/v1/account`, { headers: { Authorization: basic(email, firstPassword) } }))
+			.status
 	).toBe(200);
 
 	// A duplicate is refused in words.
@@ -116,7 +117,7 @@ test('an administrator adds people, makes a team, sets limits and removes them',
 	await expect
 		.poll(
 			async () =>
-				(await fetch(`${base}/api/account`, { headers: { Authorization: basic(email, secondPassword) } }))
+				(await fetch(`${base}/api/v1/account`, { headers: { Authorization: basic(email, secondPassword) } }))
 					.status
 		)
 		.toBe(200);

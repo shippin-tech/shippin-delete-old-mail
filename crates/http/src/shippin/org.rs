@@ -1,7 +1,7 @@
 //! Organisations (`common::orgs`).
 //!
-//! `/api/orgs` is for the server's administrators: list, save and remove organisations.
-//! `/api/org` is for an organisation's own administrators, and only ever reaches the
+//! `/api/v1/orgs` is for the server's administrators: list, save and remove organisations.
+//! `/api/v1/org` is for an organisation's own administrators, and only ever reaches the
 //! people on that organisation's domains. Writes run through the normal management
 //! handlers, as the free-plan panel's do.
 

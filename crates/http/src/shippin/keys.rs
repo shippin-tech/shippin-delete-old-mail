@@ -1,4 +1,4 @@
-//! `/api/keys`: our services' keys, for the server's administrators (KEYS.md).
+//! `/api/v1/keys`: our services' keys, for the server's administrators (KEYS.md).
 //!
 //! Shows each service's keys without their bytes, makes the keys a new server still lacks
 //! (the "author your keys" step after the install key), and replaces one: made at random,

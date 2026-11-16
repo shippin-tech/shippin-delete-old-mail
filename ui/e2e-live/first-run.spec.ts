@@ -13,7 +13,7 @@ const admin = `boss@first-run-${Math.random().toString(16).slice(2, 8)}.test`;
 const password = 'First run administrator pw';
 
 test('the setup key leads to creating the administrator, then stops working', async ({ page }) => {
-	const setup = await (await fetch(`${url}/api/setup`)).json();
+	const setup = await (await fetch(`${url}/api/v1/setup`)).json();
 	expect(setup.pending).toBe(true);
 
 	await page.goto('/login');
@@ -35,8 +35,8 @@ test('the setup key leads to creating the administrator, then stops working', as
 		page.getByText('Your administrator was created and the setup key no longer works.')
 	).toBeVisible();
 
-	expect((await (await fetch(`${url}/api/setup`)).json()).pending).toBe(false);
-	const withKey = await fetch(`${url}/api/account`, {
+	expect((await (await fetch(`${url}/api/v1/setup`)).json()).pending).toBe(false);
+	const withKey = await fetch(`${url}/api/v1/account`, {
 		headers: { Authorization: 'Basic ' + Buffer.from(`admin:${key}`).toString('base64') }
 	});
 	expect(withKey.status).toBe(401);

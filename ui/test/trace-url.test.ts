@@ -13,7 +13,7 @@ describe('live tracing stream', () => {
 			]),
 			'http://x'
 		);
-		expect(url.pathname).toBe('/api/trace/live');
+		expect(url.pathname).toBe('/api/v1/trace/live');
 		expect(Object.fromEntries(url.searchParams)).toEqual({
 			token: 'tok',
 			filter: 'example.org',
