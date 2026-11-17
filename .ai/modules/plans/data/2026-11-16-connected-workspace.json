@@ -64,6 +64,58 @@
       "ref": "RELEASE.md"
     },
     {
+      "kind": "code",
+      "ref": "resources/product/api.json"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/INTEGRATIONS.md"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/src/lib/integrations/types.ts"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/src/lib/integrations/Connections.svelte"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/src/lib/integrations/microsoft.ts"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/src/lib/integrations/microsoft-graph.ts"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/src/lib/integrations/google.ts"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/src/lib/integrations/providers.ts"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/src/lib/integrations/transfers.ts"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/src/routes/(integrations)/integrations/+page.svelte"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/src/routes/connect/microsoft/callback/+page.svelte"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/test/integrations.test.ts"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/e2e/integrations.spec.ts"
+    },
+    {
       "kind": "web",
       "ref": "https://learn.microsoft.com/en-us/entra/msal/javascript/browser/initialization"
     },
@@ -115,20 +167,23 @@
       "name": "ui-contracts",
       "command": "npm.cmd run check; npm.cmd test",
       "proves": "Types and existing/new UI behavior remain consistent.",
-      "expected": "No new errors; report baseline failures."
+      "expected": "No new errors; report baseline failures.",
+      "result": "2026-11-16: initial and final svelte-check passed with zero errors and warnings. Focused integrations, Google and navigation suite: 33/33 passed. Full suite: 259 passed, two failures in unrelated registry-facade stale-edit tests during concurrent registry development. No registry files were changed by this task. Full suite is not green."
     },
     {
       "name": "workspace-browser",
       "command": "npm.cmd run test:browser -- e2e/integrations.spec.ts",
       "proves": "The assembled route can browse, search, handle failures, copy explicit files, disconnect and gate signed-out access with mocked provider responses.",
-      "expected": "Desktop/mobile tests and accessibility checks pass."
+      "expected": "Desktop/mobile tests and accessibility checks pass.",
+      "result": "2026-11-16: all six browser tests passed, including an exported document copied byte-for-byte through mocked Drive endpoints, disconnect confirmation, empty/error states, mobile accessibility, signed-out routing and callback isolation. Real provider consent was not exercised."
     },
     {
       "name": "static-build",
       "command": "npm.cmd run build",
       "proves": "Production-format static assets include the route and Microsoft auth callback without bundling server-only dependencies.",
-      "expected": "Build succeeds; this is a build check, not a production readiness claim."
+      "expected": "Build succeeds; this is a build check, not a production readiness claim.",
+      "result": "2026-11-16: Vite and adapter-static completed successfully and wrote ui/build. Build manifest confirms MSAL is a dynamic entry (226975 bytes minified, plus shared dependencies); redirect bridge is a separate dynamic entry. Bundle-size warnings remain for large chunks elsewhere. API coverage check also passed: 27 served, 27 documented."
     }
   ],
-  "status": "draft"
+  "status": "implemented"
 }

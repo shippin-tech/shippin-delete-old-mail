@@ -1,0 +1,116 @@
+{
+  "schema_version": "1.0",
+  "id": "2026-11-17-zero-regression",
+  "title": "Preserve the fork's behavior through integrations and engine replacement",
+  "costar": {
+    "context": "The owner requires zero regression as the minimum fork acceptance bar.",
+    "objective": "Fix observed check failures and require demonstrated behavior parity before replacing existing capabilities.",
+    "style": "Evidence with explicit coverage limits.",
+    "tone": "Direct.",
+    "audience": "Owner and future implementers.",
+    "response": "Regression contract, repaired tests and complete available verification results."
+  },
+  "sources": [
+    {
+      "kind": "code",
+      "ref": "AGENTS.md"
+    },
+    {
+      "kind": "code",
+      "ref": "RELEASE.md"
+    },
+    {
+      "kind": "code",
+      "ref": "api/README.md"
+    },
+    {
+      "kind": "code",
+      "ref": ".github/workflows/check.yml"
+    },
+    {
+      "kind": "code",
+      "ref": ".ai/modules/plans/data/2026-11-16-independent-engine.json"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/test/registry-facade.test.ts"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/test/integrations.test.ts"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/e2e/integrations.spec.ts"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/e2e/mail-reader.spec.ts"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/src/routes/+layout.svelte"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/src/routes/(mail)/mail/email/+page.svelte"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/package.json"
+    },
+    {
+      "kind": "code",
+      "ref": "deploy/local/start.ps1"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/src/lib/integrations/providers.ts"
+    }
+  ],
+  "concerns": [
+    "Passing mocked UI checks cannot establish mail engine parity, live provider consent or upgrade safety.",
+    "The checked-in baseline contains known incomplete capabilities; freezing its hash does not establish parity with the original upstream fork point.",
+    "The registry recorder omitted If-Match even though the client sends it; repair observation without weakening assertions.",
+    "A full browser run reported a mail reader stuck loading; reproduce and diagnose before modifying behavior or test timing.",
+    "Docker is not currently available in this shell; live-stack verification may remain blocked."
+  ],
+  "context": "Zero regression applies to existing capabilities throughout the fork and independent rewrite. Incremental replacement must retain the current working implementation until equivalence is demonstrated.",
+  "current_state": "Baseline 533ca73524f0fa0ec82b98ced1a8e4cf03318c14 has 259 passing and two failing unit tests caused by missing recorder headers, formatting failures in new integration tests, and one failed mocked browser mail-reader check. Live OAuth and complete protocol parity remain unverified.",
+  "target_design": "A documented capability and compatibility floor referenced by agent instructions, with all available CI checks green and remaining live coverage gaps explicitly blocking replacement claims.",
+  "changes": [
+    "Document the zero-regression contract and evidence requirements in REGRESSION.md and reference it from AGENTS.md.",
+    "Amend the independent-engine plan so existing capabilities are mandatory replacement scope even when implementation is staged.",
+    "Capture request headers faithfully in the registry test recorder, preserving all existing assertions.",
+    "Format integration tests and the provider registry. Isolate the existing mail-reader browser fixture from unmocked background admin requests with the same API fallback used by other mocked tests; preserve its rendering and unsafe-content assertions."
+  ],
+  "boundaries": [
+    "No engine replacement, removed capability, release tag, deployment, publication or licensing change.",
+    "Do not skip tests or weaken functional assertions to make the gate green.",
+    "Preserve existing unrelated changes and use only synthetic data."
+  ],
+  "verification": [
+    {
+      "name": "web-gate",
+      "command": "Run .github/workflows/check.yml web checks locally, including the full unit suite, typecheck, static build and full mocked browser suite.",
+      "proves": "The complete available web checks pass together, including existing mail and admin behavior.",
+      "expected": "All checks pass with no exclusions; record any environment limitation.",
+      "result": "2026-11-17: full unit suite 261/261 passed across 39 files; full mocked browser suite 12/12 passed in 17.5s; lint checked 326 files with no errors; svelte-check 0 errors and 0 warnings; complete Vite static build succeeded. Registry contracts current; inventory accounts for 57 original files and 13 work packages (planning coverage only); MCPL conformance 28 components, 75 events, 14 lessons, 5 kernels; brand generation check and 5 brand tests passed; all 27 API routes documented. update.sh, auto-update.sh and backup.sh fake-Docker suites all passed under Git Bash. No tests skipped or assertions weakened. Vite commands required escalation after sandbox directory access denial. No runtime code changed; Rust build not rerun."
+    },
+    {
+      "name": "operating-tree",
+      "command": "py -3.11 .ai/machine/organize.py --check; git diff --check",
+      "proves": "Operating records validate and the full tracked diff has no whitespace errors.",
+      "expected": "Both pass; identify unrelated baseline errors explicitly.",
+      "result": "2026-11-17: git diff --check passed. All three changed plan records validate individually against plan.schema.json with Ajv. Whole operating-tree validator still exits 1 on pre-existing records: .ai/modules/chats/data/sessions/a06e2efe-3026-4fda-a6ec-f81c0faeec17/tools.jsonl line 20 is an unterminated JSON string (confirmed also malformed in HEAD), and 2026-11-01-suite-readiness.json is missing concerns. These historical records were not altered."
+    },
+    {
+      "name": "live-capability-floor",
+      "command": "Check local Docker availability and the documented disposable stack before running live suites.",
+      "proves": "Separates actual runtime verification from mocked checks.",
+      "expected": "Run live checks where available; otherwise explicitly leave protocol, migration and real OAuth parity unverified.",
+      "result": "2026-11-17: Docker executable unavailable in this shell. Disposable-stack health request to http://127.0.0.1:28080/healthz/ready timed out both inside and outside sandbox (3s/5s, no HTTP response). Live suites were not run. Mail/protocol parity, upstream fork-point inventory, migration/recovery, performance equivalence and actual Google/Microsoft consent remain unverified; no component was retired and no release readiness claimed."
+    }
+  ],
+  "status": "implemented"
+}

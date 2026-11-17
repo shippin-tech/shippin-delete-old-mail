@@ -1,7 +1,7 @@
 {
   "product": "shippin.tech",
   "prerelease": true,
-  "summary": "Your own mail, calendars, contacts, Drive and Docs on your domain, with a link to Google Drive and MCPL lessons that teach people as they use it.",
+  "summary": "Your own mail, calendars, contacts, Drive and Docs, with a Connections workspace for Google Drive and Microsoft 365 files and MCPL lessons that teach people as they use it.",
   "reviewed": "2026-11-11",
   "statuses": {
     "live": "Works against the server and is proven by an automated test.",
@@ -9,6 +9,15 @@
     "planned": "Not built yet. The plan names where it is tracked."
   },
   "areas": [
+    {
+      "id": "connections",
+      "name": "Connected workspace",
+      "status": "partial",
+      "web": "/integrations",
+      "api": [],
+      "missing": "Google uses the existing server connection. Microsoft uses browser MSAL and delegated Graph Files.Read: configure its public application ID and SPA callback first. Browse OneDrive, open Office documents in Microsoft, download, or explicitly copy files into shippinTECH Drive. Copies are not sync. No Outlook or Gmail aggregation, calendar sync, SharePoint site discovery, embedded Office editing or background jobs. Real-provider consent still needs verification. Microsoft disconnect clears this tab's connection, not tenant consent. See ui/INTEGRATIONS.md.",
+      "proof": "ui/test/integrations.test.ts; ui/e2e/integrations.spec.ts (substituted providers; not live-provider proof)"
+    },
     {
       "id": "mail",
       "name": "Webmail and mail",

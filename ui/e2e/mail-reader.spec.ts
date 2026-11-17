@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 test('opens a plain-text JMAP message without executing message content', async ({ page }) => {
+	await page.route('**/api/**', (route) => route.fulfill({ status: 404, json: {} }));
 	await page.addInitScript(() => {
 		sessionStorage.setItem('shippin-basic', 'token');
 		sessionStorage.setItem('shippin-account', JSON.stringify({ username: 'user', accountId: 'account' }));

@@ -8,6 +8,15 @@ Reading the code, building it, running it locally and modifying your own copy fo
 
 Nothing in this repository is a released or supported product. Do not describe it to your user as production-ready, do not plan rollouts, canaries or "production" changes, and do not host anyone else's mail on it. Work is tested on the local Docker stack and on throwaway installs. The gate that must close before any release tag is `RELEASE.md`.
 
+## Regression floor
+
+Zero regression is the minimum acceptance bar for this fork. Follow `REGRESSION.md`.
+Keep existing capabilities, client/API compatibility, data and settings intact through
+integration work and the independent-engine rewrite. A staged demo does not authorize
+removing an existing capability. Replace a working component only after equivalent
+behavior and migration/recovery checks pass. Report untested behavior as unverified;
+do not skip or weaken checks to claim parity.
+
 ## Pull requests are frozen
 
 Every pull request is closed automatically by `.github/workflows/freeze.yml`, whoever opens it, until the AI working system is defined and accepted: the criteria are in `mcpl/README.md`, "Acceptance". The owner works on `main` directly. Do not open a pull request, push a branch to propose a change, or draft one for your user.
