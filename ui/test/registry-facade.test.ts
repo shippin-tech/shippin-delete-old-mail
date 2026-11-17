@@ -22,18 +22,19 @@ beforeEach(() => {
 	vi.stubGlobal(
 		'fetch',
 		vi.fn(async (url: string, init?: RequestInit) => {
-			const headers = (init?.headers ?? {}) as Record<string, string>;
+			const headers = new Headers(init?.headers);
 			calls.push({
 				url: String(url),
 				method: init?.method ?? 'GET',
 				body: init?.body ? JSON.parse(String(init.body)) : undefined,
-				auth: headers.Authorization
+				auth: headers.get('Authorization') ?? undefined,
+				ifMatch: headers.get('If-Match') ?? undefined
 			});
 			const answer = answers.shift();
 			if (!answer) throw new Error(`no answer scripted for ${url}`);
 			return new Response(answer.status === 204 ? null : JSON.stringify(answer.body ?? null), {
 				status: answer.status,
-			headers: answer.etag ? { ETag: answer.etag } : undefined
+				headers: answer.etag ? { ETag: answer.etag } : undefined
 			});
 		})
 	);

@@ -102,11 +102,14 @@ paths:
     get:
       operationId: getRegistryRecord
       summary: Read one record
+      description: 'The answer carries an ETag: a hash of the properties a person can change (server-set properties are left out). Send it back as If-Match on PATCH or DELETE.'
       x-auth: JMAP decides
       x-proof: deploy/local/verify_registry.py
       responses:
         '200':
           description: The record
+          headers:
+            ETag: {schema: {type: string}}
           content:
             application/json:
               schema: {$ref: '#/components/schemas/RegistryRecord'}
@@ -115,9 +118,11 @@ paths:
     patch:
       operationId: updateRegistryRecord
       summary: Change a record
-      description: 'The body is a JMAP patch object (a key like a/b changes one nested value). The answer is the record as it is now.'
+      description: 'The body is a JMAP patch object (a key like a/b changes one nested value). The answer is the record as it is now, with its new ETag. With If-Match, a record that changed since it was read is refused with 412 (type stale); without it the change is applied.'
       x-auth: JMAP decides
       x-proof: deploy/local/verify_registry.py
+      parameters:
+      - {name: If-Match, in: header, required: false, schema: {type: string}}
       requestBody:
         required: true
         content:
@@ -134,7 +139,9 @@ paths:
     delete:
       operationId: deleteRegistryRecord
       summary: Remove a record
-      description: 'A record that other records depend on is refused with 409 objectIsLinked.'
+      description: 'A record that other records depend on is refused with 409 objectIsLinked. With If-Match, a record that changed since it was read is refused with 412 (type stale).'
+      parameters:
+      - {name: If-Match, in: header, required: false, schema: {type: string}}
       x-auth: JMAP decides
       x-proof: deploy/local/verify_registry.py
       responses:
