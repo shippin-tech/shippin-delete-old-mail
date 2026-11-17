@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 
@@ -41,8 +43,33 @@ function isoDay(offset: number): string {
 	return `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
 }
 
+// The server leaves out an invitation for an event that has already passed, so the meeting this
+// test invites a guest to is tomorrow. On the last day of a month tomorrow is in the next month,
+// and each page steps to it.
+const tomorrow = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() + 1);
+const meetingDay = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+const meetingInNextMonth = tomorrow.getMonth() !== new Date().getMonth();
+
+async function showMeetingMonth(page: Page) {
+	if (meetingInNextMonth) await page.getByRole('button', { name: 'Next month' }).click();
+}
+
 test('events, repeats, calendars and an invitation answered by a real guest', async ({ browser }) => {
 	test.setTimeout(180_000);
+	// Invitations only land on a guest's calendar when the server is set to add them. That is off by
+	// default, so this test turns it on as the administrator rather than relying on how the stack began.
+	const admin = JSON.parse(
+		readFileSync(resolve(process.cwd(), '../deploy/local/.credentials.json'), 'utf8')
+	) as { username: string; secret: string };
+	const enabled = await fetch(`${base}/api/v1/registry/CalendarScheduling`, {
+		method: 'PATCH',
+		headers: {
+			Authorization: `Basic ${Buffer.from(`${admin.username}:${admin.secret}`).toString('base64')}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({ autoAddInvitations: true })
+	});
+	expect(enabled.status).toBe(200);
 	const created = await fetch(`${base}/api/v1/panel/signup`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -74,12 +101,13 @@ test('events, repeats, calendars and an invitation answered by a real guest', as
 
 	// Create.
 	await page.getByLabel('Title').fill('Budget review');
-	await page.getByLabel('Starts').fill(isoDay(0));
-	await page.getByLabel('Ends').fill(isoDay(0));
+	await page.getByLabel('Starts').fill(meetingDay);
+	await page.getByLabel('Ends').fill(meetingDay);
 	await page.getByLabel('At', { exact: true }).fill('10:00');
 	await page.getByLabel('Until').fill('11:00');
 	await page.getByLabel('Location').fill('Office');
 	await page.getByRole('button', { name: 'Save event' }).click();
+	await showMeetingMonth(page);
 	const chip = page.getByRole('button', { name: /Budget review/ });
 	await expect(chip).toBeVisible({ timeout: 30_000 });
 	await expect(lesson.getByText('1 of 3 done')).toBeVisible();
@@ -93,6 +121,7 @@ test('events, repeats, calendars and an invitation answered by a real guest', as
 	await expect(page.getByRole('button', { name: /Budget meeting/ })).toBeVisible({ timeout: 30_000 });
 	await expect(lesson.getByText('2 of 3 done')).toBeVisible();
 	await page.reload();
+	await showMeetingMonth(page);
 	await expect(page.getByRole('button', { name: /Budget meeting/ })).toBeVisible({ timeout: 30_000 });
 
 	// A repeating all-day event appears on each occurrence.
@@ -131,6 +160,7 @@ test('events, repeats, calendars and an invitation answered by a real guest', as
 	// It reaches the guest's calendar, and they answer.
 	await expect(async () => {
 		await guestPage.goto('/calendar');
+		await showMeetingMonth(guestPage);
 		await expect(guestPage.getByRole('button', { name: /Budget meeting/ })).toBeVisible({ timeout: 5_000 });
 	}).toPass({ timeout: 60_000 });
 	await guestPage.getByRole('button', { name: /Budget meeting/ }).click();
@@ -140,6 +170,7 @@ test('events, repeats, calendars and an invitation answered by a real guest', as
 	// The organizer sees the answer.
 	await expect(async () => {
 		await page.reload();
+		await showMeetingMonth(page);
 		await page.getByRole('button', { name: /Budget meeting/ }).click({ timeout: 5_000 });
 		await expect(page.getByRole('region', { name: 'Event' }).getByText('Going')).toBeVisible({
 			timeout: 3_000
