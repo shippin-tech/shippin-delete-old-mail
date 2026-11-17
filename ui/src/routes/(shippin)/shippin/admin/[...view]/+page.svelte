@@ -30,7 +30,7 @@
 	const filterText = $derived(page.url.searchParams.get('q') ?? '');
 	const sortBy = $derived(page.url.searchParams.get('sort') ?? '');
 	const sortAscending = $derived(page.url.searchParams.get('dir') !== 'desc');
-	const limit = $derived(sanitizeRegistryLimit(Number(page.url.searchParams.get('lim'))));
+	const limit = $derived(sanitizeRegistryLimit(page.url.searchParams.has('lim') ? Number(page.url.searchParams.get('lim')) : undefined));
 	const position = $derived(sanitizeRegistryPosition(Number(page.url.searchParams.get('pos'))));
 	const selectedId = $derived(page.url.searchParams.get('id') ?? '');
 	let schema = $state<PortalSchema | null>(null);

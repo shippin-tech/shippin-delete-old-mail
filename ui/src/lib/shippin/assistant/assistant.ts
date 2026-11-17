@@ -6,7 +6,7 @@ export * from './assistant-call';
 async function call<T>(method: string, path: string, fallback: string, body?: unknown): Promise<T> {
 	const auth = authorization();
 	if (!auth) throw new Error('Sign in again to continue.');
-	const res = await fetch(`/api/${path}`, {
+	const res = await fetch(`/api/v1/${path}`, {
 		method,
 		credentials: 'same-origin',
 		cache: 'no-store',
