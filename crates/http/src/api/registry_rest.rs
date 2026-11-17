@@ -231,6 +231,25 @@ pub async fn handle_registry(
                     }
                 }
             }
+            // `sort=name` ascending, `sort=-name` descending: one property, as JMAP's `sort` takes it.
+            if let Some(raw) = params.get("sort") {
+                let (property, ascending) = match raw.strip_prefix('-') {
+                    Some(rest) => (rest, false),
+                    None => (&*raw, true),
+                };
+                if property.is_empty()
+                    || property.len() > 64
+                    || !property.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+                {
+                    return problem(
+                        StatusCode::BAD_REQUEST,
+                        "invalid-parameter",
+                        "sort must be a property name, optionally led by '-' for descending",
+                        Some(&*raw),
+                    );
+                }
+                query["sort"] = json!([{ "property": property, "isAscending": ascending }]);
+            }
             let query_name = method("query");
             let get_name = method("get");
             let responses = jmap(

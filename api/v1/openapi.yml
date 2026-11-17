@@ -48,6 +48,7 @@ paths:
       - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 500, default: 50}}
       - {name: position, in: query, schema: {type: integer, minimum: 0, default: 0}}
       - {name: filter, in: query, schema: {type: string}, description: 'A JMAP filter as a JSON object, passed through'}
+      - {name: sort, in: query, schema: {type: string, pattern: '^-?[A-Za-z0-9_]{1,64}$'}, description: 'One property to sort by; a leading - sorts descending. The server refuses a property it cannot sort by (400)'}
       responses:
         '200':
           description: A page of records (collections) or the singleton record

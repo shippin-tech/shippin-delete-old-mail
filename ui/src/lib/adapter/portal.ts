@@ -1,6 +1,7 @@
 import type { PortalSchema } from '$lib/portal/schema';
 import { accountId, idsOf, jmap, listOf } from './jmap';
 import { registryGet, usingFor } from './portal-call';
+import { facadeList, facadeWrite, servedByFacade } from './registry-facade';
 import { authorization, clearSession } from './session';
 import { type RegistryChange, registrySet, setResult } from './writes-call';
 
@@ -85,6 +86,32 @@ export async function loadRegistryPage(
 		limit,
 		position
 	};
+	// A registry object (x:Name) is read through /api/v1/registry and its generated contract; the
+	// standard JMAP types below stay on JMAP.
+	if (await servedByFacade(objectName)) {
+		const merged = mergeRegistryFilter(options.filter, controls.filterText);
+		const page = await facadeList(objectName, {
+			filter: merged,
+			limit: controls.limit,
+			position: controls.position,
+			sortBy: controls.sortBy,
+			sortAscending: controls.sortAscending,
+			ids: options.ids
+		});
+		if (options.ids?.length) {
+			return { items: page.items, controls, total: page.items.length, hasPrev: false, hasNext: false };
+		}
+		return {
+			items: page.items,
+			controls,
+			total: page.total,
+			hasPrev: controls.position > 0,
+			hasNext:
+				page.total == null
+					? page.items.length === controls.limit
+					: controls.position + page.items.length < page.total
+		};
+	}
 	const get = registryGet(objectName, id);
 	if (options.properties) get[1].properties = options.properties;
 	let queryIds: string[] | null = null;
@@ -149,6 +176,7 @@ export async function loadPortalSchema(): Promise<PortalSchema> {
 }
 
 export async function writeRegistry(object: string, change: RegistryChange, id: string): Promise<string> {
+	if (await servedByFacade(object)) return facadeWrite(object, change, id);
 	const call = registrySet(object, accountId(), change);
 	const state = registryStates.get(`${accountId()}:${object}`);
 	if (state) call[1].ifInState = state;

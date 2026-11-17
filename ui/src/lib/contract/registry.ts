@@ -17,7 +17,13 @@ type Create<N extends RegistryName> = ReturnType<Registry[N]['create']>['infer']
 type Update<N extends RegistryName> = ReturnType<Registry[N]['update']>['infer'];
 
 export type Page<T> = { items: T[]; position: number; total?: number };
-export type ListOptions = { limit?: number; position?: number; filter?: Record<string, unknown> };
+/** `sort` is one property name; a leading `-` sorts descending. */
+export type ListOptions = {
+	limit?: number;
+	position?: number;
+	filter?: Record<string, unknown>;
+	sort?: string;
+};
 
 export type ClientOptions = {
 	/** The Authorization header value, or nothing when signed out. */
@@ -57,6 +63,27 @@ function contractsOf<N extends RegistryName>(name: N) {
 	};
 	return entry;
 }
+
+type Row = Record<string, unknown>;
+
+/** True for a name the generated registry has. */
+export function isRegistryName(name: string): name is RegistryName {
+	return Object.hasOwn(registry, name);
+}
+
+/** What the screens use: the same entry as `contractsOf`, read as plain records. */
+function loose(name: RegistryName) {
+	return registry[name] as unknown as {
+		read: () => Type<Row>;
+		create: () => Type<Row>;
+		update: () => Type<Row>;
+	};
+}
+
+const unknownObject = (name: string): Parsed<never> => ({
+	ok: false,
+	problem: localProblem('unknown-object', 'There is no such object', 404, name)
+});
 
 export function registryClient(options: ClientOptions) {
 	const doFetch = options.fetch ?? fetch;
@@ -111,6 +138,7 @@ export function registryClient(options: ClientOptions) {
 			if (opts.limit !== undefined) query.set('limit', String(opts.limit));
 			if (opts.position !== undefined) query.set('position', String(opts.position));
 			if (opts.filter) query.set('filter', JSON.stringify(opts.filter));
+			if (opts.sort) query.set('sort', opts.sort);
 			const suffix = query.size ? `?${query}` : '';
 			return send('GET', `${where(name)}${suffix}`, pageOf(read)) as Promise<Parsed<Page<Read<N>>>>;
 		},
@@ -141,6 +169,47 @@ export function registryClient(options: ClientOptions) {
 
 		async remove(name: RegistryName, id: string): Promise<Parsed<undefined>> {
 			return send('DELETE', where(name, id), null) as Promise<Parsed<undefined>>;
+		},
+
+		/**
+		 * The same calls for a name known only at run time (a screen that edits whichever object the
+		 * URL names). Same contracts, same checks; a name the registry does not have is refused here,
+		 * before any request. Rows are plain records: the screen shows what the schema names.
+		 */
+		any: {
+			async list(name: string, opts: ListOptions = {}): Promise<Parsed<Page<Row>>> {
+				if (!isRegistryName(name)) return unknownObject(name);
+				const read = loose(name).read();
+				const query = new URLSearchParams();
+				if (opts.limit !== undefined) query.set('limit', String(opts.limit));
+				if (opts.position !== undefined) query.set('position', String(opts.position));
+				if (opts.filter) query.set('filter', JSON.stringify(opts.filter));
+				if (opts.sort) query.set('sort', opts.sort);
+				const suffix = query.size ? `?${query}` : '';
+				return send('GET', `${where(name)}${suffix}`, pageOf(read)) as Promise<Parsed<Page<Row>>>;
+			},
+			async get(name: string, id?: string): Promise<Parsed<Row>> {
+				if (!isRegistryName(name)) return unknownObject(name);
+				return send('GET', where(name, id), loose(name).read()) as Promise<Parsed<Row>>;
+			},
+			async create(name: string, input: Row): Promise<Parsed<Row>> {
+				if (!isRegistryName(name)) return unknownObject(name);
+				const contracts = loose(name);
+				const checked = contracts.create()(input);
+				if (checked instanceof type.errors) return { ok: false, problem: asProblem(checked) };
+				return send('POST', where(name), contracts.read(), checked) as Promise<Parsed<Row>>;
+			},
+			async update(name: string, id: string | undefined, patch: Row): Promise<Parsed<Row>> {
+				if (!isRegistryName(name)) return unknownObject(name);
+				const contracts = loose(name);
+				const checked = contracts.update()(patch);
+				if (checked instanceof type.errors) return { ok: false, problem: asProblem(checked) };
+				return send('PATCH', where(name, id), contracts.read(), checked) as Promise<Parsed<Row>>;
+			},
+			async remove(name: string, id: string): Promise<Parsed<undefined>> {
+				if (!isRegistryName(name)) return unknownObject(name);
+				return send('DELETE', where(name, id), null) as Promise<Parsed<undefined>>;
+			}
 		}
 	};
 }
