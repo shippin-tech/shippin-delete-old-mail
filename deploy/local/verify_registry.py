@@ -112,7 +112,9 @@ asc = [i.get('name') for i in (b.get('items') or [])] if s == 200 else []
 s2, b2 = call('GET', '/Domain?sort=-name&limit=50', admin)
 desc = [i.get('name') for i in (b2.get('items') or [])] if s2 == 200 else []
 check('sort: ascending and descending are reverses of each other', s == 200 and s2 == 200 and len(asc) > 1 and asc == sorted(asc) and desc == asc[::-1], (asc, desc))
-for label, query in (('sort=', '?sort='), ('sort=-', '?sort=-'), ('sort=a b', '?sort=a%20b'), ('sort=__proto__x.y', '?sort=a.b')):
+s, b = call('GET', '/Domain?sort=&limit=1', admin)
+check('list sort= (empty): treated as no sort, like every empty parameter', s == 200 and isinstance(b.get('items'), list), (s,))
+for label, query in (('sort=-', '?sort=-'), ('sort=a b', '?sort=a%20b'), ('sort=__proto__x.y', '?sort=a.b')):
     s, b = call('GET', '/Domain' + query, admin)
     check(f'list {label}: 400 problem', s == 400 and problem(b, 400), (s, b))
 s, b = call('GET', '/Domain?sort=noSuchProperty', admin)
