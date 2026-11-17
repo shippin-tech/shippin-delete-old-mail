@@ -1,0 +1,134 @@
+{
+  "schema_version": "1.0",
+  "id": "2026-11-16-connected-workspace",
+  "title": "Connected shippinTECH workspace: Google Drive and Microsoft 365 files",
+  "costar": {
+    "context": "The owner requests a usable shippinTECH app built around integration with Microsoft 365, Google Drive, Docs and extensible third-party components.",
+    "objective": "Deliver a working connection hub, shared file-provider interface, existing Google adapter and Microsoft Graph browser connector with documented setup and executable checks.",
+    "style": "Implement vertical user workflows with honest capability boundaries.",
+    "tone": "Practical.",
+    "audience": "People testing the local app and future connector implementers.",
+    "response": "UI, connector modules, tests and local setup documentation."
+  },
+  "sources": [
+    {
+      "kind": "code",
+      "ref": "ui/package.json"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/package-lock.json"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/src/routes/+layout.svelte"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/src/lib/adapter/home.ts"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/test/panel.test.ts"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/src/lib/adapter/google.ts"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/src/lib/adapter/google-call.ts"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/src/lib/adapter/drive.ts"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/src/lib/adapter/session.ts"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/playwright.config.ts"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/e2e/search.spec.ts"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/svelte.config.js"
+    },
+    {
+      "kind": "code",
+      "ref": "RELEASE.md"
+    },
+    {
+      "kind": "web",
+      "ref": "https://learn.microsoft.com/en-us/entra/msal/javascript/browser/initialization"
+    },
+    {
+      "kind": "web",
+      "ref": "https://learn.microsoft.com/en-us/entra/msal/javascript/browser/caching"
+    },
+    {
+      "kind": "web",
+      "ref": "https://learn.microsoft.com/en-us/graph/api/driveitem-list-children?view=graph-rest-1.0"
+    },
+    {
+      "kind": "web",
+      "ref": "https://learn.microsoft.com/en-us/graph/api/driveitem-get-content?view=graph-rest-1.0"
+    },
+    {
+      "kind": "web",
+      "ref": "https://learn.microsoft.com/en-us/graph/api/driveitem-search?view=graph-rest-1.0"
+    }
+  ],
+  "concerns": [
+    "Real Microsoft/Google consent requires app registration and a user account; tests against substitutes are not live-provider proof.",
+    "Microsoft browser tokens must remain in MSAL memory, be cleared on shippinTECH sign-out/account change, and never be sent to the mail server or arbitrary Graph pagination URLs.",
+    "Use explicit user gestures for sign-in and transfers. No background cross-provider copying or mail/calendar consent.",
+    "Provider download URLs are short-lived credentials; do not persist or log them.",
+    "Google backend remains coupled to the inherited engine. This integration slice does not complete the independent-engine rewrite.",
+    "MSAL may require a dedicated popup bridge page depending on installed version; inspect installed supported APIs.",
+    "The existing operating-tree checker has unrelated failing records."
+  ],
+  "context": "Continue independent-product direction with tangible integration functionality instead of further replacement-only planning.",
+  "current_state": "Google OAuth, browsing, exports and per-file copies exist. There is no Microsoft connector or common connection hub. Drive and Docs appear only in admin navigation. Svelte builds as static assets.",
+  "target_design": "Provider-neutral TypeScript file interface and reusable Svelte browser, with Google using existing same-origin server endpoints and Microsoft using official MSAL plus delegated Graph access. The Microsoft connector uses public application configuration and a dedicated popup redirect, no client secret. File metadata normalizes IDs, folders, source URLs and export formats. Own Drive stays behind its existing adapter. Normal signed-in navigation exposes the workspace and connections for local testing.",
+  "changes": [
+    "Add a provider contract and Google/Microsoft adapters with normalized metadata and capabilities.",
+    "Add Microsoft sign-in, memory-only session lifecycle, OneDrive list/search/pagination and file download using Graph-provided download URLs. Start with read-only consent; opening Office documents uses their existing Microsoft URLs.",
+    "Add a Connections route with provider state, sign-in/disconnect, folder navigation, search, export/download and copy into shippinTECH Drive; expose Drive/Docs/Connections in signed-in navigation.",
+    "Add transfer bounds, stale-response protection, explicit disconnect confirmation and provider-specific recovery messages.",
+    "Document public app configuration and connector extension points, with a tested-capability matrix and clear omissions.",
+    "Run typecheck, unit, build and mocked browser interaction/accessibility tests. Record real-provider proof as pending."
+  ],
+  "boundaries": [
+    "No real account sign-in, external publication, release, customer mail or background data movement.",
+    "No credentials in chat, source, logs or URLs; Microsoft application ID is public configuration, not a secret.",
+    "No claim of Outlook/Gmail sync, SharePoint site discovery, embedded Office editing, continuous synchronization or completed engine independence.",
+    "Leave existing Google connection and files routes compatible; preserve unrelated untracked plan."
+  ],
+  "verification": [
+    {
+      "name": "ui-contracts",
+      "command": "npm.cmd run check; npm.cmd test",
+      "proves": "Types and existing/new UI behavior remain consistent.",
+      "expected": "No new errors; report baseline failures."
+    },
+    {
+      "name": "workspace-browser",
+      "command": "npm.cmd run test:browser -- e2e/integrations.spec.ts",
+      "proves": "The assembled route can browse, search, handle failures, copy explicit files, disconnect and gate signed-out access with mocked provider responses.",
+      "expected": "Desktop/mobile tests and accessibility checks pass."
+    },
+    {
+      "name": "static-build",
+      "command": "npm.cmd run build",
+      "proves": "Production-format static assets include the route and Microsoft auth callback without bundling server-only dependencies.",
+      "expected": "Build succeeds; this is a build check, not a production readiness claim."
+    }
+  ],
+  "status": "draft"
+}

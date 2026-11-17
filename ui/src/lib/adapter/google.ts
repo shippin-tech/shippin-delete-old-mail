@@ -1,3 +1,4 @@
+import { boundedBlob } from '../integrations/types';
 import { createFolder, type DriveNode, listFolder, uploadFile } from './drive';
 import {
 	copyName,
@@ -79,21 +80,21 @@ export async function listGoogle(options: {
 	};
 }
 
-async function fetchContent(file: GoogleFile, format?: string): Promise<File> {
+export async function readGoogleFile(file: GoogleFile, format?: string): Promise<File> {
 	const query = format ? `?export=${encodeURIComponent(format)}` : '';
 	const res = await fetch(`/api/v1/google/content/${encodeURIComponent(file.id)}${query}`, {
 		credentials: 'same-origin',
 		headers: headers()
 	});
 	if (!res.ok) throw await failure(res, `${file.name} could not be fetched from Google.`);
-	const blob = await res.blob();
+	const blob = await boundedBlob(res, 'application/octet-stream');
 	const name = copyName(file.name, res.headers.get('X-File-Extension') ?? '');
 	return new File([blob], name, { type: blob.type || 'application/octet-stream' });
 }
 
 /** Saves a Google file to this device. */
 export async function downloadGoogle(file: GoogleFile, format?: string): Promise<void> {
-	const content = await fetchContent(file, format);
+	const content = await readGoogleFile(file, format);
 	const link = document.createElement('a');
 	link.href = URL.createObjectURL(content);
 	link.download = content.name;
@@ -103,7 +104,7 @@ export async function downloadGoogle(file: GoogleFile, format?: string): Promise
 
 /** Copies a Google file into the "From Google" folder of the person's own Drive. */
 export async function importFromGoogle(file: GoogleFile, format?: string): Promise<void> {
-	const content = await fetchContent(file, format);
+	const content = await readGoogleFile(file, format);
 	const top = await listFolder(null);
 	const folder =
 		top.find((node) => node.kind === 'folder' && node.name === IMPORT_FOLDER)?.id ??

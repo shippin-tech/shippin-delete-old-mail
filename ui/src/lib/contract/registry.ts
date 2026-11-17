@@ -85,6 +85,11 @@ const unknownObject = (name: string): Parsed<never> => ({
 	problem: localProblem('unknown-object', 'There is no such object', 404, name)
 });
 
+// The ETag of each record this page has read or saved, by URL. A save or a delete sends it back as
+// If-Match, so the server refuses (412) when the record changed after it was read. A record that was
+// never read in this page is saved without the guard.
+const tags = new Map<string, string>();
+
 export function registryClient(options: ClientOptions) {
 	const doFetch = options.fetch ?? fetch;
 	const base = options.base ?? '/api/v1/registry';
@@ -98,6 +103,11 @@ export function registryClient(options: ClientOptions) {
 		const headers: Record<string, string> = { Accept: 'application/json' };
 		const authorization = options.authorization();
 		if (authorization) headers.Authorization = authorization;
+		const tagKey = `${base}${path}`;
+		if (method === 'PATCH' || method === 'DELETE') {
+			const tag = tags.get(tagKey);
+			if (tag) headers['If-Match'] = tag;
+		}
 		let body: string | undefined;
 		if (payload !== undefined) {
 			headers['Content-Type'] = 'application/json';
@@ -115,6 +125,10 @@ export function registryClient(options: ClientOptions) {
 		} catch {
 			return { ok: false, problem: localProblem('network-error', 'The server could not be reached', 503) };
 		}
+		const tag = response.headers.get('etag');
+		if (response.ok && tag && (method === 'GET' || method === 'PATCH')) tags.set(tagKey, tag);
+		// A 412 keeps the old tag on purpose: saving again without reading is refused again.
+		else if ((method === 'DELETE' && response.ok) || response.status === 404) tags.delete(tagKey);
 		const text = response.status === 204 ? '' : await response.text().catch(() => '');
 		let parsed: unknown = null;
 		if (text) {

@@ -37,7 +37,8 @@
 		role = await currentRole();
 	}
 
-	const PROTECTED = ['/shippin/admin', '/platform', '/manage', '/shippin/org', '/account', '/mail', '/files', '/docs', '/calendar', '/contacts'];
+	const PROTECTED = ['/shippin/admin', '/platform', '/manage', '/shippin/org', '/account', '/mail', '/files', '/docs', '/calendar', '/contacts', '/integrations'];
+	const microsoftCallback = $derived(page.url.pathname === '/connect/microsoft/callback');
 
 	function protectedPath(pathname: string): boolean {
 		return PROTECTED.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
@@ -53,6 +54,8 @@
 	}
 
 	onMount(() => {
+		// The popup bridge handles only Microsoft's response; do not start workspace requests here.
+		if (microsoftCallback) return;
 		const saved = localStorage.getItem('shippin-theme');
 		if (saved === 'light' || saved === 'dark') choice = saved;
 		signedIn = !!account();
@@ -115,6 +118,7 @@
 	<title>{brand.name}</title>
 </svelte:head>
 
+{#if !microsoftCallback}
 <a class="skip" href="#content">Skip to content</a>
 <header>
 	<a class="mark" href="/" aria-label="{brand.name} home">
@@ -132,11 +136,12 @@
 	</nav>
 	<Theme value={choice} {onchange} />
 </header>
+{/if}
 <main id="content">
 	{@render children()}
 </main>
 
-{#if signedIn}<AssistantDock />{/if}
+{#if signedIn && !microsoftCallback}<AssistantDock />{/if}
 
 <style>
 	header {

@@ -129,6 +129,96 @@ fn set_problem(error: &Value) -> Reply {
     problem_with_fields(status, kind, title, detail, fields)
 }
 
+/// The properties the server sets itself, per object type, from the schema this server ships
+/// (`serverSet` in resources/schema/schema.json.gz). They can change with no one editing the record
+/// (a new domain's DNS zone gains its DKIM keys a moment after it is made), so they are left out of
+/// the entity tag: it follows what a person can change.
+fn server_set() -> &'static std::collections::HashMap<String, Vec<String>> {
+    use std::{collections::HashMap, io::Read, sync::OnceLock};
+    static TABLE: OnceLock<HashMap<String, Vec<String>>> = OnceLock::new();
+    TABLE.get_or_init(|| {
+        const SCHEMA: &[u8] = include_bytes!("../../../../resources/schema/schema.json.gz");
+        let mut text = String::new();
+        if flate2::read::GzDecoder::new(SCHEMA).read_to_string(&mut text).is_err() {
+            return HashMap::new();
+        }
+        let schema: Value = serde_json::from_str(&text).unwrap_or(Value::Null);
+        let mut table = HashMap::new();
+        for (object, def) in schema.get("fields").and_then(Value::as_object).into_iter().flatten() {
+            let names = def
+                .get("properties")
+                .and_then(Value::as_object)
+                .into_iter()
+                .flatten()
+                .filter(|(_, property)| property.get("update").and_then(Value::as_str) == Some("serverSet"))
+                .map(|(name, _)| name.clone())
+                .collect::<Vec<_>>();
+            table.insert(object.clone(), names);
+        }
+        table
+    })
+}
+
+/// A record's entity tag: a hash of the properties a person can change, as the server serialises
+/// them. The registry keeps no per-record version, so a change to any of those is what makes an
+/// earlier tag stale.
+fn etag_of(object: &str, item: &Value) -> String {
+    use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+    use sha2::{Digest, Sha256};
+    let skip = server_set().get(&format!("x:{object}"));
+    let mut editable = item.clone();
+    if let (Some(map), Some(skip)) = (editable.as_object_mut(), skip) {
+        for name in skip {
+            map.remove(name);
+        }
+    }
+    let digest = Sha256::digest(editable.to_string().as_bytes());
+    format!("\"{}\"", URL_SAFE_NO_PAD.encode(&digest[..16]))
+}
+
+fn record_reply(status: StatusCode, object: &str, item: &Value) -> Reply {
+    Ok(JsonResponse::with_status(status, item.clone())
+        .no_cache()
+        .into_http_response()
+        .with_etag(etag_of(object, item)))
+}
+
+/// Honours `If-Match` on a change or a removal: the record must still be the one the caller read.
+/// Without the header the change is applied as before. The check and the change are two JMAP calls,
+/// so two writers arriving within the same instant can still both pass; it stops the common case of
+/// saving over a change made since the form was opened.
+async fn check_if_match(
+    server: &Server,
+    token: &AccessToken,
+    session: &HttpSessionData,
+    req: &HttpRequest,
+    object: &str,
+    get_name: &str,
+    id: &str,
+) -> Result<(), Box<Reply>> {
+    let Some(wanted) = req.headers().get(hyper::header::IF_MATCH) else {
+        return Ok(());
+    };
+    let wanted = wanted.to_str().unwrap_or("").trim().to_string();
+    let responses = jmap(server, token, session, vec![json!([get_name, { "ids": [id] }, "g"])])
+        .await
+        .map_err(|e| Box::new(Err(e)))?;
+    let got = method_args(&responses, 0, get_name)?;
+    let Some(item) = got.get("list").and_then(Value::as_array).and_then(|list| list.first()) else {
+        return Err(Box::new(problem(StatusCode::NOT_FOUND, "notFound", "No such record", Some(id))));
+    };
+    if wanted == "*" || wanted.split(',').any(|tag| tag.trim() == etag_of(object, item)) {
+        Ok(())
+    } else {
+        Err(Box::new(problem(
+            StatusCode::PRECONDITION_FAILED,
+            "stale",
+            "The record changed after you read it",
+            Some("Read it again and repeat the change."),
+        )))
+    }
+}
+
 fn valid_id(id: &str) -> bool {
     !id.is_empty() && id.len() <= 64 && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
 }
@@ -289,7 +379,7 @@ pub async fn handle_registry(
                 Err(reply) => return *reply,
             };
             match got.get("list").and_then(Value::as_array).and_then(|list| list.first()) {
-                Some(item) => ok(StatusCode::OK, item.clone()),
+                Some(item) => record_reply(StatusCode::OK, name, item),
                 None => problem(StatusCode::NOT_FOUND, "notFound", "No such record", Some(id)),
             }
         }
@@ -326,6 +416,9 @@ pub async fn handle_registry(
             };
             let set_name = method("set");
             let get_name = method("get");
+            if let Err(reply) = check_if_match(server, &token, session, req, name, &get_name, id).await {
+                return *reply;
+            }
             let responses = jmap(
                 server,
                 &token,
@@ -348,13 +441,16 @@ pub async fn handle_registry(
                 Err(reply) => return *reply,
             };
             match got.get("list").and_then(Value::as_array).and_then(|list| list.first()) {
-                Some(item) => ok(StatusCode::OK, item.clone()),
+                Some(item) => record_reply(StatusCode::OK, name, item),
                 None => problem(StatusCode::NOT_FOUND, "notFound", "No such record", Some(id)),
             }
         }
         // Remove
         (Method::DELETE, Some(id), false) => {
             let set_name = method("set");
+            if let Err(reply) = check_if_match(server, &token, session, req, name, &method("get"), id).await {
+                return *reply;
+            }
             let responses = jmap(server, &token, session, vec![json!([set_name, { "destroy": [id] }, "s"])]).await?;
             let set = match method_args(&responses, 0, &set_name) {
                 Ok(args) => args,

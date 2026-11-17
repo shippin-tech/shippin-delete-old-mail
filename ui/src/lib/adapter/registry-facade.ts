@@ -41,6 +41,11 @@ export function refusal(problem: Problem): Error {
 			'This record is still referenced by other objects. Remove those links before deleting it.'
 		);
 	}
+	if (problem.type === 'stale') {
+		return new Error(
+			'This record was changed by someone else after you opened it. Reload it and make your change again.'
+		);
+	}
 	const fields = problem.fields ? Object.keys(problem.fields) : [];
 	const fieldText = fields.length ? ` (${fields.map((f) => `${f}: ${problem.fields?.[f]}`).join('; ')})` : '';
 	// A record that broke its contract is the server's fault, not the person's: say so first.

@@ -1,0 +1,157 @@
+{
+  "schema_version": "1.0",
+  "id": "2026-11-16-independent-engine",
+  "title": "Independent implementation and product adoption proof",
+  "costar": {
+    "context": "The owner wants to replace inherited Stalwart implementation, control the replacement license and evolve an independently adoptable product.",
+    "objective": "Define a verifiable path from the current fork to a standalone implementation, with customer evidence collected alongside engineering.",
+    "style": "Evidence-backed staged replacement; separate observed code from proposed behavior.",
+    "tone": "Direct and practical.",
+    "audience": "Owner, team and future implementers.",
+    "response": "Dependency map, first standalone slice, replacement gates and adoption experiment."
+  },
+  "sources": [
+    {
+      "kind": "code",
+      "ref": "AGENTS.md"
+    },
+    {
+      "kind": "code",
+      "ref": "Cargo.toml"
+    },
+    {
+      "kind": "code",
+      "ref": "LICENSE"
+    },
+    {
+      "kind": "code",
+      "ref": "PLAN.md"
+    },
+    {
+      "kind": "code",
+      "ref": "RELEASE.md"
+    },
+    {
+      "kind": "code",
+      "ref": "crates/main/Cargo.toml"
+    },
+    {
+      "kind": "code",
+      "ref": "Dockerfile.fdb"
+    },
+    {
+      "kind": "code",
+      "ref": "api/README.md"
+    },
+    {
+      "kind": "code",
+      "ref": "platform/ABSORPTION.md"
+    },
+    {
+      "kind": "code",
+      "ref": "crates/common/src/shippin/mod.rs"
+    },
+    {
+      "kind": "code",
+      "ref": "crates/common/src/shippin/orgs.rs"
+    },
+    {
+      "kind": "code",
+      "ref": "crates/http/src/shippin/mod.rs"
+    },
+    {
+      "kind": "code",
+      "ref": "crates/http/src/shippin/panel.rs"
+    },
+    {
+      "kind": "code",
+      "ref": "crates/http/src/shippin/assistant.rs"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/e2e-live/mcp.spec.ts"
+    },
+    {
+      "kind": "code",
+      "ref": "ui/package.json"
+    },
+    {
+      "kind": "code",
+      "ref": ".ai/PROTOCOL.md"
+    },
+    {
+      "kind": "code",
+      "ref": ".ai/modules/plans/SKILL.md"
+    },
+    {
+      "kind": "code",
+      "ref": ".ai/modules/plans/schema/plan.schema.json"
+    },
+    {
+      "kind": "web",
+      "ref": "https://stalw.art/open-source/"
+    },
+    {
+      "kind": "web",
+      "ref": "https://www.apache.org/licenses/LICENSE-2.0"
+    },
+    {
+      "kind": "web",
+      "ref": "https://stalw.art/"
+    }
+  ],
+  "concerns": [
+    "Target license is pending the owner's answer. The current root BUSL declaration does not establish rights to relicense inherited implementation.",
+    "AI translation, renaming, a new repository or removing notices does not establish independent provenance. This session inspected inherited implementation and cannot be described as an unexposed clean-room implementer.",
+    "Comments calling product code 'ours' are not an authorship or license audit. UI, generated schemas, tests, assets, dependencies and imported platform code need separate provenance review.",
+    "The product API is tightly coupled to inherited Server, storage, registry, authentication and permission types; it cannot simply be copied into an empty server.",
+    "Standards compatibility, crash-safe storage, authorization and mail delivery require independent behavior tests; a source scan alone cannot establish independence or correctness.",
+    "License friction is the owner's adoption hypothesis, not verified customer evidence. A permissive license alone does not establish demand.",
+    "Current release documents include stale or inconsistent licensing descriptions. They are not a substitute for historical source attribution.",
+    "A full mail and groupware replacement has no credible schedule until the first slice and the complete dependency inventory are measured."
+  ],
+  "context": "User direction supersedes the earlier recommendation to retain Stalwart as the long-term engine. Preserve the fork as a separately identified local baseline while writing a standalone replacement. No product code is implemented by this planning record.",
+  "current_state": "At inspection commit 860462e, Cargo defaults include enterprise and Dockerfile.fdb explicitly builds scale,enterprise. Protocol, storage, auth, registry and groupware crates are part of one Rust workspace. Product additions under crates/http/src/shippin and crates/common/src/shippin depend on those internals. The Svelte adapters use JMAP and configuration registry contracts. MCP screen approval code and test sources exist; the internal assistant explicitly explains only and has no tools. Platform is a separate imported Go control plane with unresolved license selection. Current live behavior was not rerun during this assessment.",
+  "target_design": "A standalone engine with independently specified account, authorization, message, persistence and queue models, paired with a product experience whose retained source has documented rights. Implement protocol behavior from public standards and original requirements, with reviewed dependencies. Keep standard protocol compatibility where supported; do not inherit private extension schemas or database layouts as the new internal design. Build the replacement without any path dependency, binary, generated schema, bundled asset or running service from the old engine. Market readiness remains a separate release gate.",
+  "changes": [
+    "Stage 0 — Record the target license and rights holder; inventory every candidate source, generated artifact, asset, test and direct/transitive dependency. Classify as independently authored with evidence, permitted dependency with obligations, inherited replacement, or unresolved. No unresolved item may be silently retained.",
+    "Stage 1 — Write original behavior specifications from published standards, product requirements and externally observable interoperability. Cite exact standard sections during implementation. Define new storage and identity models. Preserve historical attribution in the old baseline; do not use source-to-source AI rewriting as independence evidence.",
+    "Stage 2 — Create a separate standalone workspace and build context. First slice: a loopback-only disposable server with two test accounts, authenticated sessions, mailbox authorization, bounded SMTP ingestion to local recipients, durable message storage, and a newly implemented inbox UI/API. SMTP must reject external relay; no external delivery or full protocol compliance claim. Acknowledged messages must survive process restart; unauthorized cross-account reads must fail. State exactly which SMTP commands and extensions are supported.",
+    "Stage 2 proof — Start with the old server stopped and its tree unavailable to the replacement build context. Submit a synthetic message through an independent SMTP client, retrieve it as the recipient, verify body and attachment bytes, restart and retrieve again, deny another account access, and reject nonlocal relay. Run positive and negative cases against the entire built artifact.",
+    "Stage 3 — Add a standards-based mail access surface and submission/outbound queue in measured increments. Specify advertised JMAP/IMAP capabilities, stable identifiers and state changes, retries, failure reports, TLS, authentication, DNS authentication and abuse limits. Use independent client implementations and failure injection. Do not claim full standards support after greeting/session-only tests.",
+    "Stage 4 — Rebuild or port only provenance-approved product UX onto the new service contracts: guided setup, domain health, mailbox management, operator-visible agent actions and lessons. Expand AI actions only with server-enforced authorization and tests for approval, denial and disconnected sessions.",
+    "Stage 5 — Add filtering, calendars, contacts, files, federation and other protocols only when buyer evidence requires them. Each retained capability gets a standards/requirements source and an end-to-end test; protocol parity is not a prerequisite for the first limited demo.",
+    "Stage 6 — Prove standalone installation, backup/restore, failure recovery and export/import in throwaway environments. Migration should use documented formats and protocols rather than reuse the old database layout. Retire old runtime components only after explicit data and feature checks pass.",
+    "Parallel adoption experiment — Recruit one buyer segment, record current workaround and license objections separately from usability objections, observe task completion on synthetic data, and seek repeated evaluations plus explicit willingness to pay. Suggested initial gates: 10 interviews, 5 observed demos, 3 scheduled follow-ups with an identified payer. These are proposed thresholds, not results or promises of demand."
+  ],
+  "boundaries": [
+    "This record maps work; it does not replace the engine, certify legal independence or certify any reused file.",
+    "Do not change the current root license, erase history, remove notices, delete the working baseline or claim inherited code is original.",
+    "Use only local Docker or throwaway environments and synthetic mail until the repository release gate is satisfied; no real customer mail.",
+    "No PR, issue, proposal branch push, maintainer message, security report, release tag or publication is authorized by this record.",
+    "The current team's ownership arrangements and the imported platform's rights remain unverified; personal independence is not established by technical replacement."
+  ],
+  "verification": [
+    {
+      "name": "operating-tree",
+      "command": "py -3.11 .ai/machine/organize.py --check",
+      "proves": "The complete operating record tree, including this plan, satisfies registered schemas.",
+      "expected": "All modules and records pass; report unrelated baseline failures explicitly.",
+      "result": "2026-11-16: whole-tree check failed with an unterminated JSON string and a missing concerns field in 2026-11-01-suite-readiness.json. This task did not change that record. The new independent-engine plan separately passed validation against plan.schema.json using the installed Ajv package. Whole-tree validation remains unresolved."
+    },
+    {
+      "name": "change-scope",
+      "command": "git status --short; git diff --check",
+      "proves": "The planning change leaves product implementation and license unchanged and introduces no tracked whitespace errors.",
+      "expected": "Only this new planning record is added by this task; no tracked diff errors. Untracked JSON is parsed by operating-tree.",
+      "result": "2026-11-16: git diff --check emitted no errors; git status showed only this new untracked plan."
+    },
+    {
+      "name": "standalone-whole-product-proof",
+      "command": "To be implemented with Stage 2: isolated build, dependency/source artifact inventory, and external SMTP-to-inbox/restart/authorization/relay-rejection suite with old engine unavailable.",
+      "proves": "The first replacement artifact operates without the inherited runtime and satisfies its entire declared behavior, including negative paths.",
+      "expected": "No old engine files, runtime or unreviewed dependency; all declared positive and negative cases pass. Not executed in this planning task."
+    }
+  ],
+  "status": "draft"
+}

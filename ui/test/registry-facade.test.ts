@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadRegistryPage, writeRegistry } from '../src/lib/adapter/portal';
 import { facadeName, servedByFacade } from '../src/lib/adapter/registry-facade';
 
-type Call = { url: string; method: string; body?: unknown; auth?: string };
+type Call = { url: string; method: string; body?: unknown; auth?: string; ifMatch?: string };
 let calls: Call[];
-let answers: { status: number; body?: unknown }[];
+let answers: { status: number; body?: unknown; etag?: string }[];
 let store: Map<string, string>;
 
 beforeEach(() => {
@@ -32,7 +32,8 @@ beforeEach(() => {
 			const answer = answers.shift();
 			if (!answer) throw new Error(`no answer scripted for ${url}`);
 			return new Response(answer.status === 204 ? null : JSON.stringify(answer.body ?? null), {
-				status: answer.status
+				status: answer.status,
+			headers: answer.etag ? { ETag: answer.etag } : undefined
 			});
 		})
 	);
@@ -175,5 +176,35 @@ describe('writing', () => {
 			writeRegistry('x:Domain', { create: { t: { name: 42 } as any } }, 't')
 		).rejects.toThrow(/not valid|name/i);
 		expect(calls).toHaveLength(0);
+	});
+});
+
+describe('stale-edit guard', () => {
+	it('sends back the ETag it read as If-Match when saving', async () => {
+		answers.push({ status: 200, body: domain('g1', 'g.test'), etag: '"v1"' });
+		answers.push({ status: 200, body: { ...domain('g1', 'g.test'), description: 'x' }, etag: '"v2"' });
+		answers.push({ status: 200, body: { ...domain('g1', 'g.test'), description: 'y' }, etag: '"v3"' });
+		await loadRegistryPage('x:Domain', { ids: ['g1'] });
+		await writeRegistry('x:Domain', { update: { g1: { description: 'x' } } }, 'g1');
+		await writeRegistry('x:Domain', { update: { g1: { description: 'y' } } }, 'g1');
+		expect(calls[1].ifMatch).toBe('"v1"');
+		// the answer to a save carries the new tag, so a second save in a row is not stale
+		expect(calls[2].ifMatch).toBe('"v2"');
+	});
+
+	it('does not guard a record it never read', async () => {
+		answers.push({ status: 200, body: domain('g2', 'h.test') });
+		await writeRegistry('x:Domain', { update: { g2: { description: 'x' } } }, 'g2');
+		expect(calls[0].ifMatch).toBeUndefined();
+	});
+
+	it('guards a delete too, and says why a stale one was refused', async () => {
+		answers.push({ status: 200, body: domain('g3', 'i.test'), etag: '"a"' });
+		answers.push({ status: 412, body: { type: 'stale', title: 'Changed', status: 412 } });
+		await loadRegistryPage('x:Domain', { ids: ['g3'] });
+		await expect(writeRegistry('x:Domain', { destroy: ['g3'] }, 'g3')).rejects.toThrow(
+			/changed by someone else/
+		);
+		expect(calls[1].ifMatch).toBe('"a"');
 	});
 });

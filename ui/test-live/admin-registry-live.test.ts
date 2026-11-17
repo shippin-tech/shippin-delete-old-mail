@@ -90,6 +90,35 @@ describe('the admin path, live', () => {
 		expect(gone.items.map((r) => r.id)).not.toContain(id);
 	});
 
+	it('refuses a save over a change made since the record was opened', async () => {
+		const name = `stale-${Math.random().toString(16).slice(2, 8)}.test`;
+		const id = await writeRegistry('x:Domain', { create: { tmp: { name } } }, 'tmp');
+		try {
+			await new Promise((r) => setTimeout(r, 1500)); // DKIM keys are made in the background
+			await loadRegistryPage('x:Domain', { ids: [id] }); // this screen opens the record
+			// someone else saves it from another screen, with their own read
+			const other = await fetch(`/api/v1/registry/Domain/${id}`, {
+				method: 'PATCH',
+				headers: { Authorization: `Basic ${basic}`, 'Content-Type': 'application/json' },
+				body: JSON.stringify({ description: 'by someone else' })
+			});
+			expect(other.status).toBe(200);
+			await expect(
+				writeRegistry('x:Domain', { update: { [id]: { description: 'my stale save' } } }, id)
+			).rejects.toThrow(/changed by someone else/);
+			const now = await loadRegistryPage('x:Domain', { ids: [id] });
+			expect(now.items[0].description).toBe('by someone else');
+			// having read it again, the save goes through
+			await writeRegistry('x:Domain', { update: { [id]: { description: 'mine' } } }, id);
+		} finally {
+			const keys = await loadRegistryPage('x:DkimSignature', { limit: 200 });
+			for (const key of keys.items.filter((k) => k.domainId === id)) {
+				await writeRegistry('x:DkimSignature', { destroy: [String(key.id)] }, String(key.id));
+			}
+			await writeRegistry('x:Domain', { destroy: [id] }, id);
+		}
+	});
+
 	it('names the field when the server refuses a value', async () => {
 		await expect(
 			writeRegistry('x:Domain', { create: { tmp: { name: 'not a domain!!' } } }, 'tmp')

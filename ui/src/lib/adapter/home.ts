@@ -60,6 +60,9 @@ export function navFor(role: Role, signupOpen: boolean): NavItem[] {
 		{ href: '/mail', label: 'Mail' },
 		{ href: '/calendar', label: 'Calendar' },
 		{ href: '/contacts', label: 'Contacts' },
+		{ href: '/files', label: 'Drive' },
+		{ href: '/docs', label: 'Docs' },
+		{ href: '/integrations', label: 'Connections' },
 		{ href: '/account', label: 'Account' }
 	];
 	switch (role) {
@@ -70,13 +73,7 @@ export function navFor(role: Role, signupOpen: boolean): NavItem[] {
 		case 'org':
 			return [{ href: '/shippin/org', label: 'Organisation' }, ...mail];
 		case 'admin':
-			return [
-				{ href: '/shippin/admin', label: 'Admin' },
-				{ href: '/platform', label: 'Platform' },
-				...mail,
-				{ href: '/files', label: 'Drive' },
-				{ href: '/docs', label: 'Docs' }
-			];
+			return [{ href: '/shippin/admin', label: 'Admin' }, { href: '/platform', label: 'Platform' }, ...mail];
 		default:
 			return mail;
 	}

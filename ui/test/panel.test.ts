@@ -123,7 +123,15 @@ describe('role-based home and navigation', () => {
 	it('shows customers only what they can use', () => {
 		expect(navFor('guest', true).map((i) => i.href)).toEqual(['/signup']);
 		expect(navFor('guest', false)).toEqual([]);
-		expect(navFor('user', true).map((i) => i.href)).toEqual(['/mail', '/calendar', '/contacts', '/account']);
+		expect(navFor('user', true).map((i) => i.href)).toEqual([
+			'/mail',
+			'/calendar',
+			'/contacts',
+			'/files',
+			'/docs',
+			'/integrations',
+			'/account'
+		]);
 		expect(navFor('owner', true)[0]).toEqual({ href: '/manage', label: 'My domain' });
 		expect(navFor('owner', true).map((i) => i.href)).not.toContain('/shippin/admin');
 		expect(navFor('admin', true).map((i) => i.href)).toContain('/shippin/admin');

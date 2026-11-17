@@ -24,8 +24,8 @@ def auth(who):
     return 'Basic ' + base64.b64encode(f"{who['username']}:{who['secret']}".encode()).decode()
 
 
-def call(method, path, who=None, body=None, raw=None):
-    headers = {'Accept': 'application/json'}
+def call(method, path, who=None, body=None, raw=None, extra=None):
+    headers = {'Accept': 'application/json', **(extra or {})}
     if who:
         headers['Authorization'] = auth(who)
     data = raw if raw is not None else (json.dumps(body).encode() if body is not None else None)
@@ -35,10 +35,12 @@ def call(method, path, who=None, body=None, raw=None):
     try:
         with urllib.request.urlopen(req, timeout=30) as r:
             LAST['type'] = r.headers.get('content-type', '')
+            LAST['etag'] = r.headers.get('etag')
             text = r.read()
             return r.status, (json.loads(text) if text else None)
     except urllib.error.HTTPError as e:
         LAST['type'] = e.headers.get('content-type', '')
+        LAST['etag'] = e.headers.get('etag')
         text = e.read()
         try:
             return e.code, json.loads(text) if text else None
@@ -136,6 +138,30 @@ try:
 
     s, b = call('PATCH', f'/Domain/{created}', admin, {'description': None})
     check('patch: null clears a nullable value', s == 200 and b.get('description') is None, (s, b))
+
+    # --- stale-edit guard: ETag on a read, If-Match on a change ---
+    # No settling here on purpose: a new domain's DNS zone gains its DKIM keys a moment after it is made,
+    # and that server-set change must not move the tag.
+    s, b = call('GET', f'/Domain/{created}', admin)
+    tag1 = LAST['etag']
+    check('get: carries an ETag', s == 200 and bool(tag1) and tag1.startswith('"'), (s, tag1))
+    s, b = call('GET', f'/Domain/{created}', admin)
+    check('get twice: the same ETag while nothing changed', LAST['etag'] == tag1, (LAST['etag'], tag1))
+    s, b = call('PATCH', f'/Domain/{created}', admin, {'description': 'by someone else'})
+    tag2 = LAST['etag']
+    check('patch: answers with the new ETag', s == 200 and bool(tag2) and tag2 != tag1, (s, tag1, tag2))
+    s, b = call('PATCH', f'/Domain/{created}', admin, {'description': 'stale save'}, extra={'If-Match': tag1})
+    check('patch with a stale If-Match: 412 problem, nothing changed', s == 412 and problem(b, 412) and b['type'] == 'stale', (s, b))
+    s, b = call('GET', f'/Domain/{created}', admin)
+    check('the stale save did not land', b.get('description') == 'by someone else', b)
+    s, b = call('PATCH', f'/Domain/{created}', admin, {'description': 'fresh save'}, extra={'If-Match': tag2})
+    check('patch with the current If-Match: 200', s == 200 and b.get('description') == 'fresh save', (s, b))
+    s, b = call('PATCH', f'/Domain/{created}', admin, {'description': 'star'}, extra={'If-Match': '*'})
+    check('patch with If-Match: * : 200 while the record exists', s == 200, (s, b))
+    s, b = call('DELETE', f'/Domain/{created}', admin, extra={'If-Match': tag1})
+    check('delete with a stale If-Match: 412, not a delete', s == 412 and b.get('type') == 'stale', (s, b))
+    s, b = call('PATCH', '/Domain/zzzzzz', admin, {'description': 'x'}, extra={'If-Match': tag1})
+    check('If-Match on a record that is not there: 404', s == 404 and problem(b, 404), (s, b))
 
     s, b = call('GET', '/Domain?filter=' + urllib.parse.quote(json.dumps({'text': name})), admin)
     found = [i for i in (b.get('items') or [])] if s == 200 else []
