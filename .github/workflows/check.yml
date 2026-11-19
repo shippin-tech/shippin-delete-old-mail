@@ -58,6 +58,8 @@ jobs:
           bash deploy/update.test.sh
           bash deploy/auto-update.test.sh
           bash deploy/backup.test.sh
+          bash deploy/relay.test.sh
+          bash deploy/host.test.sh
       - run: npm ci
         working-directory: ui
       - run: node scripts/check-webui-inventory.mjs

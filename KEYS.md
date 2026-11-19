@@ -89,6 +89,12 @@ its replaced keys, so a DNS value already published still counts.
 **A minute after every start**, the server seals again anything still under a replaced key
 or sealed the old way, then destroys the keys nothing needs any more.
 
+## Smarthost secret
+
+This one is not in the table above. It is not typed into the admin panel, and it is not sealed in the database.
+
+Paste the SMTP provider's secret into `secrets/relay/relay.key` in the instance directory (one line, mode 400, owner uid 2000). That file is what the field is. Resend is the documented example: the username is `resend` and the API key is the file. `bash relay.sh enable` tells the server the path (`/run/secrets/relay/relay.key`, secret type File). The registry does not store the key. `relay.sh` does not print it. A backup does not copy `secrets/`. The provider receives it as the SMTP password when a message for a listed sender domain is relayed. Proven by `deploy/relay.test.sh`.
+
 ## Backups and the key-wrapping key
 
 `backup.sh` leaves `key-wrapping.key` out on purpose, so a backup alone cannot open the secrets

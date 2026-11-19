@@ -48,7 +48,7 @@ refresh_scripts() {
   local image=$1 cid dir f
   dir=$(mktemp -d ./.deploy-new.XXXXXX)
   if cid=$(docker create "$image" 2>/dev/null) && docker cp "${cid}:/usr/share/shippin.tech/deploy/." "$dir" 2>/dev/null; then
-    for f in compose.yaml update.sh auto-update.sh verify-install.sh backup.sh; do
+    for f in compose.yaml update.sh auto-update.sh verify-install.sh backup.sh host.sh relay.sh relay.py relay.env.example; do
       if [[ -f "$dir/$f" ]] && ! cmp -s "$dir/$f" "$f"; then
         cp "$dir/$f" "$f.new" && chmod --reference="$f" "$f.new" 2>/dev/null; mv -f "$f.new" "$f"
         log "refreshed $f from the image"
@@ -106,7 +106,7 @@ do_status() {
   echo "channel:   ${base}:${channel}"
   if command -v systemctl >/dev/null; then
     echo "timer:     $(systemctl is-enabled "${unit}.timer" 2>/dev/null || echo not-installed) / $(systemctl is-active "${unit}.timer" 2>/dev/null || true)"
-    systemctl list-timers "${unit}.timer" --no-pager 2>/dev/null | sed -n 2p | sed 's/^/next:      /'
+    systemctl list-timers "${unit}.timer" --no-pager 2>/dev/null | sed -n 2p | sed 's/^/next:      /' || true
   fi
   [[ -f .update-skip ]] && { echo "skipped (failed health check):"; sed 's/^/  /' .update-skip; }
   [[ -f deployments.log ]] && { echo "last deployments:"; tail -n 5 deployments.log | sed 's/^/  /'; }

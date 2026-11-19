@@ -5,14 +5,20 @@
 #   bash backup.sh list                    # what is there
 #   bash backup.sh key                     # prints the key-wrapping key, to keep apart from backups
 #   bash backup.sh restore backups/<time> --yes   # replaces ALL mail data with that backup
+#   sudo bash backup.sh install            # systemd timer: 03:15 local time, every day
+#   sudo bash backup.sh uninstall          # remove that timer
 #
 # A backup holds a consistent FoundationDB snapshot (accounts, settings, mail
 # index), a mirror of the object storage (message bodies and attachments) taken
-# right after it, the server's settings file and server.env. Copy ./backups off
+# right after it, the server's settings file and server.env. It does not copy
+# secrets/ (the smarthost key) or the key-wrapping key. Copy ./backups off
 # the host as well; a backup on the same disk does not survive losing the disk.
 # Nodes on your own FoundationDB and S3 back those up with their own tools.
 set -euo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
+here=$(pwd -P)
+unit_dir=${SHIPPIN_UNIT_DIR:-/etc/systemd/system}
+systemctl=(${SHIPPIN_SYSTEMCTL:-systemctl})
 
 value() { awk -F= -v k="$1" '$1 == k { sub(/^[^=]*=/, ""); print; exit }' server.env; }
 [[ -f server.env ]] || { echo 'Run this in the instance directory.' >&2; exit 1; }
@@ -26,7 +32,59 @@ tool=(docker compose --env-file server.env -f compose.yaml --profile bundled --p
 mc_setup='export HOME=/tmp; cp /tools/mc /tmp/mc && chmod +x /tmp/mc && /tmp/mc alias set s3 http://minio:9000 "$S3_ACCESS_KEY" "$S3_SECRET_KEY" >/dev/null'
 mkdir -p backups
 
+backup_unit() {
+  local project safe
+  project=$(value COMPOSE_PROJECT_NAME)
+  project=${project:-shippin-mail}
+  safe=$(printf '%s' "$project" | tr -c 'A-Za-z0-9._-' '-')
+  printf 'shippin-backup-%s\n' "$safe"
+}
+
+require_root_unit() {
+  if [[ "$unit_dir" == /etc/systemd/system && ${EUID:-$(id -u)} -ne 0 ]]; then
+    echo 'backup: run as root (sudo bash backup.sh install)' >&2
+    exit 1
+  fi
+}
+
 case "${1:-backup}" in
+  install)
+    require_root_unit
+    command -v "${systemctl[0]}" >/dev/null || { echo 'backup: systemd is required for the timer' >&2; exit 1; }
+    unit=$(backup_unit)
+    mkdir -p -- "$unit_dir"
+    cat > "$unit_dir/${unit}.service" <<EOF
+[Unit]
+Description=shippin.tech mail backup (${here})
+After=docker.service
+[Service]
+Type=oneshot
+WorkingDirectory=${here}
+ExecStart=/usr/bin/env bash ${here}/backup.sh
+EOF
+    cat > "$unit_dir/${unit}.timer" <<EOF
+[Unit]
+Description=Nightly shippin.tech mail backup (${here})
+[Timer]
+OnCalendar=*-*-* 03:15:00
+Persistent=true
+RandomizedDelaySec=15min
+Unit=${unit}.service
+[Install]
+WantedBy=timers.target
+EOF
+    "${systemctl[@]}" daemon-reload
+    "${systemctl[@]}" enable --now "${unit}.timer"
+    echo "installed ${unit}.timer (03:15 in the host timezone). Copy backups/ off this machine; see README.md."
+    ;;
+  uninstall)
+    require_root_unit
+    unit=$(backup_unit)
+    "${systemctl[@]}" disable --now "${unit}.timer" >/dev/null 2>&1 || true
+    rm -f -- "$unit_dir/${unit}.timer" "$unit_dir/${unit}.service"
+    "${systemctl[@]}" daemon-reload || true
+    echo "removed ${unit}.timer"
+    ;;
   backup)
     stamp=$(date -u +%Y%m%dT%H%M%SZ)
     # Written under a .partial name and renamed only when every part succeeded,
@@ -76,7 +134,7 @@ case "${1:-backup}" in
     echo "Restored from $dir"
     ;;
   *)
-    sed -n '2,13p' "$0" >&2
+    awk 'NR>1 && /^#/ { sub(/^# ?/, ""); print; next } NR>1 { exit }' "$0" >&2
     exit 2
     ;;
 esac

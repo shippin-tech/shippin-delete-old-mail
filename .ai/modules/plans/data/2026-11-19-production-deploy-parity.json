@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0",
+  "id": "2026-11-19-production-deploy",
+  "title": "Match the repo to the running mail host",
+  "costar": {
+    "context": "The mail host for shippin.ai was changed by hand. The owner requires every server change to land in this repo before it is deployed. This change does not touch the host.",
+    "objective": "Make a fresh install describe the same stack as the running host, keep main's compatible improvements, and add a default-off sender-domain smarthost, a systemd unit for the real compose project, and a backup timer.",
+    "style": "Deploy scripts and docs. No engine rewrite. No secrets in the tree.",
+    "tone": "Direct.",
+    "audience": "The maintainer reviewing the pull request.",
+    "response": "The pull request lists what already matched, what changed, how to verify, and the follow-ups."
+  },
+  "sources": [
+    {"kind": "code", "ref": "deploy/compose.yaml"},
+    {"kind": "code", "ref": "deploy/server.env.example"},
+    {"kind": "code", "ref": "deploy/backup.sh"},
+    {"kind": "code", "ref": "deploy/README.md"},
+    {"kind": "code", "ref": "install.sh"},
+    {"kind": "code", "ref": "Dockerfile.fdb"},
+    {"kind": "code", "ref": ".github/workflows/test-build.yml"},
+    {"kind": "code", "ref": "crates/http/src/api/registry_rest.rs"},
+    {"kind": "code", "ref": "crates/registry/src/schema/structs.rs"},
+    {"kind": "code", "ref": "ui/scripts/emit-portal.ts"},
+    {"kind": "code", "ref": "resources/schema/schema.json.gz"}
+  ],
+  "concerns": [
+    "The running image is a hand build of commit 6c8f37b, which is not an ancestor of main. A fresh install cannot reproduce that binary; it reproduces the stack and pins a CI image.",
+    "SETUP_KEY_HOURS and /api/v1 paths are main improvements. Shipping them means the host must move to a main image before those scripts are the ones it runs.",
+    "The secrets mount recreates the mail container the next time compose is applied. Relay stays off, so delivery stays direct MX.",
+    "The admin catalog drops nested MTA menus, so the relay is not a clickable route until that walker is fixed.",
+    "backup.sh install and host.sh install are not run on the host by this change."
+  ],
+  "context": "Production is compose project shippin-mail in /srv/shippin-tech/mail: one mail container, FoundationDB 7.4.6, MinIO, NATS, direct MX. systemd units point at /srv/shippin-tech/node-a and /etc/shippin-tech/infra.compose.yaml, which do not exist. No backup timer. A Resend relay route was removed; outbound is local plus mx.",
+  "current_state": "deploy/compose.yaml matches that stack except shippin.tech_SETUP_KEY_HOURS. server.env.example, backup.sh, verify-install.sh and README.md are the newer main copies. test-build.yml already publishes ghcr.io/<repo>-scale on v* tags and workflow_dispatch. MtaRoute and MtaOutboundStrategy are registry objects. The portal walker never emits the MTA menu.",
+  "target_design": "The instance directory stays /srv/shippin-tech/mail. New installs write the same bundled compose project, with SETUP_KEY_HOURS left at 24. Outbound relay is relay.env, default off, secret only in secrets/relay/relay.key, applied by relay.sh through the loopback registry API as a File secret. host.sh installs one systemd unit for that directory and retires the two broken units when their paths are missing. backup.sh install arms a 03:15 timer. Images come from the existing Test container build workflow, not a hand build.",
+  "changes": [
+    "Document the host versus main in deploy/PRODUCTION.md and the operator steps in deploy/README.md.",
+    "Mount ./secrets/relay into the mail container and add relay.sh, default off.",
+    "Add host.sh and backup.sh install/uninstall.",
+    "Teach install.sh, the image copy, and auto-update refresh about the new files.",
+    "Point the release notes at mail.shippin.ai for the PTR check."
+  ],
+  "boundaries": [
+    "No deploy to the host, no secrets, no account names, no backup dumps.",
+    "No license file, no shippin.cloud hosting, no new mail engine.",
+    "The portal catalog walker is unchanged; the MTA screens stay a follow-up.",
+    "Third-party image tags stay floating, as on the host. Digests are recorded, not pinned."
+  ],
+  "verification": [
+    {
+      "name": "relay and host scripts",
+      "command": "bash deploy/relay.test.sh && bash deploy/host.test.sh && bash deploy/backup.test.sh && bash deploy/auto-update.test.sh && bash deploy/update.test.sh",
+      "proves": "A default-off relay never sends a secret, enable scopes by sender domain and preserves other strategy rules, disable returns to direct MX, and the systemd unit targets the instance directory rather than the missing node-a path. Existing backup and update checks still pass.",
+      "expected": "each script prints that its checks passed",
+      "result": "relay.sh, host.sh, backup.sh, auto-update.sh and update.sh each printed that all checks passed. auto-update.sh status no longer fails when systemctl cannot reach a bus."
+    },
+    {
+      "name": "compose renders the production services",
+      "command": "MAIL_HOSTNAME=mail.example.com SHIPPIN_IMAGE=ghcr.io/shippin-tech/shippin-tech-scale:sha-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa S3_ENDPOINT=http://minio:9000 S3_ACCESS_KEY=example S3_SECRET_KEY=example S3_BUCKET=mail NATS_ADDRESS=nats:4222 COMPOSE_PROFILES=bundled docker compose -f deploy/compose.yaml config",
+      "proves": "The rendered stack still has mail, foundationdb, minio, nats and fdb-backup-agent, and the new secret mount, so a fresh install is the production stack plus the empty relay directory.",
+      "expected": "services mail, foundationdb, minio, nats, fdb-backup-agent and volume ./secrets/relay",
+      "result": "Docker is not installed in this environment, so docker compose config was not run. PyYAML loaded deploy/compose.yaml: services fdb-backup-agent, fdb-init, foundationdb, mail, minio, nats, objects-client, objects-init, objects-tool. The mail service mounts ./secrets/relay and still sets shippin.tech_SETUP_KEY_HOURS."
+    }
+  ],
+  "status": "implemented"
+}

@@ -46,7 +46,13 @@ That is the only supported install. It creates `/srv/shippin-tech/mail` with
 server together with FoundationDB, object storage and NATS on the same host
 (`COMPOSE_PROFILES=bundled`), all with persistent Docker volumes. Add
 `--no-start` to review `server.env` before the first start, and
-`--auto-update` to install the release-channel timer described below.
+`--auto-update` to install the release-channel timer described below. On a
+host with systemd it also installs a boot unit for that directory and a
+nightly backup timer (`--no-systemd` and `--no-backup` skip those).
+
+The mail host that serves shippin.ai is `mail.shippin.ai`. Do not use
+`mail.shippin.tech` as a mail host. What that machine runs today, and how to
+move it onto a build of this tree, is [PRODUCTION.md](PRODUCTION.md).
 
 ### First sign-in
 
@@ -161,6 +167,11 @@ and object storage and are untouched.
 
 ### From v0.1.2 (for example VM 164)
 
+The host that is running now is the bundled stack in `/srv/shippin-tech/mail`.
+Move that one with [PRODUCTION.md](PRODUCTION.md). The steps below are only for
+a v0.1.2 install whose FoundationDB, object storage and NATS are outside
+compose.
+
 v0.1.2 mounted `./config.json` read-only into the container, had no data-volume
 settings file and no setup key. To move it to the current layout:
 
@@ -168,9 +179,12 @@ settings file and no setup key. To move it to the current layout:
 cd /path/to/the/instance            # where server.env and update.sh are
 cp server.env server.env.v0.1.2     # keep a copy of what you had
 REF=main                            # or the release tag you are moving to
-for f in compose.yaml update.sh auto-update.sh verify-install.sh; do
+for f in compose.yaml update.sh auto-update.sh verify-install.sh backup.sh host.sh relay.sh relay.py relay.env.example README.md PRODUCTION.md; do
   curl -fsSL "https://raw.githubusercontent.com/shippin-tech/shippin-tech/$REF/deploy/$f" -o "$f"
 done
+chmod +x update.sh auto-update.sh verify-install.sh backup.sh host.sh relay.sh relay.py
+[[ -f relay.env ]] || cp relay.env.example relay.env
+mkdir -p secrets/relay
 bash update.sh --check              # should say the running server's
                                     # /etc/shippin.tech/config.json will be copied in
 bash update.sh ghcr.io/shippin-tech/shippin-tech-scale@sha256:<digest>
@@ -187,8 +201,9 @@ channel.
 ### From v0.1.3 or later
 
 `auto-update.sh` handles it: every update first refreshes `compose.yaml`,
-`update.sh`, `auto-update.sh` and `verify-install.sh` from the new image. By
-hand: `bash update.sh --check`, then `bash update.sh <image>`.
+`update.sh`, `auto-update.sh`, `verify-install.sh`, `backup.sh`, `host.sh` and
+`relay.sh` from the new image. By hand: `bash update.sh --check`, then
+`bash update.sh <image>`.
 
 ## Backups
 
@@ -202,17 +217,30 @@ keeps the newest seven (`KEEP=14 bash backup.sh` for more):
 cd /srv/shippin-tech/mail
 sudo bash backup.sh                 # take one now
 sudo bash backup.sh list
+sudo bash backup.sh install         # systemd timer, 03:15 in the host timezone
 ```
 
-Run it nightly with cron (`sudo crontab -e`):
+`install` starts the `fdb-backup-agent` service when the timer fires (`backup.sh`
+brings that container up itself). The timer is `shippin-backup-<project>.timer`.
+`sudo bash backup.sh uninstall` removes it. A cron line is the same job if you
+have no systemd:
 
 ```
 15 3 * * * cd /srv/shippin-tech/mail && bash backup.sh >> backups/backup.log 2>&1
 ```
 
-Copy `backups/` off the host as well (rsync, restic, your provider's snapshots):
-a backup on the same disk does not survive losing the disk. To restore, which
-replaces every account, setting and message with the backup:
+Copy `backups/` off the host as well. A backup on the same disk does not survive
+losing the disk. `server.env` in each backup contains the object-storage
+password, so the copy needs the same care as the host. The smarthost key in
+`secrets/relay/` is not inside `backups/`; copy that file separately if you use
+a relay, and keep one copy of `bash backup.sh key` apart from both. From a
+trusted admin machine:
+
+```sh
+rsync -a root@mail.example.com:/srv/shippin-tech/mail/backups/ /var/backups/mail/
+```
+
+To restore, which replaces every account, setting and message with the backup:
 
 ```sh
 sudo bash backup.sh restore backups/20261110T031500Z --yes
@@ -223,6 +251,56 @@ starts it again. A restore of an upgraded node was rehearsed: a message deleted
 after the backup came back, and an account created after it was gone. Nodes on
 your own FoundationDB and S3 back those up with their own tools
 (`fdbbackup`, bucket replication).
+
+## Outbound smarthost
+
+Remote mail goes out by MX lookup. A smarthost is optional and off until you
+turn it on. It applies only to the sender domains you name; every other domain
+stays on MX, and mail to a local domain stays local.
+
+The registry stores a file path, not the secret. Paste the provider key into
+`secrets/relay/relay.key` (one line). That file is what the server reads.
+
+```sh
+cd /srv/shippin-tech/mail
+install -m 0400 -o 2000 -g 2000 /dev/null secrets/relay/relay.key
+# paste the provider key into secrets/relay/relay.key
+# sign-in for the next command, one line, mode 600, not mounted into the container:
+#   address:password  > secrets/relay-admin
+```
+
+`relay.env` (from `relay.env.example`) holds everything that is not a secret.
+The documented example is Resend. Any SMTP smarthost works: set the host,
+port, TLS and username to that provider.
+
+```
+RELAY=on
+RELAY_DOMAINS=example.com
+RELAY_HOST=smtp.resend.com
+RELAY_PORT=465
+RELAY_IMPLICIT_TLS=true
+RELAY_USERNAME=resend
+RELAY_NAME=relay
+```
+
+Resend's username is the word `resend`. The API key is the file, not a line
+in `relay.env`.
+
+```sh
+sudo bash relay.sh status     # relay.env and the live strategy; secrets are not printed
+sudo bash relay.sh enable     # RELAY=on and apply
+sudo bash relay.sh apply      # make the server match relay.env, whatever it says
+sudo bash relay.sh disable    # remove the sender-domain rule and the route; MX again
+```
+
+`enable` and `disable` change `relay.env` only after the registry accepted the
+change. Run them as root so the key file is owned by uid 2000, which is the
+user inside the mail container. The admin screen does not list this route
+today: Settings → MTA → Outbound is nested in the schema, and the portal
+catalog keeps only one level of menu, so Routes and Strategy are not in the
+nav. Until that menu is fixed, `relay.sh` is the switch. The same records are
+`MtaRoute` and `MtaOutboundStrategy` on `POST/PATCH /api/v1/registry/...` if
+you already drive the registry by hand.
 
 ## Your own FoundationDB, object storage and NATS
 
@@ -240,6 +318,24 @@ The image name is always lowercase (`ghcr.io/shippin-tech/shippin-tech-scale`).
 tag; moving tags such as `release` are refused. Use the same image on all
 servers. Health checks measure process liveness, so verify mail delivery,
 shared mailbox access and tenant isolation before promoting a build.
+
+## Images are built by CI
+
+Do not build the image on the mail host. [Test container build](../.github/workflows/test-build.yml)
+(`.github/workflows/test-build.yml`) is the build. It runs on a `v*` tag and
+when someone starts the workflow by hand. Every build is pushed as
+`ghcr.io/shippin-tech/shippin-tech-scale:sha-<full commit>`. A `v*` tag also
+moves `:release`. [RELEASE.md](../RELEASE.md) still has open rows, so do not
+push a `v*` tag: that would move `:release` and any host running
+`auto-update.sh` would take it. For a host you are moving by hand, start
+**Test container build** on the commit you want, then:
+
+```sh
+bash update.sh ghcr.io/shippin-tech/shippin-tech-scale:sha-<full commit>
+```
+
+The workflow summary prints the digest form, `ghcr.io/shippin-tech/shippin-tech-scale@sha256:<digest>`,
+which `update.sh` also accepts.
 
 ## Automatic updates from the release channel
 
@@ -318,8 +414,10 @@ new actions; existing mailboxes keep the storage they were created with.
 
 Use one deployment directory per node instance. For each instance:
 
-1. Copy the bundle into an instance directory (example:
-   `/srv/shippin-tech/node-a`, `/srv/shippin-tech/node-b`).
+1. Copy the bundle into an instance directory. The one-host install is
+   `/srv/shippin-tech/mail`. A second instance you add on purpose can be
+   `/srv/shippin-tech/node-b`; do not point a unit at `node-a` unless that
+   directory is the one you created.
 2. Set a unique `COMPOSE_PROJECT_NAME` in each `server.env`.
 3. Set a unique `MAIL_HOSTNAME` for each node.
 4. If multiple instances share one host/IP, set unique host ports in

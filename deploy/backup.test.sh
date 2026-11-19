@@ -33,6 +33,8 @@ export PATH="$work/bin:$PATH" FAKE="$work/state"
 echo "$KEY" > state/key
 printf 'COMPOSE_PROJECT_NAME=node-a\nCOMPOSE_PROFILES=bundled\nS3_ACCESS_KEY=a\nS3_SECRET_KEY=b\n' > server.env
 touch compose.yaml
+mkdir -p secrets/relay
+printf 'super-secret-value\n' > secrets/relay/relay.key
 
 expect() { if [[ "$2" == *"$1"* ]]; then echo "ok   $3"; else echo "FAIL $3"; echo "---"; echo "$2"; echo "---"; exit 1; fi; }
 refute() { if [[ "$2" != *"$1"* ]]; then echo "ok   $3"; else echo "FAIL $3"; echo "---"; echo "$2"; echo "---"; exit 1; fi; }
@@ -44,6 +46,7 @@ made=$(ls -d backups/*Z)
 expect "FoundationDb" "$(cat "$made/config.json")" "the settings file is in the backup"
 [[ -f "$made/server.env" ]] && echo "ok   server.env is in the backup" || { echo "FAIL server.env is in the backup"; exit 1; }
 refute "$KEY" "$(cat -- $(find "$made" -type f))" "no file in the backup holds the key-wrapping key"
+refute "super-secret-value" "$(cat -- $(find "$made" -type f))" "the smarthost key is not in the backup"
 refute "key-wrapping.key" "$(cat state/calls)" "a backup never reads the key-wrapping key"
 
 expect "$KEY" "$(bash backup.sh key 2>&1)" "backup.sh key prints the key-wrapping key on request"

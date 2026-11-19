@@ -35,6 +35,8 @@ CLAUDE.md
 deploy/server.env
 deploy/server.env.*
 !deploy/server.env.example
+deploy/relay.env
+deploy/secrets/
 deploy/fdb.cluster
 deploy/deployments.log
 

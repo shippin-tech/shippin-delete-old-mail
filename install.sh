@@ -16,11 +16,13 @@
 #   --from DIR         copy the deploy files from a local checkout's deploy/ instead
 #   --no-start         write the files and stop, so you can review server.env first
 #   --auto-update      also install the timer that follows the release channel
+#   --no-systemd       do not install the boot unit
+#   --no-backup        do not install the nightly backup timer
 set -euo pipefail
 
 REPO=https://raw.githubusercontent.com/shippin-tech/shippin-tech
 IMAGE_BASE=ghcr.io/shippin-tech/shippin-tech-scale
-ref=main dir=/srv/shippin-tech/mail host='' image='' from='' start=true auto=false
+ref=main dir=/srv/shippin-tech/mail host='' image='' from='' start=true auto=false systemd=true backup=true
 
 die() { echo "install: $*" >&2; exit 1; }
 while [[ $# -gt 0 ]]; do
@@ -32,7 +34,9 @@ while [[ $# -gt 0 ]]; do
     --from) from=${2:-}; shift 2 ;;
     --no-start) start=false; shift ;;
     --auto-update) auto=true; shift ;;
-    -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
+    --no-systemd) systemd=false; shift ;;
+    --no-backup) backup=false; shift ;;
+    -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
     *) die "unknown option $1 (try --help)" ;;
   esac
 done
@@ -51,7 +55,7 @@ if [[ -n "$from" ]]; then
 fi
 mkdir -p "$dir"
 cd "$dir"
-files=(compose.yaml update.sh auto-update.sh verify-install.sh backup.sh config.json server.env.example README.md)
+files=(compose.yaml update.sh auto-update.sh verify-install.sh backup.sh host.sh relay.sh relay.py config.json server.env.example relay.env.example README.md PRODUCTION.md)
 for f in "${files[@]}"; do
   if [[ -n "$from" ]]; then
     cp -- "$from/$f" "$f"
@@ -59,7 +63,7 @@ for f in "${files[@]}"; do
     curl -fsSL "$REPO/$ref/deploy/$f" -o "$f" || die "could not download deploy/$f for $ref"
   fi
 done
-chmod +x update.sh auto-update.sh verify-install.sh backup.sh
+chmod +x update.sh auto-update.sh verify-install.sh backup.sh host.sh relay.sh relay.py
 
 if [[ -z "$image" ]]; then
   docker pull -q "$IMAGE_BASE:release" >/dev/null \
@@ -80,6 +84,8 @@ MAIL_HOSTNAME=$host
 # Optional break-glass administrator (admin:<long password>). Leave empty to use the
 # one-time setup key the server prints on its first start.
 RECOVERY_ADMIN=
+# Hours the one-time setup key works for, counted from when it was made.
+SETUP_KEY_HOURS=24
 # Bundled object storage and NATS on this host.
 S3_ENDPOINT=http://minio:9000
 S3_ACCESS_KEY=shippin
@@ -107,6 +113,9 @@ PANEL_SIGNUPS_PER_HOUR=10
 PANEL_SENDS_PER_DAY=200
 EOF
 umask 022
+cp -- relay.env.example relay.env
+mkdir -p secrets/relay
+chmod 755 secrets/relay
 
 if ! $start; then
   echo "Files written to $dir. Review server.env, then run: cd $dir && bash update.sh $image"
@@ -114,6 +123,13 @@ if ! $start; then
 fi
 
 bash update.sh "$image"
+if $systemd && command -v systemctl >/dev/null && [[ -d /run/systemd/system ]]; then
+  if $backup; then
+    bash host.sh install
+  else
+    BACKUP_TIMER=skip bash host.sh install
+  fi
+fi
 if $auto; then
   bash auto-update.sh install
 fi
