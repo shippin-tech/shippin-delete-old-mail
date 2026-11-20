@@ -1,0 +1,7 @@
+# Paths that existed at the baseline commit and that the owner confirms are their own work.
+# One glob per line (fnmatch against the repository-relative path; * also matches "/").
+# Anything not listed here and present at the baseline counts as inherited.
+#
+# Listed on the evidence of the name alone: the product modules live in directories called shippin.
+# The owner must confirm this list; the ui/, deploy/, mcpl/ and resources/ trees are not listed yet.
+crates/*/src/shippin/*
