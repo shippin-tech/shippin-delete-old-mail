@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0",
+  "id": "2026-11-20-shippintech-foundation",
+  "title": "Own the product boundary and prevent false regression passes",
+  "costar": {
+    "context": "The owner requires full separation from Stalwart, one new API, a complete Svelte UI and Rust foundation supporting webmail and services for shippin.ai.",
+    "objective": "Record the final architecture and make regression evidence fail closed before engine replacement.",
+    "style": "Concrete acceptance criteria with observed evidence.",
+    "tone": "Direct.",
+    "audience": "Owner and implementers.",
+    "response": "Architecture decision, regression runner hardening and executable tests."
+  },
+  "sources": [
+    {"kind": "code", "ref": "AGENTS.md"},
+    {"kind": "code", "ref": "README.md"},
+    {"kind": "code", "ref": "REGRESSION.md"},
+    {"kind": "code", "ref": "ROADMAP.md"},
+    {"kind": "code", "ref": "api/DESIGN.md"},
+    {"kind": "code", "ref": "api/README.md"},
+    {"kind": "code", "ref": "roadmap/independence.md"},
+    {"kind": "code", "ref": "scripts/regression.py"},
+    {"kind": "code", "ref": ".github/workflows/check.yml"},
+    {"kind": "code", "ref": "ui/porting/README.md"},
+    {"kind": "code", "ref": "ui/src/lib/contract/registry.ts"},
+    {"kind": "code", "ref": "crates/http/src/api/mod.rs"},
+    {"kind": "web", "ref": "https://github.com/stalwartlabs/stalwart"},
+    {"kind": "web", "ref": "https://github.com/knadh/listmonk"},
+    {"kind": "web", "ref": "https://listmonk.app/docs/apis/apis/"}
+  ],
+  "concerns": [
+    "A new prefix and renamed files do not establish independent authorship or a new domain model.",
+    "Unknown step selection, omitted engine tests, missing image identity and empty engine summaries can otherwise overstate proof.",
+    "A selected suite passing does not prove baseline equivalence, migration, performance or external consent.",
+    "Docker was absent on the sandbox tool PATH but visible in the approved test process. Image inspection alone does not establish equivalence or matching UI build identity.",
+    "scripts/engine-suite.sh was already untracked on arrival and remains outside this change."
+  ],
+  "context": "The owner's current direction supersedes any permanent upstream management compatibility or inherited registry requirement. Standard client behavior and product capabilities remain mandatory.",
+  "current_state": "The dispatcher already requires /api/v1, but the registry facade and generated contracts depend on inherited schemas. The Svelte port documents remaining parity work. The runner has web/live/engine steps but can accept empty selections and write a full report without engine steps.",
+  "target_design": "One shippinTECH domain model and product API owned by Rust, one Svelte product UI, standard protocol adapters and private service integrations. No permanent upstream compatibility API, UI bundle or runtime dependency. Component retirement requires behavioral, data and recovery proof.",
+  "changes": [
+    "Document the final product boundary, cutover evidence, upstream lessons intake after separation, and listmonk service acceptance for shippin.ai.",
+    "Clarify the capability regression floor versus deliberately replaced private upstream contracts.",
+    "Reject unknown or empty regression selections; partial runs cannot overwrite full reports; report missing coverage explicitly.",
+    "Require recorded local image identity for live checks, reject unattributable endpoint overrides and reject empty/ignored engine success or skipped browser/unit cases.",
+    "Add runner tests to the existing Check workflow."
+  ],
+  "boundaries": [
+    "No engine, data, schema, old bundle or attribution is deleted by this foundation change.",
+    "No release, PR, issue, external message, commit or push is performed.",
+    "Service integration and full independence remain pending implementation and proof."
+  ],
+  "verification": [
+    {"name": "runner", "command": "python -m unittest discover -s scripts -p test_regression.py -v", "proves": "CLI selection, execution verdicts and report isolation reject false success.", "expected": "All runner tests pass.", "result": "10 tests passed in the final complete web-gate run on Python 3.15.0rc2; CI is configured for Python 3.11 but has not run for this uncommitted change."},
+    {"name": "web-and-live", "command": "python scripts/regression.py", "proves": "All available web/live gates run without narrowing to changed files; failures and unavailable checks remain visible.", "expected": "Report every result and limitation; no full parity claim.", "result": "2026-11-20T20:30:54Z to 20:32:58Z: 17 passed, 0 failed, 9 not run, 2 engine suites omitted; exit 1. Typecheck, lint, 261 unit tests, build and 12 mocked browser tests passed. POSIX relay check unavailable on Windows; all eight live checks blocked by an unreachable engine. Docker inspection then showed the local stack stopped with mail exit 0. Initial deploy-update failure was CRLF in the working copy; normalized to existing LF attributes and passed on final run. No deployment logic or assertions changed. Details in roadmap/shippintech-foundation.md and roadmap/regression-results.partial.json."},
+    {"name": "operating-tree", "command": "python .ai/machine/organize.py --check", "proves": "Operating records match the module schemas.", "expected": "Pass or identify pre-existing invalid records.", "result": "Exit 1: pre-existing unterminated JSON and missing concerns in 2026-11-01-suite-readiness.json, also documented in the earlier independent-engine plan. The new foundation plan separately passes validation with ui/node_modules/ajv against plan.schema.json."},
+    {"name": "diff", "command": "git diff --check", "proves": "Tracked changes have no whitespace errors.", "expected": "Pass.", "result": "Exit 0. Existing untracked scripts/engine-suite.sh was not edited."}
+  ],
+  "status": "implemented"
+}

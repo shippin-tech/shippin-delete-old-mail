@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """One command for the gates in REGRESSION.md. Records what ran, against which commit and image.
 
-    python scripts/regression.py                 web gate + live gate (needs the local stack up)
+    python scripts/regression.py                 web + live (partial; needs the local stack up)
     python scripts/regression.py --engine        also the inherited Rust suite in a Linux container
     python scripts/regression.py --only web      one gate: web, live, engine
     python scripts/regression.py --list          print the steps and exit
@@ -12,7 +12,8 @@ Rules it keeps, because REGRESSION.md demands them:
   - The report names the commit (and whether the tree was dirty) and the image under test.
 
 Writes roadmap/regression-results.json and REGRESSION-RESULTS.md; full logs go to roadmap/runs/ (git-ignored).
-Exit status is 0 only when every step that was selected passed.
+Exit status is 0 only when a nonempty selection passed. This is suite execution evidence,
+not a certification of independence or zero regression against a baseline.
 """
 
 from __future__ import annotations
@@ -61,6 +62,7 @@ class Step:
 def web_steps() -> list[Step]:
     n = ["node"]
     return [
+        Step("web.runner", "web", "Regression evidence tests", [PY, "-m", "unittest", "discover", "-s", "scripts", "-p", "test_regression.py"]),
         Step("web.brand", "web", "Brand sources valid, generated files current", [*n, "scripts/brand-sync.mjs", "--check"]),
         Step("web.brand-test", "web", "Brand sync tests", [*n, "--test", "scripts/brand-sync.test.mjs"]),
         Step("web.api-coverage", "web", "Every /api route documented", [*n, "scripts/check-api-coverage.mjs"]),
@@ -95,7 +97,7 @@ def live_steps() -> list[Step]:
 
 ENGINE_SCRIPT = (
     "apt-get update -qq && apt-get install -yqq --no-install-recommends clang libclang-dev cmake make "
-    "protobuf-compiler pkg-config git perl ca-certificates libssl-dev zlib1g-dev >/dev/null 2>&1; "
+    "protobuf-compiler pkg-config git perl ca-certificates libssl-dev zlib1g-dev >/dev/null 2>&1 && "
     "STORE={store} cargo test -p tests --locked --no-fail-fast -- --test-threads=1 2>&1"
 )
 
@@ -129,7 +131,10 @@ def credentials() -> str | None:
 
 def stack_problem() -> str | None:
     """None when the local stack answers a real JMAP request as the administrator, else why not."""
-    auth = credentials()
+    try:
+        auth = credentials()
+    except (OSError, ValueError, KeyError, TypeError):
+        return "local credentials could not be loaded (contents withheld)"
     if not auth:
         return "deploy/local/.credentials.json is missing (run deploy/local/start.ps1)"
     req = urllib.request.Request(f"{ENGINE_URL}/jmap/session", headers={"Authorization": auth})
@@ -154,6 +159,41 @@ def image_identity() -> dict:
         return {"container": "shippintech-local-mail-1", "name": "", "id": ""}
 
 
+def select_steps(catalog: list[Step], only: str | None, requested: list[str] | None) -> list[Step]:
+    eligible = [s for s in catalog if only is None or s.gate == only]
+    if requested:
+        unknown = sorted(set(requested) - {s.id for s in eligible})
+        if unknown:
+            raise ValueError("Unknown or excluded step id(s): " + ", ".join(unknown))
+        eligible = [s for s in eligible if s.id in requested]
+    if not eligible:
+        raise ValueError("No regression steps selected")
+    return eligible
+
+
+def engine_problem(log: str) -> str | None:
+    results = re.findall(r"test result: (\w+)\. (\d+) passed; (\d+) failed; (\d+) ignored", log)
+    if not results or sum(int(r[1]) for r in results) == 0:
+        return "No executed engine tests were reported"
+    if any(r[0] != "ok" or int(r[2]) for r in results):
+        return "Engine output reports failed tests"
+    if any(int(r[3]) for r in results):
+        return "Engine suite contains ignored tests; coverage remains incomplete"
+    return None
+
+
+def evidence_problem(step: Step, log: str) -> str | None:
+    log = re.sub(r"\x1b\[[0-9;]*m", "", log)
+    if step.gate == "engine":
+        return engine_problem(log)
+    if step.id in {"web.browser", "live.browser", "web.unit", "live.contract"}:
+        if re.search(r"\b[1-9]\d* (?:skipped|pending|todo)\b", log):
+            return "Test suite reports skipped or pending cases; coverage remains incomplete"
+        if not re.search(r"\b[1-9]\d* passed\b", log):
+            return "No executed tests were reported"
+    return None
+
+
 def summarize(step: Step, log: str) -> str:
     """One line of what the step reported, taken from its own output."""
     if step.gate == "engine":
@@ -176,7 +216,7 @@ def run(step: Step, logdir: Path, stack: str | None) -> dict:
     result = {"id": step.id, "gate": step.gate, "title": step.title}
     if step.posix_only and WIN:
         return {**result, "status": "not-run", "seconds": 0, "detail": "",
-                "reason": "needs POSIX file permissions; passes in CI on Linux, not checked on Windows"}
+                "reason": "needs POSIX file permissions; not checked on Windows"}
     if step.needs_stack and stack:
         return {**result, "status": "not-run", "reason": stack, "seconds": 0, "detail": ""}
     if not shutil.which(step.argv[0]) and not Path(step.argv[0]).exists():
@@ -191,6 +231,8 @@ def run(step: Step, logdir: Path, stack: str | None) -> dict:
         if not shim.exists():
             body = f'#!/bin/sh{chr(10)}exec "{Path(PY).as_posix()}" "$@"{chr(10)}'
             shim.write_bytes(body.encode("utf-8"))
+            if not WIN:
+                shim.chmod(0o755)
     env = {**os.environ, **step.env}
     env["PATH"] = str(shims) + os.pathsep + env.get("PATH", "")
     try:
@@ -198,16 +240,28 @@ def run(step: Step, logdir: Path, stack: str | None) -> dict:
                               timeout=step.timeout, env=env)
         out, code = proc.stdout + proc.stderr, proc.returncode
         status = "pass" if code == 0 else "fail"
+        if status == "pass":
+            problem = evidence_problem(step, out)
+            if problem:
+                status = "fail"
+                out += f"\n[evidence rejected: {problem}]"
     except subprocess.TimeoutExpired as err:
         raw = (err.stdout or b"") + (err.stderr or b"")
         out = raw.decode("utf-8", "replace") if isinstance(raw, bytes) else raw
         status, code = "fail", -1
         out += f"\n[timed out after {step.timeout}s]"
+    except OSError as err:
+        return {**result, "status": "not-run", "seconds": round(time.time() - started, 1),
+                "detail": "", "reason": f"process could not start ({type(err).__name__})"}
     seconds = round(time.time() - started, 1)
     log = logdir / f"{step.id}.log"
     log.write_text(out, "utf-8")
+    detail = summarize(step, out)
+    if code == 0 and status == "fail":
+        detail = evidence_problem(step, out) or detail
     return {**result, "status": status, "exit": code, "seconds": seconds,
-            "detail": summarize(step, out), "log": str(log.relative_to(ROOT)).replace("\\", "/")}
+            "argv": step.argv, "cwd": str(step.cwd),
+            "detail": detail, "log": str(log.relative_to(ROOT)).replace("\\", "/")}
 
 
 def write_reports(meta: dict, results: list[dict], partial: bool) -> None:
@@ -224,6 +278,8 @@ def write_reports(meta: dict, results: list[dict], partial: bool) -> None:
         "",
         "Written by `python scripts/regression.py`; do not edit. Rules: [REGRESSION.md](REGRESSION.md). "
         "A step that could not run is **not run**, never green.",
+        "This reports suite execution only. Baseline comparison, migration/recovery, performance, "
+        "real provider consent and independent authorship need separate evidence.",
         "",
         f"- Commit `{meta['commit'][:12]}`{' (working tree had uncommitted changes)' if meta['dirty'] else ''}",
         f"- Image under test: `{meta['image']['name'] or 'not running'}` `{meta['image']['id'][:19]}`",
@@ -248,24 +304,42 @@ def main() -> int:
     ap.add_argument("--step", action="append", help="run only this step id (repeatable)")
     args = ap.parse_args()
 
-    steps = [*web_steps(), *live_steps(), *(engine_steps() if (args.engine or args.only == "engine") else [])]
-    if args.only:
-        steps = [s for s in steps if s.gate == args.only]
-    if args.step:
-        steps = [s for s in steps if s.id in args.step]
+    catalog = [*web_steps(), *live_steps(), *engine_steps()]
+    eligible = catalog if args.engine or args.only == "engine" else [s for s in catalog if s.gate != "engine"]
+    try:
+        steps = select_steps(eligible, args.only, args.step)
+    except ValueError as err:
+        ap.error(str(err))
+    omitted = [s.id for s in catalog if s.id not in {step.id for step in steps}]
+    partial = bool(omitted)
     if args.list:
         for s in steps:
             print(f"{s.id:28} {s.gate:7} {s.title}")
         return 0
 
-    stack = stack_problem() if any(s.needs_stack for s in steps) else None
+    image = image_identity()
+    needs_stack = any(s.needs_stack for s in steps)
+    stack = None
+    if needs_stack:
+        if not image.get("id"):
+            stack = "local candidate image identity is unavailable; live evidence cannot be attributed"
+        elif ENGINE_URL != "http://127.0.0.1:28081":
+            stack = "ENGINE override cannot be attributed to the inspected local container"
+        elif os.environ.get("LIVE_URL", "http://127.0.0.1:28080") != "http://127.0.0.1:28080":
+            stack = "LIVE_URL override cannot be attributed to the inspected local container"
+        else:
+            stack = stack_problem()
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     logdir = RUNS / stamp
     logdir.mkdir(parents=True, exist_ok=True)
     meta = {
         "commit": git("rev-parse", "HEAD"),
-        "dirty": bool(git("status", "--porcelain", "--untracked-files=no")),
-        "image": image_identity(),
+        "dirty": bool(git("status", "--porcelain", "--untracked-files=normal")),
+        "image": image,
+        "scope": "partial" if partial else "all-configured-suites",
+        "omitted_steps": omitted,
+        "unverified_requirements": ["baseline equivalence", "replacement migration and recovery",
+                                    "performance thresholds", "real provider consent", "independent authorship"],
         "started": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
     results = []
@@ -274,11 +348,19 @@ def main() -> int:
         r = run(step, logdir, stack)
         print(f"  {r['status']} {r.get('detail') or r.get('reason') or ''}", flush=True)
         results.append(r)
+    if needs_stack and stack is None:
+        image_after = image_identity()
+        meta["image_after"] = image_after
+        if image_after.get("id") != image.get("id"):
+            for result in results:
+                if result["gate"] == "live" and result["status"] == "pass":
+                    result.update(status="fail", detail="candidate image changed or disappeared during the run")
     meta["finished"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    write_reports(meta, results, bool(args.only or args.step))
+    write_reports(meta, results, partial)
     bad = [r for r in results if r["status"] != "pass"]
     print(f"\n{len(results) - len(bad)} passed, {sum(r['status'] == 'fail' for r in bad)} failed, "
-          f"{sum(r['status'] == 'not-run' for r in bad)} not run. See {OUT_MD.name if not (args.only or args.step) else 'roadmap/regression-results.partial.json'}.")
+          f"{sum(r['status'] == 'not-run' for r in bad)} not run; {len(omitted)} steps omitted. "
+          f"See {OUT_MD.name if not partial else 'roadmap/regression-results.partial.json'}.")
     return 0 if not bad else 1
 
 

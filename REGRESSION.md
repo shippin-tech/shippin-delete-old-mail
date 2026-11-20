@@ -8,6 +8,14 @@ it is not permission to remove existing capabilities.
 This is an acceptance requirement, not a claim that zero regressions have been proven.
 The repository remains pre-release under [RELEASE.md](RELEASE.md).
 
+Owner clarification, 2026-11-20: the final product has one owned shippinTECH API and
+no permanent compatibility layer for private upstream management APIs or registry
+extensions. Coordinated replacement of those contracts is authorized when every
+consumer moves and equivalent capabilities, permissions, settings, data and recovery
+are proven. Standard protocol interoperability remains mandatory. See the
+[product boundary](roadmap/shippintech-foundation.md); a path rename alone is not
+independence, and removing a private contract does not waive its capabilities.
+
 ## Baselines and evidence
 
 The local comparison anchor for this requirement is commit

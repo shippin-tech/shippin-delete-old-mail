@@ -11,6 +11,12 @@ of work between them. Pre-release: nothing here is supported for real mail.
 
 ## 1. Where we stand (measured 2026-11-20)
 
+Owner direction on 2026-11-20: the finished product is fully authored shippinTECH,
+with one product API and no permanent upstream compatibility layer. The complete
+boundary, separation gates and subsequent services for shippin.ai are specified in
+[shippinTECH foundation](roadmap/shippintech-foundation.md). An alpha that still uses
+inherited code is an interim milestone and does not satisfy the independence goal.
+
 | | |
 |---|---|
 | Product surface | Svelte UI, 54k lines, all the owner's. One API prefix `/api/v1`, registry facade over JMAP, generated ArkType contracts, stale-write guard. No legacy management API. |
@@ -119,7 +125,7 @@ Stage 1 is closed for alpha (X8) when this table is accepted and S1's oracle run
 
 ## 6. Order of work
 
-1. **R1** now (running). Then **R3**, so every later change is measured.
+1. **R1** first; no completed baseline is recorded here. Then **R3**, so every later change is measured.
 2. **R2, R4, R6** the same week: CI carries the engine suite and the dumb-UI check.
 3. **L1, L2, L10, L4** (the evidence gaps), then **L3, L5, L6, L7** (the capability gaps).
 4. **R5** before any Stage 2 slice, so performance is a gate, not an opinion.

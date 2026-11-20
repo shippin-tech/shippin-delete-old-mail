@@ -2,6 +2,12 @@
 
 Status: proposal, written 2026-11-15. Nothing here is built yet except where it says **exists**.
 
+Direction updated 2026-11-20: [shippinTECH foundation](../roadmap/shippintech-foundation.md)
+defines the final owned API and domain model. The inherited JMAP registry facade below
+is a transition mechanism; its private schema and `x:` methods are not a permanent
+source of truth. The final Rust domain services own behavior and standard protocols
+adapt to them. Historical progress entries below need fresh evidence before cutover.
+
 shippin.tech is alpha 0.5. There are no production installs, so there is no legacy and no
 compatibility promise for anything we run ourselves: the management API, the old web UI bundle
 and the paths the Svelte UI calls today can all change in one step, without redirects.
@@ -94,10 +100,10 @@ protocols, DAV and OAuth discovery are untouched throughout.
 
 ## What is not decided
 
-- Nothing about the registry transport: **decided 2026-11-15, both.** Native JMAP (RFC 8620, 8621
+- Historical registry transport decision, **2026-11-15, superseded as the final architecture on 2026-11-20.** Native JMAP (RFC 8620, 8621
   and the registry `x:` methods) is the transport and stays the source of truth for mail and
-  configuration. REST under `/api/v1/registry/*` is a thin facade over those same JMAP calls
+  configuration in the current implementation. REST under `/api/v1/registry/*` is a thin facade over those same JMAP calls
   (one REST request becomes one JMAP method call; no logic of its own), for the chat, MCP, curl
-  and the Svelte admin. The facade must never do something JMAP cannot.
+  and the Svelte admin. The replacement will use the owned domain services described above.
 - Whether to add 587, 143 and 110 listeners. Unrelated to this redesign; see `api/README.md`.
 - The licence (`PLAN.md` B0). A5 depends on it.

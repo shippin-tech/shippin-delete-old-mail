@@ -1,12 +1,15 @@
 # API
 
-Pre-release. Everything a program can call on a shippin.tech server, grouped by where it comes from.
+Pre-release. Current callable surfaces, distinct from the final
+[owned shippinTECH API](../roadmap/shippintech-foundation.md).
 `GET /api` on a running server lists what is live; `resources/product/api.json` is the same list
 with the proof for each area.
 
-## Compatible: the interfaces other software already speaks
+## Current interfaces and standard protocols
 
-These keep the standard or upstream shape so existing clients, mail apps and tools work unchanged.
+Standard interfaces preserve interoperability with mail apps and tools. The management
+API below is our product surface and may change through a coordinated, verified cutover;
+preserving a private upstream shape is not a final requirement.
 They are the reason a person can move to or from this server without leaving their devices behind.
 Each row names the check that tried it, run against the local stack:
 `py -3.11 deploy/local/verify_compat.py` (15 checks, passing on 2026-11-15).

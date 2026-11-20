@@ -1,13 +1,18 @@
 # shippin.tech
 
 > **Pre-release. Not production.** Nothing here is supported for real users' mail.
-> Interfaces, data layouts and settings change without migration or notice, and data
-> on test installs can be lost. Do not host anyone else's mail on it. The release gate
+> Changes must satisfy [REGRESSION.md](REGRESSION.md), including data preservation and
+> migration/recovery checks; complete parity is not yet proven. Do not host anyone else's mail on it. The release gate
 > is [RELEASE.md](RELEASE.md); pull requests are closed automatically until the AI
 > working system in [mcpl/](mcpl/README.md) is accepted (see [AGENTS.md](AGENTS.md)).
 
 Rust mail and groupware engine: SMTP, IMAP, JMAP, POP3, ManageSieve,
 CalDAV and CardDAV. The scale image uses shared FoundationDB, S3 and NATS.
+
+The target is a fully owned shippinTECH product: one Svelte UI, one product API,
+an independently authored Rust foundation, and service integrations for shippin.ai.
+The current engine still contains inherited implementation. See the
+[ownership and separation criteria](roadmap/shippintech-foundation.md).
 
 This directory is the application Git repository. Run Git commands here;
 the parent directory is a separate empty repository. The adjacent `one-node`
