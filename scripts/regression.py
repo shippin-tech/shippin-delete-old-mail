@@ -54,6 +54,7 @@ class Step:
     cwd: Path = ROOT
     needs_stack: bool = False
     timeout: int = 900
+    posix_only: bool = False  # needs real file modes (chmod); not meaningful on NTFS
     env: dict[str, str] = field(default_factory=dict)
 
 
@@ -65,7 +66,8 @@ def web_steps() -> list[Step]:
         Step("web.api-coverage", "web", "Every /api route documented", [*n, "scripts/check-api-coverage.mjs"]),
         Step("web.dumb-ui", "web", "UI touches the network only at its edge", [*n, "scripts/check-dumb-ui.mjs"]),
         *[
-            Step(f"web.deploy.{t}", "web", f"deploy/{t}.test.sh (fake docker)", [BASH, f"deploy/{t}.test.sh"])
+            Step(f"web.deploy.{t}", "web", f"deploy/{t}.test.sh (fake docker)", [BASH, f"deploy/{t}.test.sh"],
+                 posix_only=(t == "relay"))
             for t in ("update", "auto-update", "backup", "relay", "host")
         ],
         Step("web.webui-inventory", "web", "Porting inventory", [*n, "scripts/check-webui-inventory.mjs"], UI),
@@ -172,12 +174,25 @@ def summarize(step: Step, log: str) -> str:
 
 def run(step: Step, logdir: Path, stack: str | None) -> dict:
     result = {"id": step.id, "gate": step.gate, "title": step.title}
+    if step.posix_only and WIN:
+        return {**result, "status": "not-run", "seconds": 0, "detail": "",
+                "reason": "needs POSIX file permissions; passes in CI on Linux, not checked on Windows"}
     if step.needs_stack and stack:
         return {**result, "status": "not-run", "reason": stack, "seconds": 0, "detail": ""}
     if not shutil.which(step.argv[0]) and not Path(step.argv[0]).exists():
         return {**result, "status": "not-run", "reason": f"{step.argv[0]} is not installed", "seconds": 0, "detail": ""}
     started = time.time()
+    # Scripts that say `python` or `python3` must get the interpreter running this file, not the
+    # Microsoft Store stub Windows puts earlier on the path, and Windows has no python3 at all.
+    shims = logdir / "bin"
+    shims.mkdir(exist_ok=True)
+    for name in ("python", "python3"):
+        shim = shims / name
+        if not shim.exists():
+            body = f'#!/bin/sh{chr(10)}exec "{Path(PY).as_posix()}" "$@"{chr(10)}'
+            shim.write_bytes(body.encode("utf-8"))
     env = {**os.environ, **step.env}
+    env["PATH"] = str(shims) + os.pathsep + env.get("PATH", "")
     try:
         proc = subprocess.run(step.argv, cwd=step.cwd, capture_output=True, text=True, errors="replace",
                               timeout=step.timeout, env=env)
@@ -195,8 +210,12 @@ def run(step: Step, logdir: Path, stack: str | None) -> dict:
             "detail": summarize(step, out), "log": str(log.relative_to(ROOT)).replace("\\", "/")}
 
 
-def write_reports(meta: dict, results: list[dict]) -> None:
+def write_reports(meta: dict, results: list[dict], partial: bool) -> None:
     OUT_JSON.parent.mkdir(exist_ok=True)
+    if partial:  # a subset must never replace the report of a full run
+        part = OUT_JSON.with_name("regression-results.partial.json")
+        part.write_text(json.dumps({**meta, "steps": results}, indent=1) + chr(10), "utf-8", newline=chr(10))
+        return
     OUT_JSON.write_text(json.dumps({**meta, "steps": results}, indent=1) + "\n", "utf-8", newline="\n")
     count = lambda s: sum(r["status"] == s for r in results)  # noqa: E731
     icon = {"pass": "pass", "fail": "FAIL", "not-run": "not run"}
@@ -226,11 +245,14 @@ def main() -> int:
     ap.add_argument("--only", choices=["web", "live", "engine"])
     ap.add_argument("--engine", action="store_true", help="include the inherited Rust suite (slow)")
     ap.add_argument("--list", action="store_true")
+    ap.add_argument("--step", action="append", help="run only this step id (repeatable)")
     args = ap.parse_args()
 
     steps = [*web_steps(), *live_steps(), *(engine_steps() if (args.engine or args.only == "engine") else [])]
     if args.only:
         steps = [s for s in steps if s.gate == args.only]
+    if args.step:
+        steps = [s for s in steps if s.id in args.step]
     if args.list:
         for s in steps:
             print(f"{s.id:28} {s.gate:7} {s.title}")
@@ -253,10 +275,10 @@ def main() -> int:
         print(f"  {r['status']} {r.get('detail') or r.get('reason') or ''}", flush=True)
         results.append(r)
     meta["finished"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    write_reports(meta, results)
+    write_reports(meta, results, bool(args.only or args.step))
     bad = [r for r in results if r["status"] != "pass"]
     print(f"\n{len(results) - len(bad)} passed, {sum(r['status'] == 'fail' for r in bad)} failed, "
-          f"{sum(r['status'] == 'not-run' for r in bad)} not run. See {OUT_MD.name}.")
+          f"{sum(r['status'] == 'not-run' for r in bad)} not run. See {OUT_MD.name if not (args.only or args.step) else 'roadmap/regression-results.partial.json'}.")
     return 0 if not bad else 1
 
 

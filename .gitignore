@@ -44,3 +44,4 @@ deploy/deployments.log
 storybook-static
 
 roadmap/runs/
+roadmap/regression-results.partial.json
