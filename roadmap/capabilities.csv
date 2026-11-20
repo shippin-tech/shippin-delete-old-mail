@@ -1,0 +1,46 @@
+id,floor_area,capability,engine_crates,surface,evidence,status,gap_and_next
+M1,Mail and clients,SMTP inbound delivery to local mailboxes,"smtp, email, store",port 25/587,deploy/local/verify.py; ui/e2e-live/free-plan.spec.ts,verified,Failure reports and oversize/abuse limits only in the engine suite
+M2,Mail and clients,"SMTP submission, authentication, relay refusal","smtp, directory",port 587/465,deploy/local/verify_panel.py (outside-domain refusal); ui/e2e-live/split-domain.spec.ts,verified,Rate limits and quota refusals: engine suite only
+M3,Mail and clients,"Outbound queue, retries, delay and failure reports",smtp (queue),SMTP,tests/src/smtp/queue,engine-suite-only,No repo-level check. B4 (real deliverability) is owed on the host
+M4,Mail and clients,"DKIM, SPF, DMARC, ARC sign and verify; MTA-STS, DANE","smtp, common (mail-auth)",SMTP,tests/src/smtp (auth); RELEASE B4,engine-suite-only,"Repo-level proof needs a real domain (B1, B4)"
+M5,Mail and clients,"IMAP: folders, flags, search, byte-exact fetch","imap, imap-proto, email",port 143/993,deploy/local/verify.py and verify_account.py (sign-in and read); tests/src/imap,unverified,"Only sign-in and read are proven by an independent client here. Flags, search, move, IDLE need a client suite"
+M6,Mail and clients,POP3,pop3,port 110/995,tests/src/imap (pop3 cases); deploy/local/verify_compat.py greeting only,unverified,A greeting is not proof. Add a retrieve and delete round trip
+M7,Mail and clients,"Webmail over JMAP: list, read, thread, flags","jmap, email",/jmap,ui/e2e-live/free-plan.spec.ts; ui/e2e/mail-reader.spec.ts (mocked),verified,-
+M8,Mail and clients,"Compose, reply, forward, drafts, attachments byte-for-byte","jmap, email",/jmap,ui/e2e-live/free-plan.spec.ts (RELEASE A3),verified,-
+M9,Mail and clients,"Mail search (full text, filters)","email, store, nlp",/jmap,"ui/e2e/search.spec.ts (mocked, operator portal)",unverified,No live search check for webmail. Add one
+M10,Mail and clients,"Spam filter, greylisting, reputation, learning",spam-filter,SMTP,tests/src/smtp (antispam); RELEASE F9 open,engine-suite-only,Model-backed classification (F9) is open
+M11,Mail and clients,Masked addresses,"email, common/shippin","/jmap, /api/v1",ui/e2e-live/masked.spec.ts,verified,Receiving only
+M12,Mail and clients,Undelete of messages and accounts,"email, common/shippin",/api/v1,ui/e2e-live/recover.spec.ts,verified,"Files, calendars and contacts deleted alone are not kept"
+M13,Mail and clients,Split-domain relay to another provider,"smtp, common/shippin",SMTP,ui/e2e-live/split-domain.spec.ts (stand-in relay),verified,Real Google relay (H2) owed
+C1,"Calendar, contacts, files and filtering","Calendar events, repeats, calendars, invitations and replies","groupware, jmap",/jmap,ui/e2e-live/calendar.spec.ts,verified,-
+C2,"Calendar, contacts, files and filtering",Invitation and reminder email templates,"groupware, common/shippin",/api/v1,ui/e2e-live/calendar-templates.spec.ts,verified,The RSVP page is our own Svelte page
+C3,"Calendar, contacts, files and filtering",Contacts,"groupware, jmap",/jmap,ui/e2e-live/contacts.spec.ts,verified,-
+C4,"Calendar, contacts, files and filtering","CalDAV, CardDAV, WebDAV","dav, dav-proto, groupware",/dav,tests/src/webdav,engine-suite-only,No repo-level check with an independent DAV client. Add one
+C5,"Calendar, contacts, files and filtering","Drive: upload, folders, rename, move, share, ACL, cross-domain wall",jmap (filenode),/jmap,ui/e2e-live/drive.spec.ts; drive-share.spec.ts,verified,-
+C6,"Calendar, contacts, files and filtering","Docs: write, format, autosave",jmap (filenode),/jmap,ui/e2e-live/docs.spec.ts,verified,-
+C7,"Calendar, contacts, files and filtering","Sieve filtering: user scripts, ManageSieve, editor","managesieve, email (sieve-rs)","port 4190, /jmap",tests/src/smtp (sieve); no UI,gap,Svelte Sievepad is open (porting P2). ManageSieve has no repo-level check
+I1,Identity and administration,"First sign-in: single-use setup key, create the real administrator","http, common",/login,ui/e2e-live/first-run.spec.ts (RELEASE A6),verified,-
+I2,Identity and administration,"Password change, app passwords, two-factor, IMAP app-password sign-in","directory, http","/api/v1, IMAP",deploy/local/verify_account.py (25 checks),verified,-
+I3,Identity and administration,Per-domain OpenID Connect sign-in,"directory, common/shippin",/api/v1/sso,ui/e2e-live/sso.spec.ts (stand-in provider),verified,Per-domain LDAP is not built; a real identity provider is owed
+I4,Identity and administration,SCIM provisioning,"scim, scim-proto",/api/v1/scim/v2,ui/e2e-live/scim.spec.ts; tests/src/scim,verified,eq filters only; real Okta or Entra owed
+I5,Identity and administration,"Roles, organisations, people and teams, quotas, cross-account isolation","directory, common/shippin",/api/v1,ui/e2e-live/org.spec.ts; people.spec.ts; deploy/local/verify_v1.py,verified,No seeded organisation-admin account for the org role in verify_v1
+I6,Identity and administration,"Administrative CRUD over the registry, stale-write rejection","registry, http",/api/v1/registry,deploy/local/verify_registry.py (51); ui/test-live; ui/e2e-live/admin-*.spec.ts,verified,"Create/read round trips on 37 empty objects, nested patch paths and typed editors are open"
+I7,Identity and administration,"Free-plan signup with DNS proof, /manage, limits, closure","http, common/shippin",/api/v1/panel,deploy/local/verify_panel.py; ui/e2e-live/free-plan.spec.ts,verified,Real DNS proof (B1) owed
+I8,Identity and administration,"Service keys: one key, one job",common/shippin,/shippin/admin/keys,ui/e2e-live/keys.spec.ts,verified,-
+I9,Identity and administration,"OAuth/OIDC provider for mail clients, device flow","http, directory","/auth, /oauth",tests/src/system; ui/e2e-live/first-run.spec.ts (browser flow),unverified,No independent client check of XOAUTH2 for IMAP and SMTP
+G1,Integrations and AI,"Google Drive connection, copy and download",common/shippin,/api/v1/google,ui/e2e-live/google.spec.ts (stand-in Google),mocked-only,Real consent needs the owner's OAuth client (REGRESSION gate 4)
+G2,Integrations and AI,Microsoft 365 files connection,ui adapter,/api/v1,ui/e2e/integrations.spec.ts (mocked),mocked-only,No server side and no live check yet
+G3,Integrations and AI,AI assistant and MCP drive with approvals,"http (assistant, mcp)","/api/v1/mcp, /api/v1/assistant",ui/e2e-live/assistant.spec.ts; mcp.spec.ts,verified,Model-backed spam and Sieve prompt (F9) open
+G4,Integrations and AI,MCPL lessons with server-kept progress,http (learn),/api/v1/learn,ui/e2e-live/learn.spec.ts; scripts/check-mcpl.mjs,verified,Variant comparison is the owner's (M1)
+O1,Persistence and operations,Metrics dashboard on our own sampler,common/shippin (stats),/api/v1/stats,ui/e2e-live/dashboard.spec.ts,verified,-
+O2,Persistence and operations,Live tracing and trace history,"trc, common/shippin",/api/v1/live,ui/e2e-live/tracing.spec.ts,verified,-
+O3,Persistence and operations,Alerts to email and webhook,common/shippin,/api/v1,ui/e2e-live/alerts.spec.ts,verified,-
+O4,Persistence and operations,"Install, upgrade from v0.1.2, rollback, restart survival",deploy,"install.sh, update.sh","deploy/verify-install.sh (7); deploy/*.test.sh; RELEASE A7, A8, B6",verified,"The same on a Linux host is owed (B3, B6)"
+O5,Persistence and operations,Backup and restore with a content check,deploy,backup.sh,deploy/backup.test.sh; RELEASE B5,verified,Scheduled run and off-machine copy owed on the host
+O6,Persistence and operations,TLS certificate issuance (ACME),common (acme),port 443,none,gap,RELEASE A10 is open
+O7,Persistence and operations,"Scale stores (FoundationDB, S3, NATS, SQL, Redis) and cluster coordination","store, coordinator",config,tests/src/store; tests/src/cluster; local stack runs the scale image,engine-suite-only,Only the shipped combination is exercised. F11 is open
+O8,Persistence and operations,Host monitoring with an alert channel,deploy,-,none,gap,RELEASE D3 needs a channel chosen
+O9,Persistence and operations,Data migration from earlier layouts,migration,update.sh,deploy/update.test.sh; RELEASE A8,verified,Import from another mail server's layout is not built
+U1,User experience and performance,"Accessibility: axe scans on signup, manage, account, compose, calendar",ui,browser,ui/e2e-live (axe in specs),verified,Keyboard-only and mobile-width flows are not asserted
+U2,User experience and performance,Svelte is the only UI; every registry object is reachable,"ui, registry",/shippin/admin,ui/e2e-live/admin-shell.spec.ts; ui/test-live/registry-live.test.ts,verified,Typed editors for the largest objects (porting P2)
+U3,User experience and performance,"Latency, throughput and memory against a baseline with thresholds",all,-,none,gap,REGRESSION gate 3. Build the fixture and record the baseline before any engine slice is replaced

@@ -1,7 +1,26 @@
-# Paths that existed at the baseline commit and that the owner confirms are their own work.
+# Paths that existed at the baseline commit and that count as the owner's own work.
 # One glob per line (fnmatch against the repository-relative path; * also matches "/").
 # Anything not listed here and present at the baseline counts as inherited.
 #
-# Listed on the evidence of the name alone: the product modules live in directories called shippin.
-# The owner must confirm this list; the ui/, deploy/, mcpl/ and resources/ trees are not listed yet.
+# 2026-11-20: the owner told Claude to stop asking and decide. Claude listed the trees below on
+# that instruction and on their names; the owner has said ui/ is months of their own Svelte work.
+# Strike any line that is not the owner's. The list changes the report, not the code.
+
+# Product modules inside the engine crates (directories named shippin)
 crates/*/src/shippin/*
+
+# The Svelte application, the generated contracts and the tests that drive it
+ui/*
+
+# The management API's specification and design, and the product inventory
+api/*
+resources/product/*
+
+# The AI working system and its checks
+mcpl/*
+.ai/*
+scripts/*
+
+# Brand, and the deploy scripts and local stack for this product
+brand/*
+deploy/*
