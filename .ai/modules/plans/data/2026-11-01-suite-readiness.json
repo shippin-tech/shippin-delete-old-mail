@@ -19,6 +19,12 @@
     {"kind": "code", "ref": "resources/scale/docker-compose.yml"},
     {"kind": "web", "ref": "https://mariadb.com/bsl11/"}
   ],
+  "concerns": [
+    "scale_two_nodes needs Docker plus libfdb_c; a missing daemon makes the roadmap claim unobserved again.",
+    "Writing BUSL-1.1 without touching LicenseRef-SEL blocks must keep enterprise on the default build.",
+    "Choosing zoho-client first must not start collaborative Docs or a second mail server.",
+    "A check that only greps one file would miss a roadmap objective or phase left inconsistent."
+  ],
   "context": "The readiness assessment scored the engine strong and the mailcow/Zoho/Docs product surfaces weak. The attached plan's todos are the next moves.",
   "current_state": "Roadmap marks two-node-shared done without a journaled run. license is deciding. product-boundaries still say Current work is Scale. Docs is absent from the roadmap.",
   "target_design": "Journaled scale_two_nodes proof, BUSL-1.1 at the root and in crates/main/Cargo.toml, zoho-client in_progress as current work, Docs deferred by an explicit objective, license-and-scale and product-boundaries rewritten to match.",
@@ -28,6 +34,12 @@
     "Rewrite license-and-scale.mdc for the BSL choice; leave SEL blocks and enterprise defaults alone.",
     "Set zoho-client to in_progress; add a no-docs-yet objective; update product-boundaries Current work.",
     "Leave shippin.cloud not_started until hosting work begins."
+  ],
+  "boundaries": [
+    "Do not relicense SPDX LicenseRef-SEL blocks.",
+    "Do not remove enterprise from default or from Dockerfiles.",
+    "Do not add a webmail, Docs editor, Go control plane, or second MTA in this pass.",
+    "Do not edit the attached assessment plan file under /opt/cursor/artifacts/plans."
   ],
   "verification": [
     {

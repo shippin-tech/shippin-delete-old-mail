@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "id": "2026-11-20-baseline-reconciliation",
+  "title": "Reconcile main and recover damaged operating records",
+  "costar": {
+    "context": "The owner needs a known committed baseline and verified branch and PR integration.",
+    "objective": "Verify remote and local main, account for every PR and surviving branch, recover exact historical records and commit the repair.",
+    "style": "Commit hashes and executable checks.",
+    "tone": "Direct.",
+    "audience": "Owner and implementers.",
+    "response": "A clean pushed main, audit evidence and a passing operating-tree gate."
+  },
+  "sources": [
+    {"kind": "code", "ref": "AGENTS.md"},
+    {"kind": "code", "ref": ".ai/PROTOCOL.md"},
+    {"kind": "code", "ref": ".ai/machine/organize.py"},
+    {"kind": "code", "ref": ".ai/modules/plans/data/2026-11-01-suite-readiness.json"},
+    {"kind": "code", "ref": ".ai/modules/chats/data/sessions/a06e2efe-3026-4fda-a6ec-f81c0faeec17/tools.jsonl"},
+    {"kind": "code", "ref": ".github/workflows/check.yml"},
+    {"kind": "web", "ref": "https://github.com/shippin-tech/shippinTECH/pull/1"},
+    {"kind": "web", "ref": "https://github.com/shippin-tech/shippinTECH/pull/2"},
+    {"kind": "web", "ref": "https://github.com/shippin-tech/shippinTECH/pull/3"},
+    {"kind": "web", "ref": "https://github.com/shippin-tech/shippinTECH/actions/runs/44829308023"}
+  ],
+  "concerns": [
+    "main changed concurrently from b335bce to afb98b2 during the audit; it must be rechecked before committing and pushing.",
+    "The new root 6693b60 breaks ancestry from older PR merges. Content presence is not proof that every old behavior was preserved.",
+    "A historical event id occurs more than once; recovery must match the intact prefix, not only the event id.",
+    "CI green does not prove the unrun engine/live/recovery gates or authorize a release."
+  ],
+  "context": "The owner authorizes reconciliation onto main. No new PR is needed or permitted.",
+  "current_state": "Local and remote main are afb98b27389c918d789b7f2e1da06690b5451888 with a clean tree. Its Check run passed. The only other remote branch tip b09dbc3 is an ancestor of main. Older PR content was carried into a new-root snapshot, which damaged two operating records.",
+  "target_design": "A known committed and pushed source baseline, exact restoration of damaged historical records, and CI enforcing operating-tree validity.",
+  "changes": [
+    "Restore only the truncated tools.jsonl record from d517c13, matching its full intact prefix.",
+    "Restore the missing concerns and boundaries arrays of the historical readiness plan from PR #1 merge 6ef46d1; these remain historical context, not new product restrictions.",
+    "Run the operating-tree checker in Check and stop excluding .ai-only changes from CI.",
+    "Record branch/PR evidence, commit directly to main and verify the pushed head and checks."
+  ],
+  "boundaries": [
+    "Do not merge obsolete historical branches over current code or restore deliberately removed transcript records.",
+    "Do not change runtime behavior, licences, historical result claims or release gate statuses.",
+    "No release tag, force push, branch deletion or PR creation."
+  ],
+  "verification": [
+    {"name": "historical-recovery", "command": "node target/recover-baseline.cjs --check", "proves": "Recovered fields and the one event exactly match their historical sources.", "expected": "Pass.", "result": "Passed: one event from d517c13 selected by its full intact prefix; two arrays deep-equal to 6ef46d1. Temporary recovery helper is local under ignored target/."},
+    {"name": "operating-tree", "command": "python .ai/machine/organize.py --check", "proves": "All registered operating records satisfy their schemas and references.", "expected": "Exit 0.", "result": "Passed: 6 modules, 50 documents, 406 lines; events 165, messages 62, tools 135, journal 44."},
+    {"name": "diff", "command": "git diff --check", "proves": "The repair introduces no whitespace errors.", "expected": "Exit 0.", "result": "Passed."}
+  ],
+  "status": "implemented"
+}
