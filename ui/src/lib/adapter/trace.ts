@@ -91,3 +91,18 @@ export async function loadStoredTrace(id: string): Promise<string> {
 	if (!res.ok) throw new Error('That trace is no longer kept.');
 	return JSON.stringify(((await res.json()) as { events: unknown }).events);
 }
+
+/**
+ * Opens the server's live trace stream. The caller gets named events and a way to close it, never the
+ * connection itself, so a component does not touch the network.
+ */
+export function openTraceStream(
+	url: string,
+	on: { ready: () => void; trace: (data: string) => void; error: () => void }
+): () => void {
+	const source = new EventSource(url);
+	source.addEventListener('ready', () => on.ready());
+	source.addEventListener('trace', (event) => on.trace(String((event as MessageEvent).data)));
+	source.onerror = () => on.error();
+	return () => source.close();
+}

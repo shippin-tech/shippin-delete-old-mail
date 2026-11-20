@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { TRACE_PAGE, listStoredTraces, loadStoredTrace, reduceTraceStream, requestLiveTracing, type StoredTrace } from '$lib/adapter/trace';
+	import { TRACE_PAGE, listStoredTraces, loadStoredTrace, openTraceStream, reduceTraceStream, requestLiveTracing, type StoredTrace } from '$lib/adapter/trace';
 	import TraceHistory from '$lib/shippin/admin/TraceHistory.svelte';
 	import { publishSignals, publishStatusSignal } from '$lib/adapter/signal';
 	import { account } from '$lib/adapter/session';
@@ -18,7 +18,7 @@
 	let phase = $state<'signed-out' | 'idle' | 'connecting' | 'rejected' | 'failed' | 'open' | 'disconnected'>('idle');
 	let events = $state<TraceEvent[]>([]);
 	let dropped = $state(0);
-	let source: EventSource | null = null;
+	let closeStream: (() => void) | null = null;
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	let token = '';
 	let keywords = '';
@@ -60,39 +60,40 @@
 	}
 
 	function halt() {
-		source?.close();
-		source = null;
+		closeStream?.();
+		closeStream = null;
 		if (timer) clearTimeout(timer);
 	}
 
 	function listen(url: string) {
 		halt();
-		source = new EventSource(url);
-		source.addEventListener('ready', () => {
-			stream = reduceTraceStream(stream, { type: 'opened' });
-			phase = 'open';
-			publishStatusSignal('tracing', 'tracing.stream.open', 'open', { dropped });
-		});
-		source.addEventListener('trace', (event) => {
-			try {
-				const next = parseTracePayload(String((event as MessageEvent).data));
-				publishSignals(traceSignals(next));
-				const buffer: TraceBuffer = appendTrace({ events, dropped, anchor: events[0]?.timestamp ?? null }, next);
-				events = buffer.events;
-				dropped = buffer.dropped;
+		closeStream = openTraceStream(url, {
+			ready: () => {
 				stream = reduceTraceStream(stream, { type: 'opened' });
 				phase = 'open';
-				publishStatusSignal('tracing', 'tracing.stream.open', 'open', { dropped: buffer.dropped });
-			} catch {
-				fail(true, 'retries');
-			}
+				publishStatusSignal('tracing', 'tracing.stream.open', 'open', { dropped });
+			},
+			trace: (data) => {
+				try {
+					const next = parseTracePayload(data);
+					publishSignals(traceSignals(next));
+					const buffer: TraceBuffer = appendTrace({ events, dropped, anchor: events[0]?.timestamp ?? null }, next);
+					events = buffer.events;
+					dropped = buffer.dropped;
+					stream = reduceTraceStream(stream, { type: 'opened' });
+					phase = 'open';
+					publishStatusSignal('tracing', 'tracing.stream.open', 'open', { dropped: buffer.dropped });
+				} catch {
+					fail(true, 'retries');
+				}
+			},
+			error: () => fail(true, 'retries')
 		});
-		source.onerror = () => fail(true, 'retries');
 	}
 
 	function fail(retryable: boolean, reason: 'token' | 'rejected' | 'retries') {
-		source?.close();
-		source = null;
+		closeStream?.();
+		closeStream = null;
 		stream = reduceTraceStream(stream, { type: 'error', retryable, reason });
 		if (stream.kind === 'failed') {
 			phase = reason === 'rejected' ? 'rejected' : reason === 'token' ? 'failed' : 'disconnected';

@@ -53,6 +53,8 @@ jobs:
           node --test scripts/brand-sync.test.mjs
       - name: Every /api route is documented
         run: node scripts/check-api-coverage.mjs
+      - name: The UI touches the network only at its edge
+        run: node scripts/check-dumb-ui.mjs
       - name: Host deploy scripts behave (fake docker)
         run: |
           bash deploy/update.test.sh

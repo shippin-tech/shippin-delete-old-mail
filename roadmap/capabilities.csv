@@ -40,6 +40,7 @@ O5,Persistence and operations,Backup and restore with a content check,deploy,bac
 O6,Persistence and operations,TLS certificate issuance (ACME),common (acme),port 443,none,gap,RELEASE A10 is open
 O7,Persistence and operations,"Scale stores (FoundationDB, S3, NATS, SQL, Redis) and cluster coordination","store, coordinator",config,tests/src/store; tests/src/cluster; local stack runs the scale image,engine-suite-only,Only the shipped combination is exercised. F11 is open
 O8,Persistence and operations,Host monitoring with an alert channel,deploy,-,none,gap,RELEASE D3 needs a channel chosen
+O10,Persistence and operations,"Engine behaviour when the store stops answering (bounded wait, clear error, unhealthy, recovery)","store, http",/healthz,none,gap,"Seen 2026-11-20: full disk, FoundationDB throttled, engine silent 14 hours (ROADMAP L12)"
 O9,Persistence and operations,Data migration from earlier layouts,migration,update.sh,deploy/update.test.sh; RELEASE A8,verified,Import from another mail server's layout is not built
 U1,User experience and performance,"Accessibility: axe scans on signup, manage, account, compose, calendar",ui,browser,ui/e2e-live (axe in specs),verified,Keyboard-only and mobile-width flows are not asserted
 U2,User experience and performance,Svelte is the only UI; every registry object is reachable,"ui, registry",/shippin/admin,ui/e2e-live/admin-shell.spec.ts; ui/test-live/registry-live.test.ts,verified,Typed editors for the largest objects (porting P2)

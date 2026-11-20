@@ -15,7 +15,7 @@ of work between them. Pre-release: nothing here is supported for real mail.
 |---|---|
 | Product surface | Svelte UI, 54k lines, all the owner's. One API prefix `/api/v1`, registry facade over JMAP, generated ArkType contracts, stale-write guard. No legacy management API. |
 | Engine | 376k lines of Rust in 28 crates, about 96% inherited and untouched ([PROVENANCE.md](PROVENANCE.md)). Largest: `registry` 87k (82k of it in `schema/`, machine-generated with no generator in this tree), `common` 44k, `jmap` 33k, `store` 24k, `smtp` 20k. |
-| Capabilities | 45 tracked: **30 verified**, 5 engine-suite-only, 4 unverified, 4 gap, 2 mocked-only. |
+| Capabilities | 46 tracked: **30 verified**, 5 engine-suite-only, 4 unverified, 5 gap, 2 mocked-only. |
 | What CI proves | Lint, typecheck, unit tests, mocked browser tests, `cargo check`. |
 | What CI does not prove | Every live browser test, every `deploy/local/verify_*.py`, and the **120k-line inherited engine suite (`tests/`)**. All of them run by hand. That is why no regression claim can be made for the engine today. |
 | Separation from the upstream | The product surface is separate. The engine is not: 12 upstream-authored packages are dependencies and 96% of the workspace is inherited. Section 5 says how that ends. |
@@ -41,47 +41,48 @@ and 376k lines cannot be one step. Independence proceeds slice by slice from the
 and each slice ships on its own (section 5). This is the one structural call in this document; section 7
 lists it so it can be overruled in one line.
 
-## 3. Track A: the regression machine
+## 3. Track R: the regression machine
 
 Everything else is safe only once this exists. Do first.
 
 | Id | Task | Done when |
 |---|---|---|
-| A1 | **Run the inherited engine suite** in a Linux container against `HEAD` and record the real baseline: how many pass, fail, are ignored, and why | `roadmap/engine-suite-baseline.md` with counts per area (smtp, imap, jmap, webdav, scim, store, system, directory, automation, cluster, telemetry, utils) |
-| A2 | Put it in CI as job `engine tests` (rocks and sqlite, Linux). Failures that are environmental get an owner and a fix; real ones are bugs | Job green or every red listed in `known-failures.md` |
-| A3 | `scripts/regression.py`: runs REGRESSION.md gate 1 (the CI steps), gate 2 (build the image, bring up `deploy/local`, run `verify*.py`, `test:live`, `test:contract-live`, the engine suite), and writes `roadmap/regression-results.json` and `REGRESSION-RESULTS.md` with commit, image digest, per-gate result and what was not run | One command, one report. A gate that could not run says so; it is never green |
-| A4 | Fix whatever A1 and A3 find that is ours (stale tests, flaky live specs such as the Domains cold start) | Two consecutive full runs with identical results |
-| A5 | Performance fixture: delivery rate, JMAP list and search latency, IMAP fetch, memory at idle and under load, on synthetic data; thresholds written down | `roadmap/perf/baseline.json` and a script that compares a candidate to it |
-| A6 | `scripts/check-dumb-ui.mjs` in CI: no `.svelte` file calls `fetch`; `fetch` appears only in `src/lib/adapter`, `src/lib/contract`, and an allow-list that shrinks to nothing. Today 12 modules under `src/lib/shippin/` call it directly | Check green with an empty allow-list; those 12 use the typed client |
+| R1 | **Run the inherited engine suite** in a Linux container against `HEAD` and record the real baseline: how many pass, fail, are ignored, and why | `roadmap/engine-suite-baseline.md` with counts per area (smtp, imap, jmap, webdav, scim, store, system, directory, automation, cluster, telemetry, utils) |
+| R2 | Put it in CI as job `engine tests` (rocks and sqlite, Linux). Failures that are environmental get an owner and a fix; real ones are bugs | Job green or every red listed in `known-failures.md` |
+| R3 | `scripts/regression.py`: runs REGRESSION.md gate 1 (the CI steps), gate 2 (build the image, bring up `deploy/local`, run `verify*.py`, `test:live`, `test:contract-live`, the engine suite), and writes `roadmap/regression-results.json` and `REGRESSION-RESULTS.md` with commit, image digest, per-gate result and what was not run | One command, one report. A gate that could not run says so; it is never green |
+| R4 | Fix whatever R1 and R3 find that is ours (stale tests, flaky live specs such as the Domains cold start) | Two consecutive full runs with identical results |
+| R5 | Performance fixture: delivery rate, JMAP list and search latency, IMAP fetch, memory at idle and under load, on synthetic data; thresholds written down | `roadmap/perf/baseline.json` and a script that compares a candidate to it |
+| R6 | `scripts/check-dumb-ui.mjs` in CI: no `.svelte` file calls `fetch`; `fetch` appears only in `src/lib/adapter`, `src/lib/contract`, and an allow-list that shrinks to nothing. Today 12 modules under `src/lib/shippin/` call it directly | Check green with an empty allow-list; those 12 use the typed client |
 
-## 4. Track B: close the capability gaps
+## 4. Track L: close the capability gaps
 
 Each row is in the ledger. Order is by how much alpha depends on it.
 
 | Id | Ledger | Task | Done when |
 |---|---|---|---|
-| B1 | M5, M6, I9 | Independent-client suite for IMAP, POP3 and XOAUTH2 (flags, search, move, IDLE, retrieve and delete) against the live stack | Added to `verify_compat.py` or a sibling; rows `verified` |
-| B2 | C4, C7 | An independent DAV client check (CalDAV, CardDAV, WebDAV) and ManageSieve script upload, activation and effect on delivery | Rows `verified` |
-| B3 | C7 | Svelte Sievepad: edit, validate, activate scripts through JMAP, with the server's error positions shown | Browser test: a script that files a message into a folder, proven by delivery |
-| B4 | M9 | Live webmail search: text, sender, date, folder, flags | Live browser test |
-| B5 | G2 | Microsoft 365 connection on the server, matching the Google one: consent, expiry, cancel, disconnect, isolation, byte-exact copy, against a stand-in Microsoft server | Live spec like `google.spec.ts`. Real consent stays the owner's (gate 4) |
-| B6 | I6, U2 | Create and read round trips on the 37 empty registry objects; nested patch paths (read RFC 8620 5.3 first); typed editors for the largest objects | `verify_registry.py` covers every object; editors tested |
-| B7 | I5 | Seed an organisation-admin account; `verify_v1.py` covers the `org` role | Check added |
-| B8 | O6 | TLS certificate by ACME at install (RELEASE A10) | Certificate on a public host |
-| B9 | O8 | Monitoring and an alert channel (RELEASE D3) | Down host raises an alert outside itself |
-| B10 | M3, M4 | Queue retry and failure-report check and a sender-authentication check that do not need the public internet (local resolver, test domain) | Rows `verified` before B1 of RELEASE is needed |
-| B11 | U1 | Keyboard-only and mobile-width assertions on the main flows | Added to the live specs |
+| L1 | M5, M6, I9 | Independent-client suite for IMAP, POP3 and XOAUTH2 (flags, search, move, IDLE, retrieve and delete) against the live stack | Added to `verify_compat.py` or a sibling; rows `verified` |
+| L2 | C4, C7 | An independent DAV client check (CalDAV, CardDAV, WebDAV) and ManageSieve script upload, activation and effect on delivery | Rows `verified` |
+| L3 | C7 | Svelte Sievepad: edit, validate, activate scripts through JMAP, with the server's error positions shown | Browser test: a script that files a message into a folder, proven by delivery |
+| L4 | M9 | Live webmail search: text, sender, date, folder, flags | Live browser test |
+| L5 | G2 | Microsoft 365 connection on the server, matching the Google one: consent, expiry, cancel, disconnect, isolation, byte-exact copy, against a stand-in Microsoft server | Live spec like `google.spec.ts`. Real consent stays the owner's (gate 4) |
+| L6 | I6, U2 | Create and read round trips on the 37 empty registry objects; nested patch paths (read RFC 8620 5.3 first); typed editors for the largest objects | `verify_registry.py` covers every object; editors tested |
+| L7 | I5 | Seed an organisation-admin account; `verify_v1.py` covers the `org` role | Check added |
+| L8 | O6 | TLS certificate by ACME at install (RELEASE A10) | Certificate on a public host |
+| L9 | O8 | Monitoring and an alert channel (RELEASE D3) | Down host raises an alert outside itself |
+| L10 | M3, M4 | Queue retry and failure-report check and a sender-authentication check that do not need the public internet (local resolver, test domain) | Rows `verified` without waiting for RELEASE B1 and B4 |
+| L12 | O10 | Engine behaviour when the store stalls: bounded wait, a clear error to the client, health check turns unhealthy, recovery without a restart. Seen on 2026-11-20 (full disk, FoundationDB throttled, engine silent for 14 hours) | A test that stalls the store and sees errors and recovery |
+| L11 | U1 | Keyboard-only and mobile-width assertions on the main flows | Added to the live specs |
 
 Platform port (`ui/porting` C1 to C4, the Go control plane) and Docs/Drive beyond v1 scope are **after
 alpha**, as `RELEASE.md` already scopes them. They are not lost: they stay in `ui/porting/work-packages.json`.
 
-## 5. Track C: independence from the upstream
+## 5. Track S: independence from the upstream
 
 **Rule.** A component is replaced only when the replacement passes the same oracle as the original and the
 original is still there until it does (REGRESSION.md). Both implementations build behind a feature during the
 overlap, the original is removed in its own commit afterwards, and data stays readable.
 
-**Oracle.** In this order of strength: the inherited engine suite (A1), the ledger's live tests, differential
+**Oracle.** In this order of strength: the inherited engine suite (R1), the ledger's live tests, differential
 tests of old against new on the same inputs, the relevant RFC test vectors, and fuzzing for parsers.
 
 ### Stage 1: decisions per upstream-authored dependency
@@ -105,12 +106,12 @@ Replaced bottom-up so each layer has a stable interface under it. One crate per 
 |---|---|---|---|
 | Schema | `registry` | 87k | 82k is generated from `resources/schema/schema.json.gz` and no generator is in this tree. Own the schema and write the generator: one slice replaces a fifth of the workspace and the output is checkable against the existing structs |
 | Leaf | `utils`, `types`, `trc`, `nlp`, `http-proto` | 22k | Small and widely used |
-| Protocol | `imap-proto`, `dav-proto`, `jmap-proto`, `scim-proto` | 47k | Parser and serializer; oracle is round trip plus the independent clients from B1 and B2 |
+| Protocol | `imap-proto`, `dav-proto`, `jmap-proto`, `scim-proto` | 47k | Parser and serializer; oracle is round trip plus the independent clients from L1 and L2 |
 | Services | `smtp`, `imap`, `pop3`, `managesieve`, `dav`, `jmap`, `scim`, `spam-filter`, `email`, `groupware` | about 130k | One protocol per slice, behind its port |
 | Core | `directory`, `store`, `coordinator`, `common`, `services`, `http`, `main` | about 100k | Last. `store` needs a migration path from the inherited layout, tested against a copy of real data |
 
 The first slice is **S1 (Sieve)** because it is self-contained, has a clear specification and a strong
-oracle, and the Svelte Sievepad (B3) needs a validator whose error positions we control anyway. The second is
+oracle, and the Svelte Sievepad (L3) needs a validator whose error positions we control anyway. The second is
 **the registry generator**, the largest single reduction.
 
 Stage 1 is closed for alpha (X8) when this table is accepted and S1's oracle runs green against the current
@@ -118,12 +119,12 @@ Stage 1 is closed for alpha (X8) when this table is accepted and S1's oracle run
 
 ## 6. Order of work
 
-1. **A1** now (running). Then **A3**, so every later change is measured.
-2. **A2, A4, A6** the same week: CI carries the engine suite and the dumb-UI check.
-3. **B1, B2, B10, B4** (the evidence gaps), then **B3, B5, B6, B7** (the capability gaps).
-4. **A5** before any Stage 2 slice, so performance is a gate, not an opinion.
-5. **S1** starts when A1 and A3 are done; it runs in parallel with Track B because it touches different code.
-6. **B8, B9** and the owner's host items, then the alpha run: `scripts/regression.py` on the candidate image,
+1. **R1** now (running). Then **R3**, so every later change is measured.
+2. **R2, R4, R6** the same week: CI carries the engine suite and the dumb-UI check.
+3. **L1, L2, L10, L4** (the evidence gaps), then **L3, L5, L6, L7** (the capability gaps).
+4. **R5** before any Stage 2 slice, so performance is a gate, not an opinion.
+5. **S1** starts when R1 and R3 are done; it runs in parallel with Track L because it touches different code.
+6. **L8, L9** and the owner's host items, then the alpha run: `scripts/regression.py` on the candidate image,
    X1 to X8 checked in order, tag only when `RELEASE.md` allows it.
 
 Each step ends with `main` green, results recorded, and the ledger updated.
@@ -140,5 +141,5 @@ Decisions taken so the work does not stall. Edit this section to overrule any of
 5. Waived gaps: none yet.
 
 Only the owner can: provide the Google and Microsoft OAuth clients and test accounts (gate 4); publish a DNS
-record for B1; run the host items (RELEASE B3 to B6) or give a Linux machine to run them; choose the alert
+record for RELEASE B1; run the host items (RELEASE B3 to B6) or give a Linux machine to run them; choose the alert
 channel (D3); decide RELEASE C2 to C5; lift the pull-request freeze.
