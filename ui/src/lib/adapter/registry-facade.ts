@@ -15,7 +15,7 @@ export function facadeName(object: string): string | null {
 	return object.startsWith(PREFIX) ? object.slice(PREFIX.length) : null;
 }
 
-async function client() {
+export async function client() {
 	const auth = authorization();
 	if (!auth) throw new Error('sign-in required');
 	const { registryClient, isRegistryName } = await import('../contract/registry');

@@ -66,6 +66,15 @@ function contractsOf<N extends RegistryName>(name: N) {
 
 type Row = Record<string, unknown>;
 
+// Preserve the stored authenticator when changing only the password or OTP code.
+const AccountPasswordPatch = type({
+	'currentSecret?': 'string',
+	'secret?': 'string',
+	'otpAuth/otpCode?': 'string',
+	'otpAuth/otpUrl?': 'string | null'
+}).onDeepUndeclaredKey('reject');
+export type AccountPasswordPatch = typeof AccountPasswordPatch.infer;
+
 /** True for a name the generated registry has. */
 export function isRegistryName(name: string): name is RegistryName {
 	return Object.hasOwn(registry, name);
@@ -103,7 +112,7 @@ export function registryClient(options: ClientOptions) {
 		const headers: Record<string, string> = { Accept: 'application/json' };
 		const authorization = options.authorization();
 		if (authorization) headers.Authorization = authorization;
-		const tagKey = `${base}${path}`;
+		const tagKey = `${authorization ?? ''}\n${base}${path}`;
 		if (method === 'PATCH' || method === 'DELETE') {
 			const tag = tags.get(tagKey);
 			if (tag) headers['If-Match'] = tag;
@@ -145,6 +154,24 @@ export function registryClient(options: ClientOptions) {
 		`/${encodeURIComponent(name)}${id === undefined ? '' : `/${encodeURIComponent(id)}`}`;
 
 	return {
+		/** An action returns output fields, not a persisted record with id and @type. */
+		async executeAction(input: Row): Promise<Parsed<Row>> {
+			const checked = registry.Action.create()(input);
+			if (checked instanceof type.errors) return { ok: false, problem: asProblem(checked) };
+			const output = registry.Action.read()
+				.extract({ '@type': type.unit(checked['@type']) })
+				.omit('id', '@type');
+			return send('POST', where('Action'), output, checked) as Promise<Parsed<Row>>;
+		},
+
+		async updatePassword(patch: AccountPasswordPatch): Promise<Parsed<Read<'AccountPassword'>>> {
+			const checked = AccountPasswordPatch(patch);
+			if (checked instanceof type.errors) return { ok: false, problem: asProblem(checked) };
+			return send('PATCH', where('AccountPassword'), registry.AccountPassword.read(), checked) as Promise<
+				Parsed<Read<'AccountPassword'>>
+			>;
+		},
+
 		/** A collection's records, one page. */
 		async list<N extends RegistryName>(name: N, opts: ListOptions = {}): Promise<Parsed<Page<Read<N>>>> {
 			const read = contractsOf(name).read();

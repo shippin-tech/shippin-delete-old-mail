@@ -1,7 +1,6 @@
-import { jmap } from './jmap';
+﻿import type { AccountPasswordPatch } from '../contract/registry';
+import { client, refusal } from './registry-facade';
 import { account, authorization, openSession } from './session';
-
-const USING = ['urn:shippin.tech:jmap'];
 
 export type AppPassword = {
 	id: string;
@@ -10,47 +9,23 @@ export type AppPassword = {
 	expiresAt: string | null;
 };
 
-function result(
-	responses: [string, Record<string, unknown>, string][],
-	name: string
-): Record<string, unknown> {
-	return responses.find(([method]) => method === name)?.[1] ?? {};
-}
-
-function reason(error: unknown, fallback: string): string {
-	if (error && typeof error === 'object') {
-		const e = error as { description?: unknown; type?: unknown };
-		if (typeof e.description === 'string') return e.description;
-		if (e.type === 'overQuota') return 'You have reached the limit for this account.';
-	}
-	return fallback;
-}
-
 /** Whether two-factor sign-in is on. The server masks the secret but keeps the field set. */
 export async function loadTwoFactor(): Promise<boolean> {
-	const responses = await jmap(USING, [['x:AccountPassword/get', { ids: ['singleton'] }, 'g']]);
-	const record = ((result(responses, 'x:AccountPassword/get').list as
-		| Record<string, unknown>[]
-		| undefined) ?? [])[0];
-	const otp = (record?.otpAuth ?? {}) as { otpUrl?: unknown };
-	return typeof otp.otpUrl === 'string' && otp.otpUrl.length > 0;
+	const { c } = await client();
+	const result = await c.get('AccountPassword');
+	if (!result.ok) throw refusal(result.problem);
+	const otpUrl = result.value.otpAuth?.otpUrl;
+	return typeof otpUrl === 'string' && otpUrl.length > 0;
 }
 
-/**
- * Field-level patch on the password record. Sending "otpAuth" as a whole object would
- * clear the stored authenticator, which the server reads as "turn two-factor off".
- */
-async function updatePassword(patch: Record<string, unknown>): Promise<void> {
-	const responses = await jmap(USING, [['x:AccountPassword/set', { update: { singleton: patch } }, 's']]);
-	const payload = result(responses, 'x:AccountPassword/set');
-	const updated = payload.updated as Record<string, unknown> | undefined;
-	if (updated && 'singleton' in updated) return;
-	const notUpdated = (payload.notUpdated as Record<string, unknown> | undefined)?.singleton;
-	throw new Error(reason(notUpdated, 'The change was not saved.'));
+async function updatePassword(patch: AccountPasswordPatch): Promise<void> {
+	const { c } = await client();
+	const result = await c.updatePassword(patch);
+	if (!result.ok) throw refusal(result.problem);
 }
 
 export async function changePassword(current: string, next: string, code: string): Promise<void> {
-	const patch: Record<string, unknown> = { secret: next, currentSecret: current };
+	const patch: AccountPasswordPatch = { secret: next, currentSecret: current };
 	if (code) patch['otpAuth/otpCode'] = code;
 	await updatePassword(patch);
 	// A Basic session carries the old password; reopen it so the page keeps working.
@@ -65,48 +40,40 @@ export const disableTwoFactor = (current: string, code: string) =>
 	updatePassword({ currentSecret: current, 'otpAuth/otpCode': code, 'otpAuth/otpUrl': null });
 
 export async function loadAppPasswords(): Promise<AppPassword[]> {
-	const responses = await jmap(USING, [
-		['x:AppPassword/query', {}, 'q'],
-		[
-			'x:AppPassword/get',
-			{
-				'#ids': { resultOf: 'q', name: 'x:AppPassword/query', path: '/ids' },
-				properties: ['id', 'description', 'createdAt', 'expiresAt']
-			},
-			'g'
-		]
-	]);
-	const list = (result(responses, 'x:AppPassword/get').list as Record<string, unknown>[] | undefined) ?? [];
-	return list.map((item) => ({
-		id: String(item.id),
-		description: typeof item.description === 'string' ? item.description : '',
-		createdAt: typeof item.createdAt === 'string' ? item.createdAt : null,
-		expiresAt: typeof item.expiresAt === 'string' ? item.expiresAt : null
-	}));
+	const { c } = await client();
+	const items: AppPassword[] = [];
+	let position = 0;
+	const limit = 200;
+	for (;;) {
+		const result = await c.list('AppPassword', { position, limit });
+		if (!result.ok) throw refusal(result.problem);
+		const page = result.value;
+		items.push(
+			...page.items.map((item) => ({
+				id: item.id,
+				description: item.description ?? '',
+				createdAt: item.createdAt ?? null,
+				expiresAt: item.expiresAt ?? null
+			}))
+		);
+		position += page.items.length;
+		if (page.items.length === 0 || (page.total !== undefined ? position >= page.total : page.items.length < limit))
+			return items;
+	}
 }
 
 /** Returns the generated secret. The server shows it once and stores only a hash. */
 export async function createAppPassword(description: string): Promise<string> {
-	const responses = await jmap(USING, [['x:AppPassword/set', { create: { a: { description } } }, 's']]);
-	const payload = result(responses, 'x:AppPassword/set');
-	const created = (payload.created as Record<string, { secret?: unknown }> | undefined)?.a;
-	if (created && typeof created.secret === 'string') return created.secret;
-	throw new Error(
-		reason(
-			(payload.notCreated as Record<string, unknown> | undefined)?.a,
-			'The app password was not created.'
-		)
-	);
+	const { c } = await client();
+	const result = await c.create('AppPassword', { description });
+	if (!result.ok) throw refusal(result.problem);
+	if (typeof result.value.secret !== 'string' || !result.value.secret)
+		throw new Error('The server did not return the app password.');
+	return result.value.secret;
 }
 
 export async function revokeAppPassword(id: string): Promise<void> {
-	const responses = await jmap(USING, [['x:AppPassword/set', { destroy: [id] }, 's']]);
-	const payload = result(responses, 'x:AppPassword/set');
-	if (((payload.destroyed as string[] | undefined) ?? []).includes(id)) return;
-	throw new Error(
-		reason(
-			(payload.notDestroyed as Record<string, unknown> | undefined)?.[id],
-			'The app password was not revoked.'
-		)
-	);
+	const { c } = await client();
+	const result = await c.remove('AppPassword', id);
+	if (!result.ok) throw refusal(result.problem);
 }

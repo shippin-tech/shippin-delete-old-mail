@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "id": "2026-11-20-management-api-cutover",
+  "title": "Move remaining Svelte management workflows to the owned API",
+  "costar": {
+    "context": "The owner requires a minimal faithful Svelte and API cutover with zero regression.",
+    "objective": "Remove direct private JMAP calls from actions, account security and bootstrap adapters.",
+    "style": "Concrete implementation and observed evidence.",
+    "tone": "Factual.",
+    "audience": "Repository owner and reviewers.",
+    "response": "Tested main commit with remaining verification stated explicitly."
+  },
+  "sources": [
+    {"kind": "code", "ref": "REGRESSION.md"},
+    {"kind": "code", "ref": "ui/src/lib/contract/registry.ts"},
+    {"kind": "code", "ref": "ui/src/lib/contract/registry.generated.ts"},
+    {"kind": "code", "ref": "ui/src/lib/adapter/registry-facade.ts"},
+    {"kind": "code", "ref": "ui/src/lib/adapter/actions.ts"},
+    {"kind": "code", "ref": "ui/src/lib/adapter/account.ts"},
+    {"kind": "code", "ref": "ui/src/lib/adapter/bootstrap.ts"},
+    {"kind": "code", "ref": "ui/src/lib/portal/bootstrap.ts"},
+    {"kind": "code", "ref": "crates/http/src/api/registry_rest.rs"},
+    {"kind": "code", "ref": "crates/jmap/src/registry/mapping/action.rs"},
+    {"kind": "code", "ref": "crates/jmap/src/registry/mapping/bootstrap.rs"},
+    {"kind": "code", "ref": "crates/jmap/src/registry/mapping/account.rs"},
+    {"kind": "code", "ref": "deploy/local/README.md"}
+  ],
+  "concerns": [
+    "Action creation responses are partial results, not persisted records with id and @type; using the generic read contract would reject valid results.",
+    "Password changes require slash-delimited field patches; replacing otpAuth clears MFA.",
+    "App passwords must return the creation secret once and list every page.",
+    "Bootstrap returns no record on configured hosts; only notFound should map to an empty state.",
+    "Docker disk has less free space than FoundationDB requires; live verification must not be claimed until resolved."
+  ],
+  "context": "Latest owner clarification drops cross-platform work and prioritizes the smallest faithful owned API cutover.",
+  "current_state": "At bb3ad50, generic admin CRUD uses /api/v1/registry, but three adapters still call private x: methods over JMAP.",
+  "target_design": "The existing API carries these workflows with validated requests and responses, preserving the Svelte screens and current permissions.",
+  "changes": [
+    "Add operation-specific action-result and password-patch handling to the existing registry client.",
+    "Move actions, account security and bootstrap adapters onto that client.",
+    "Test real response shapes, MFA patch preservation, one-time secrets, pagination, refusals and session continuity."
+  ],
+  "boundaries": [
+    "Standard mail protocols and engine implementation remain intact; this change does not claim engine independence.",
+    "Preserve existing screens, data and configuration; no release tag or PR.",
+    "Do not retire affected workflows without live equivalence evidence."
+  ],
+  "verification": [
+    {"name": "Whole web regression suite", "command": "python scripts/regression.py --only web", "proves": "All existing UI checks, generated contracts, tests, browser flows and build remain valid.", "expected": "All applicable checks pass."},
+    {"name": "Live management parity", "command": "npm run test:contract-live; npm run test:live; python deploy/local/verify_account.py", "proves": "Candidate adapters preserve real engine behavior and user journeys, compared with existing private operations using synthetic data.", "expected": "Affected live workflows and existing suites pass; unavailable checks remain unverified."},
+    {"name": "Operating records", "command": "python .ai/machine/organize.py --check", "proves": "The repository operating records remain valid.", "expected": "No schema or tree errors."}
+  ],
+  "status": "approved"
+}
