@@ -12,6 +12,7 @@
   },
   "sources": [
     {"kind": "code", "ref": "REGRESSION.md"},
+    {"kind": "code", "ref": "api/v1/openapi.yml"},
     {"kind": "code", "ref": "ui/src/lib/contract/registry.ts"},
     {"kind": "code", "ref": "ui/src/lib/contract/registry.generated.ts"},
     {"kind": "code", "ref": "ui/src/lib/adapter/registry-facade.ts"},
@@ -30,7 +31,9 @@
     "Password changes require slash-delimited field patches; replacing otpAuth clears MFA.",
     "App passwords must return the creation secret once and list every page.",
     "Bootstrap returns no record on configured hosts; only notFound should map to an empty state.",
-    "Docker disk has less free space than FoundationDB requires; live verification must not be claimed until resolved."
+    "Docker disk has less free space than FoundationDB requires; live verification must not be claimed until resolved.",
+    "A wider consumer scan found ui/src/lib/shippin/people/team.ts still calling private Account and Domain methods. Its password patch paths require a faithful replacement, so the overall management cutover remains incomplete.",
+    "A concurrent process committed and pushed the initial adapter changes as 00b1f9a while verification was ongoing; that commit is not live parity evidence."
   ],
   "context": "Latest owner clarification drops cross-platform work and prioritizes the smallest faithful owned API cutover.",
   "current_state": "At bb3ad50, generic admin CRUD uses /api/v1/registry, but three adapters still call private x: methods over JMAP.",
@@ -38,7 +41,8 @@
   "changes": [
     "Add operation-specific action-result and password-patch handling to the existing registry client.",
     "Move actions, account security and bootstrap adapters onto that client.",
-    "Test real response shapes, MFA patch preservation, one-time secrets, pagination, refusals and session continuity."
+    "Test real response shapes, MFA patch preservation, one-time secrets, pagination, refusals and session continuity.",
+    "Return Bootstrap's one-time update credentials through the API instead of discarding them during a subsequent read; document action and singleton operation responses."
   ],
   "boundaries": [
     "Standard mail protocols and engine implementation remain intact; this change does not claim engine independence.",
@@ -46,9 +50,10 @@
     "Do not retire affected workflows without live equivalence evidence."
   ],
   "verification": [
-    {"name": "Whole web regression suite", "command": "python scripts/regression.py --only web", "proves": "All existing UI checks, generated contracts, tests, browser flows and build remain valid.", "expected": "All applicable checks pass."},
-    {"name": "Live management parity", "command": "npm run test:contract-live; npm run test:live; python deploy/local/verify_account.py", "proves": "Candidate adapters preserve real engine behavior and user journeys, compared with existing private operations using synthetic data.", "expected": "Affected live workflows and existing suites pass; unavailable checks remain unverified."},
-    {"name": "Operating records", "command": "python .ai/machine/organize.py --check", "proves": "The repository operating records remain valid.", "expected": "No schema or tree errors."}
+    {"name": "Whole web regression suite", "command": "python scripts/regression.py --only web", "proves": "All existing UI checks, generated contracts, tests, browser flows and build remain valid.", "expected": "All applicable checks pass.", "result": "2026-11-21 UTC: 276 unit tests and 12 mocked browser tests pass; lint, typecheck (zero errors/warnings), build, API/brand/inventory/MCPL/contract generation pass. Initial 15 pass, 2 fail, 1 not-run: update and auto-update never started because WSL Bash returned 0x8007274c. Both complete suites subsequently passed unchanged under C:/Program Files/Git/bin/bash.exe. Relay permission checks remain unverified locally because Windows lacks POSIX modes. Logs: roadmap/runs/20261121T000347Z/."},
+    {"name": "Live management parity", "command": "npm run test:contract-live; npm run test:live; python deploy/local/verify_account.py", "proves": "Candidate adapters preserve real engine behavior and user journeys, compared with existing private operations using synthetic data.", "expected": "Affected live workflows and existing suites pass; unavailable checks remain unverified.", "result": "NOT RUN. Docker VM remains 98% used: 28,403,508 KiB available of 1,055,762,868 KiB, below the recorded FoundationDB free-space threshold. Existing image 474b11762341 is not the Rust candidate. Scoped cleanup outside this project's data is awaiting the owner's choice. Added management-api-live.test.ts for baseline/candidate action and account-password/app-password comparisons; live MFA, fresh bootstrap and complete browser parity remain unverified."},
+    {"name": "Rust API compilation", "command": "cargo check -p http@0.16.27 --locked", "proves": "The bootstrap response correction compiles with the existing server.", "expected": "Compilation succeeds.", "result": "Passed, including final follow-up after removing the unnecessary Bootstrap read (14.97 seconds); existing unrelated unused-import/variable warnings."},
+    {"name": "Operating records", "command": "python .ai/machine/organize.py --check", "proves": "The repository operating records remain valid.", "expected": "No schema or tree errors.", "result": "Passed: 6 modules, 51 documents, 406 records (165 events, 62 messages, 135 tools, 44 journal)."}
   ],
   "status": "approved"
 }

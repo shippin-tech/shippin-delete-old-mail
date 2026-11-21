@@ -29,30 +29,51 @@ beforeEach(() => {
 		setItem: (key: string, value: string) => void store.set(key, value),
 		removeItem: (key: string) => void store.delete(key)
 	});
-	vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
-		const headers = new Headers(init?.headers);
-		calls.push({ url, method: init?.method ?? 'GET', body: init?.body ? JSON.parse(String(init.body)) : undefined,
-			auth: headers.get('Authorization'), tag: headers.get('If-Match') });
-		const answer = answers.shift();
-		if (!answer) throw new Error('Unscripted request');
-		return new Response(answer.status === 204 ? null : JSON.stringify(answer.body ?? null), {
-			status: answer.status, headers: answer.etag ? { ETag: answer.etag } : undefined
-		});
-	}));
+	vi.stubGlobal(
+		'fetch',
+		vi.fn(async (url: string, init?: RequestInit) => {
+			const headers = new Headers(init?.headers);
+			calls.push({
+				url,
+				method: init?.method ?? 'GET',
+				body: init?.body ? JSON.parse(String(init.body)) : undefined,
+				auth: headers.get('Authorization'),
+				tag: headers.get('If-Match')
+			});
+			const answer = answers.shift();
+			if (!answer) throw new Error('Unscripted request');
+			return new Response(answer.status === 204 ? null : JSON.stringify(answer.body ?? null), {
+				status: answer.status,
+				headers: answer.etag ? { ETag: answer.etag } : undefined
+			});
+		})
+	);
 });
 afterEach(() => vi.unstubAllGlobals());
 
 const passwordRecord = { id: 'singleton', otpAuth: { otpUrl: null } };
-const refused = (status: number, kind = 'forbidden') => ({ status, body: { type: kind, title: 'Refused', status } });
+const refused = (status: number, kind = 'forbidden') => ({
+	status,
+	body: { type: kind, title: 'Refused', status }
+});
 
 describe('actions through the owned API', () => {
 	it('accepts a real parameterless action acknowledgement without a discriminator', async () => {
 		answers.push({ status: 201, body: { id: '123' } });
 		expect(await executeAction('InvalidateNegativeCaches', {})).toEqual({});
-		expect(calls[0]).toMatchObject({ url: '/api/v1/registry/Action', method: 'POST', body: { '@type': 'InvalidateNegativeCaches' } });
+		expect(calls[0]).toMatchObject({
+			url: '/api/v1/registry/Action',
+			method: 'POST',
+			body: { '@type': 'InvalidateNegativeCaches' }
+		});
 	});
 	it('keeps spam results without requiring an id, and validates nested results', async () => {
-		const input = { message: 'From: a@example.test\r\n\r\ntest', remoteIp: '127.0.0.1', ehloDomain: 'example.test', envFrom: 'a@example.test' };
+		const input = {
+			message: 'From: a@example.test\r\n\r\ntest',
+			remoteIp: '127.0.0.1',
+			ehloDomain: 'example.test',
+			envFrom: 'a@example.test'
+		};
 		const result = { result: 'ham', score: 1, tags: { TEST: { disposition: 'score', score: 1 } } };
 		answers.push({ status: 201, body: result });
 		expect(await executeAction('ClassifySpam', input)).toEqual(result);
@@ -60,14 +81,25 @@ describe('actions through the owned API', () => {
 		await expect(executeAction('ClassifySpam', input)).rejects.toThrow(/unexpected/i);
 	});
 	it('keeps DMARC diagnostics and strips undeclared fields', async () => {
-		answers.push({ status: 201, body: { dmarcPass: true, elapsed: 12, ipRevPtr: { 'mx.test': true }, unrelated: 'drop' } });
-		expect(await executeAction('TroubleshootDmarc', { remoteIp: '127.0.0.1', ehloDomain: 'mx.test', mailFrom: 'a@mx.test' }))
-			.toEqual({ dmarcPass: true, elapsed: 12, ipRevPtr: { 'mx.test': true } });
+		answers.push({
+			status: 201,
+			body: { dmarcPass: true, elapsed: 12, ipRevPtr: { 'mx.test': true }, unrelated: 'drop' }
+		});
+		expect(
+			await executeAction('TroubleshootDmarc', {
+				remoteIp: '127.0.0.1',
+				ehloDomain: 'mx.test',
+				mailFrom: 'a@mx.test'
+			})
+		).toEqual({ dmarcPass: true, elapsed: 12, ipRevPtr: { 'mx.test': true } });
 	});
 	it('refuses unsupported actions before sending and surfaces server field errors', async () => {
 		await expect(executeAction('UnknownAction', {})).rejects.toThrow();
 		expect(calls).toHaveLength(0);
-		answers.push({ status: 422, body: { type: 'invalidProperties', title: 'Invalid', status: 422, fields: { message: 'Cannot parse' } } });
+		answers.push({
+			status: 422,
+			body: { type: 'invalidProperties', title: 'Invalid', status: 422, fields: { message: 'Cannot parse' } }
+		});
 		await expect(executeAction('ClassifySpam', {})).rejects.toThrow(/message/);
 	});
 });
@@ -80,8 +112,15 @@ describe('account security through the owned API', () => {
 		await enableTwoFactor('old', 'otpauth://totp/test?secret=TEST');
 		await disableTwoFactor('old', '123456');
 		expect(calls.map((c) => c.url)).toEqual(Array(3).fill('/api/v1/registry/AccountPassword'));
-		expect(calls[1].body).toEqual({ currentSecret: 'old', 'otpAuth/otpUrl': 'otpauth://totp/test?secret=TEST' });
-		expect(calls[2].body).toEqual({ currentSecret: 'old', 'otpAuth/otpCode': '123456', 'otpAuth/otpUrl': null });
+		expect(calls[1].body).toEqual({
+			currentSecret: 'old',
+			'otpAuth/otpUrl': 'otpauth://totp/test?secret=TEST'
+		});
+		expect(calls[2].body).toEqual({
+			currentSecret: 'old',
+			'otpAuth/otpCode': '123456',
+			'otpAuth/otpUrl': null
+		});
 	});
 	it('changes a password with an OTP and reopens Basic authentication', async () => {
 		answers.push({ status: 200, body: passwordRecord }, { status: 200, body: { accounts: { a: {} } } });
@@ -113,7 +152,10 @@ describe('account security through the owned API', () => {
 		answers.push({ status: 201, body: { id: 'p1', secret: 'synthetic-secret' } });
 		expect(await createAppPassword('Phone')).toBe('synthetic-secret');
 		answers.push(
-			{ status: 200, body: { items: [{ id: 'p1', description: 'Phone', secret: '****' }], position: 0, total: 2 } },
+			{
+				status: 200,
+				body: { items: [{ id: 'p1', description: 'Phone', secret: '****' }], position: 0, total: 2 }
+			},
 			{ status: 200, body: { items: [{ id: 'p2' }], position: 1, total: 2 } }
 		);
 		expect(await loadAppPasswords()).toEqual([
@@ -157,13 +199,29 @@ describe('bootstrap through the owned API', () => {
 	});
 	it('preserves choices and boolean patches and shows credentials from the save response', async () => {
 		answers.push({ status: 200, body: { id: 'singleton', username: 'admin', secret: 'synthetic-secret' } });
-		const result = await completeBootstrap([{ fields: [
-			{ name: 'serverHostname', kind: 'string' }, { name: 'generateDkimKeys', kind: 'boolean' }
-		] }], { serverHostname: 'mx.example.test', generateDkimKeys: true });
-		expect(calls[0]).toMatchObject({ url: '/api/v1/registry/Bootstrap', method: 'PATCH', body: { serverHostname: 'mx.example.test', generateDkimKeys: true } });
-		expect(result).toEqual({ status: 'saved', credentials: [
-			{ label: 'username', value: 'admin' }, { label: 'secret', value: 'synthetic-secret' }
-		] });
+		const result = await completeBootstrap(
+			[
+				{
+					fields: [
+						{ name: 'serverHostname', kind: 'string' },
+						{ name: 'generateDkimKeys', kind: 'boolean' }
+					]
+				}
+			],
+			{ serverHostname: 'mx.example.test', generateDkimKeys: true }
+		);
+		expect(calls[0]).toMatchObject({
+			url: '/api/v1/registry/Bootstrap',
+			method: 'PATCH',
+			body: { serverHostname: 'mx.example.test', generateDkimKeys: true }
+		});
+		expect(result).toEqual({
+			status: 'saved',
+			credentials: [
+				{ label: 'username', value: 'admin' },
+				{ label: 'secret', value: 'synthetic-secret' }
+			]
+		});
 		expect(calls).toHaveLength(1);
 	});
 });

@@ -419,22 +419,25 @@ pub async fn handle_registry(
             if let Err(reply) = check_if_match(server, &token, session, req, name, &get_name, id).await {
                 return *reply;
             }
-            let responses = jmap(
-                server,
-                &token,
-                session,
-                vec![
-                    json!([set_name, { "update": { id: patch } }, "s"]),
-                    json!([get_name, { "ids": [id] }, "g"]),
-                ],
-            )
-            .await?;
+            let mut calls = vec![json!([set_name, { "update": { id: patch } }, "s"])];
+            if object != ObjectType::Bootstrap {
+                calls.push(json!([get_name, { "ids": [id] }, "g"]));
+            }
+            let responses = jmap(server, &token, session, calls).await?;
             let set = match method_args(&responses, 0, &set_name) {
                 Ok(args) => args,
                 Err(reply) => return *reply,
             };
-            if set.get("updated").and_then(|u| u.get(id)).is_none() {
+            let Some(updated) = set.get("updated").and_then(|u| u.get(id)) else {
                 return set_problem(set.get("notUpdated").and_then(|u| u.get(id)).unwrap_or(&Value::Null));
+            };
+            // Bootstrap creates credentials in the update response only. Reading the
+            // defaults again loses them, leaving the person unable to sign in after
+            // restarting. Return that one-time result without caching it or an ETag.
+            if object == ObjectType::Bootstrap {
+                let mut result = updated.as_object().cloned().unwrap_or_default();
+                result.insert("id".into(), Value::String(id.to_string()));
+                return ok(StatusCode::OK, Value::Object(result));
             }
             let got = match method_args(&responses, 1, &get_name) {
                 Ok(args) => args,

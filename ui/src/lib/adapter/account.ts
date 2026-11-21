@@ -57,7 +57,10 @@ export async function loadAppPasswords(): Promise<AppPassword[]> {
 			}))
 		);
 		position += page.items.length;
-		if (page.items.length === 0 || (page.total !== undefined ? position >= page.total : page.items.length < limit))
+		if (
+			page.items.length === 0 ||
+			(page.total !== undefined ? position >= page.total : page.items.length < limit)
+		)
 			return items;
 	}
 }

@@ -61,7 +61,7 @@ paths:
     post:
       operationId: createRegistryRecord
       summary: Create a record (collections)
-      description: 'One JMAP request, x:{object}/set with a create. The body is the record without server-set properties.'
+      description: 'The body is the record without server-set properties. Action creates return the action output, which need not contain id or @type. AppPassword creates return id and the generated secret exactly once.'
       x-auth: JMAP decides
       x-proof: deploy/local/verify_registry.py
       requestBody:
@@ -71,15 +71,19 @@ paths:
             schema: {type: object}
       responses:
         '201':
-          description: The created record
+          description: The created record or action output
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/RegistryRecord'}
+              schema:
+                anyOf:
+                - {$ref: '#/components/schemas/RegistryRecord'}
+                - {type: object, description: 'Action output fields depend on the requested action; no id or discriminator is required.'}
         default:
           $ref: '#/components/responses/Problem'
     patch:
       operationId: updateRegistrySingleton
       summary: Change a singleton object
+      description: 'Accepts field patches, including otpAuth/otpCode and otpAuth/otpUrl for AccountPassword. Bootstrap returns id and any one-time username/secret from the completed operation; these credentials cannot be recovered by reading the record again.'
       x-auth: JMAP decides
       x-proof: deploy/local/verify_registry.py
       requestBody:
